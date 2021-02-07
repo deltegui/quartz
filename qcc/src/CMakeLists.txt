@@ -4,12 +4,7 @@ set(THIS qcclib)
 
 project(${THIS})
 
-set(SOURCES
-    lexer.cc
-)
-
-set(HEADERS
-    lexer.h
-)
+file(GLOB SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cc)
+file(GLOB HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
 add_library(${THIS} STATIC ${SOURCES} ${HEADERS})

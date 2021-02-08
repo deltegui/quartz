@@ -17,14 +17,16 @@ struct LiteralExpr;
 struct GroupingExpr;
 
 class ExprVisitor {
-    public:
+public:
+    virtual ~ExprVisitor() {}
     virtual void visit_binary(BinaryExpr*) = 0;
     virtual void visit_literal(LiteralExpr*) = 0;
     virtual void visit_grouping(GroupingExpr*) = 0;
 };
 
 class Expr {
-    public:
+public:
+    virtual ~Expr() {}
     virtual void accept(ExprVisitor* visitor) = 0;
 };
 
@@ -33,7 +35,7 @@ struct BinaryExpr: public Expr {
     Operator op;
     Expr* right;
 
-    ~BinaryExpr() {
+    ~BinaryExpr() override {
         delete left;
         delete right;
     }
@@ -45,6 +47,9 @@ struct BinaryExpr: public Expr {
 
 struct LiteralExpr: public Expr {
     Token literal;
+
+    ~LiteralExpr() override {}
+
     void accept(ExprVisitor* visitor) override {
         visitor->visit_literal(this);
     }

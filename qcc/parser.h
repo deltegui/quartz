@@ -20,7 +20,7 @@ class Parser {
     Expr* group_expr();
     Expr* primary();
 
-    public:
+public:
     Parser(Lexer* lexer);
     Expr* parse();
 };

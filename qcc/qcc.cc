@@ -1,16 +1,15 @@
-﻿#include <stdio.h>
-#include <stdlib.h>
+﻿
 
+#include "sysexits.h"
 #include "astprint.h"
 #include "lexer.h"
 #include "parser.h"
 
-// Reads all contents of file source_name and let it
-// in a char* buffer. This function can return NULL
-// if the file does not exists or if there was an error
-// while allocating memory. The ownership of the returning char*
-// is yours.
-char* read_file(const char *source_name) {
+// Reads a file from "source_name" and returns a string with
+// the contents of the file. The ownership of that string is
+// up to you, so delete it. It can also return null, meaning
+// that was an error.
+const char* read_file(const char* source_name) {
     FILE* source = fopen(source_name, "r");
     if (source == NULL) {
         fprintf(stderr, "Error while reading source file: \n");
@@ -32,20 +31,20 @@ char* read_file(const char *source_name) {
     return buffer;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     if (argc <= 1) {
         fprintf(stderr, "You should pass the file to compile!");
-        return 1;
+        return EX_USAGE;
     }
-    char *source = read_file(argv[1]);
+    const char* source = read_file(argv[1]);
     printf("Readed buffer:\n%s\n", source);
     if (source == NULL) {
-        return -1;
+        return EX_OSFILE;
     }
     Quartz::Lexer lexer = Quartz::Lexer(source);
     Quartz::Parser parser = Quartz::Parser(&lexer);
-    Quartz::AstPrinter printer;
     auto ast = parser.parse();
+    Quartz::AstPrinter printer;
     ast->accept(&printer);
     delete ast;
     delete source;

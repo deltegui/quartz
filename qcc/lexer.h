@@ -8,8 +8,8 @@
 namespace Quartz {
 
 class Lexer {
-    const char *start;
-    const char *current;
+    const char* start;
+    const char* current;
     int line;
 
     void skip_whitespaces();

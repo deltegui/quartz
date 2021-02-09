@@ -36,7 +36,7 @@ void print_token(Token token) {
         token.line,
         substr,
         token.length);
-    delete substr;
+    delete[] substr;
 }
 
 }

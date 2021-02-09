@@ -1,8 +1,8 @@
-#include <stdio.h>
-
+#include "common.h"
 #include "lexer.h"
+#include "token.h"
 
-namespace Quartz {
+namespace Quartz::Compiler {
 
 Lexer::Lexer(const char* buffer) {
     current = buffer;
@@ -38,6 +38,10 @@ Token Lexer::create_token(TokenType type) {
     token.line = this->line;
     token.start = this->start;
     token.type = type;
+#ifdef LEXER_DEBUG
+    printf("[LEXER]: Readed ");
+    print_token(token);
+#endif
     return token;
 }
 

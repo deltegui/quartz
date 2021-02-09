@@ -1,5 +1,4 @@
-﻿
-
+﻿#include "common.h"
 #include "sysexits.h"
 #include "astprint.h"
 #include "lexer.h"
@@ -18,7 +17,6 @@ const char* read_file(const char* source_name) {
     fseek(source, 0, SEEK_END);
     size_t size = ftell(source);
     fseek(source, 0, SEEK_SET);
-    printf("Allocating for %zu bytes\n", size + 1);
     // Size of the file plus \0 character
     char* buffer = new char[size + 1];
     if (buffer == NULL) {

@@ -35,6 +35,12 @@ struct BinaryExpr: public Expr {
     Operator op;
     Expr* right;
 
+    BinaryExpr(Expr* left, Operator op, Expr* right) {
+        this->left = left;
+        this->op = op;
+        this->right = right;
+    }
+
     ~BinaryExpr() override {
         delete left;
         delete right;
@@ -48,6 +54,10 @@ struct BinaryExpr: public Expr {
 struct LiteralExpr: public Expr {
     Token literal;
 
+    LiteralExpr(Token literal) {
+        this->literal = literal;
+    }
+
     ~LiteralExpr() override {}
 
     void accept(ExprVisitor* visitor) override {
@@ -57,6 +67,10 @@ struct LiteralExpr: public Expr {
 
 struct GroupingExpr: public Expr {
     Expr* inner;
+
+    GroupingExpr(Expr* inner) {
+        this->inner = inner;
+    }
 
     ~GroupingExpr() {
         delete inner;

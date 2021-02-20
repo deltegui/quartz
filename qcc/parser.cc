@@ -70,7 +70,7 @@ Expr* Parser::mul_expr() {
         return left;
     }
     this->advance();
-    Expr* right = sum_expr();
+    Expr* right = mul_expr();
     BinaryExpr* binary = new BinaryExpr();
     binary->left = left;
     binary->op = op;

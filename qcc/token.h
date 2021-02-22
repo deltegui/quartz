@@ -3,27 +3,25 @@
 
 #include "common.h"
 
-namespace Quartz {
-
-enum class TokenType {
+typedef enum {
     // Special tokens
-    End,
-    Error,
+    TOKEN_END,
+    TOKEN_ERROR,
 
     // Single character tokens
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
-    LeftParen,
-    RightParen,
-    Dot,
+    TOKEN_PLUS,
+    TOKEN_MINUS,
+    TOKEN_STAR,
+    TOKEN_SLASH,
+    TOKEN_PERCENT,
+    TOKEN_LEFT_PAREN,
+    TOKEN_RIGHT_PAREN,
+    TOKEN_DOT,
 
     // Multi-character tokens
-    Integer,
-    Float,
-};
+    TOKEN_INTEGER,
+    TOKEN_FLOAT,
+} TokenType;
 
 typedef struct {
     TokenType type;
@@ -33,7 +31,5 @@ typedef struct {
 } Token;
 
 void print_token(Token token);
-
-}
 
 #endif

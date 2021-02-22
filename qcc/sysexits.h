@@ -2,7 +2,7 @@
 #define QUARTZ_SYSEXITS_H
 
 #define EX_OK            0     // successful termination
-#define EX_BASE         64     // base value for error messages
+#define EX_BASE          64    // base value for error messages
 #define EX_USAGE         64    // command line usage error
 #define EX_DATAERR       65    // data format error
 #define EX_NOINPUT       66    // cannot open input
@@ -18,6 +18,6 @@
 #define EX_PROTOCOL      76    // remote error in protocol
 #define EX_NOPERM        77    // permission denied
 #define EX_CONFIG        78    // configuration error
-#define EX_MAX          78     // maximum listed value
+#define EX_MAX           78    // maximum listed value
 
 #endif

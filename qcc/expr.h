@@ -3,84 +3,44 @@
 
 #include "token.h"
 
-namespace Quartz {
+typedef enum {
+    EXPR_BINARY,
+    EXPR_LITERAL,
+} ExprType;
 
-enum class Operator {
-    Sum,
-    Mul,
-    Div,
-    Sub,
-};
+struct _Expr;
 
-struct BinaryExpr;
-struct LiteralExpr;
-struct GroupingExpr;
+typedef struct {
+    struct _Expr* left;
+    Token op;
+    struct _Expr* right;
+} BinaryExpr;
 
-class ExprVisitor {
-public:
-    virtual ~ExprVisitor() {}
-    virtual void visit_binary(BinaryExpr*) = 0;
-    virtual void visit_literal(LiteralExpr*) = 0;
-    virtual void visit_grouping(GroupingExpr*) = 0;
-};
-
-class Expr {
-public:
-    virtual ~Expr() {}
-    virtual void accept(ExprVisitor* visitor) = 0;
-};
-
-struct BinaryExpr: public Expr {
-    Expr* left;
-    Operator op;
-    Expr* right;
-
-    BinaryExpr(Expr* left, Operator op, Expr* right) {
-        this->left = left;
-        this->op = op;
-        this->right = right;
-    }
-
-    ~BinaryExpr() override {
-        delete left;
-        delete right;
-    }
-
-    void accept(ExprVisitor* visitor) override {
-        visitor->visit_binary(this);
-    }
-};
-
-struct LiteralExpr: public Expr {
+typedef struct {
     Token literal;
+} LiteralExpr;
 
-    LiteralExpr(Token literal) {
-        this->literal = literal;
-    }
+typedef struct _Expr {
+    ExprType type;
+    union {
+        BinaryExpr binary;
+        LiteralExpr literal;
+    };
+} Expr;
 
-    ~LiteralExpr() override {}
+typedef struct {
+    void (*visit_binary)(BinaryExpr* binary);
+    void (*visit_literal)(LiteralExpr* literal);
+} ExprVisitor;
 
-    void accept(ExprVisitor* visitor) override {
-        visitor->visit_literal(this);
-    }
-};
+#define IS_BINARY(expr) (expr.type == EXPR_BINARY)
+#define IS_LITERAL(expr) (expr.type == EXPR_LITERAL)
 
-struct GroupingExpr: public Expr {
-    Expr* inner;
+#define CREATE_BINARY_EXPR(binary) expr_create(EXPR_BINARY, &binary)
+#define CREATE_LITERAL_EXPR(literal) expr_create(EXPR_LITERAL, &literal)
 
-    GroupingExpr(Expr* inner) {
-        this->inner = inner;
-    }
-
-    ~GroupingExpr() {
-        delete inner;
-    }
-
-    void accept(ExprVisitor* visitor) override {
-        visitor->visit_grouping(this);
-    }
-};
-
-}
+Expr* expr_create(ExprType type, void* expr_node);
+void expr_free(Expr* expr);
+void expr_dispatch(ExprVisitor* visitor, Expr* expr);
 
 #endif

@@ -2,7 +2,6 @@
 #include "./common.h"
 
 #include "../lexer.h"
-#include "../token.h"
 
 #define ASSERT_TOKEN_TYPE(tkn, t) assert_true(tkn.type == t)
 

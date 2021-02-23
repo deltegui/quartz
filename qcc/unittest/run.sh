@@ -16,9 +16,9 @@ if [ "$1" = "-ed" ]; then
 fi
 
 echo "\n\n-------- [LEXER TESTS] --------"
-sh -c "$CC $MACROS ./lexer_test.c ../lexer.c ../token.c $LIBS $AND_EXEC"
+sh -c "$CC $MACROS ./lexer_test.c ../lexer.c $LIBS $AND_EXEC"
 
 echo "\n\n-------- [PARSER TESTS] --------"
-sh -c "$CC $MACROS ./parser_test.c ../parser.c ../expr.c ../lexer.c ../token.c $LIBS $AND_EXEC"
+sh -c "$CC $MACROS ./parser_test.c ../parser.c ../expr.c ../lexer.c $LIBS $AND_EXEC"
 
 rm $BIN

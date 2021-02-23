@@ -12,7 +12,7 @@ typedef struct {
     bool has_error;
 } Parser;
 
-Parser* create_parser(Lexer* lexer);
+Parser* create_parser(const char* source);
 void free_parser(Parser* parser);
 Expr* parse(Parser* parser);
 

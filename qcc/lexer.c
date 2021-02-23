@@ -48,7 +48,7 @@ static Token create_token(Lexer* lexer, TokenType type) {
     token.start = lexer->start;
     token.type = type;
 #ifdef LEXER_DEBUG
-    printf("[LEXER]: Readed ");
+    printf("[LEXER DEBUG]: Readed ");
     print_token(token);
 #endif
     return token;
@@ -56,7 +56,7 @@ static Token create_token(Lexer* lexer, TokenType type) {
 
 static Token create_error(Lexer* lexer, const char* message) {
     int len = (int) (lexer->current - lexer->start);
-    fprintf(stderr, "%s here '%.*s' in line %d\n", message, len, lexer->start, lexer->line);
+    fprintf(stderr, "[Line %d] %s here '%.*s'\n", lexer->line, message, len, lexer->start);
     return create_token(lexer, TOKEN_ERROR);
 }
 

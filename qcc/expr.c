@@ -42,13 +42,9 @@ void expr_dispatch(ExprVisitor* visitor, Expr* expr) {
         return;
     }
 #define DISPATCH(fn_visitor, node_type) visitor->fn_visitor(&expr->node_type)
-    switch(expr->type) {
-    case EXPR_LITERAL:
-        DISPATCH(visit_literal, literal);
-        break;
-    case EXPR_BINARY:
-        DISPATCH(visit_binary, binary);
-        break;
+    switch (expr->type) {
+    case EXPR_LITERAL: DISPATCH(visit_literal, literal); break;
+    case EXPR_BINARY: DISPATCH(visit_binary, binary); break;
     }
 #undef DISPATCH
 }

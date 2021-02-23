@@ -42,8 +42,7 @@ int main(int argc, char** argv) {
     if (source == NULL) {
         return EX_OSFILE;
     }
-    Lexer* lexer = create_lexer(source);
-    Parser* parser = create_parser(lexer);
+    Parser* parser = create_parser(source);
     Expr* ast = parse(parser);
     if (!parser->has_error) {
         ast_print(ast);
@@ -54,7 +53,6 @@ int main(int argc, char** argv) {
         free_compiler();
     }
     free_parser(parser);
-    free_lexer(lexer);
     expr_free(ast);
     free((char*) source);
     return 0;

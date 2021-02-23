@@ -1,8 +1,6 @@
-#include <string.h>
-#include <setjmp.h>
 #include <stdarg.h>
-#include <stdlib.h>
-#include <cmocka.h>
+#include "./common.h"
+
 #include "../lexer.h"
 #include "../token.h"
 

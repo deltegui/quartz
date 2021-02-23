@@ -1,12 +1,13 @@
 #include "common.h"
 #include "parser.h"
 
-Parser* create_parser(Lexer* lexer);
+Parser* create_parser(const char* source);
 void free_parser(Parser* parser);
 
 static void error(Parser* parser, const char* message);
 static void error_next(Parser* parser, const char* message);
 static void error_at(Parser* parser, Token* token, const char* message);
+
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenType expected, const char* msg);
 
@@ -75,16 +76,17 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     return left;
 }
 
-Parser* create_parser(Lexer* lexer) {
+Parser* create_parser(const char* source) {
     Parser* parser = (Parser*) malloc(sizeof(Parser));
     parser->current.type = -1;
     parser->next. type = -1;
-    parser->lexer = lexer;
+    parser->lexer = create_lexer(source);
     parser->has_error = false;
     return parser;
 }
 
 void free_parser(Parser* parser) {
+    free_lexer(parser->lexer);
     free(parser);
 }
 
@@ -104,7 +106,7 @@ static void error_at(Parser* parser, Token* token, const char* message) {
         fprintf(stderr, " at end");
         break;
     default:
-        fprintf(stderr, "at '%.*s'", token->length, token->start);
+        fprintf(stderr, " at '%.*s'", token->length, token->start);
     }
     fprintf(stderr, ": %s\n", message);
     parser->has_error = true;
@@ -128,7 +130,10 @@ static bool consume(Parser* parser, TokenType expected, const char* message) {
 }
 
 Expr* parse(Parser* parser) {
-    printf("\tPARSE!!!!!\n");
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: Parser start\n");
+#endif
+
     advance(parser);
     if (parser->next.type == TOKEN_END || parser->next.type == TOKEN_ERROR) {
         return NULL;
@@ -141,6 +146,10 @@ static Expr* expression(Parser* parser) {
 }
 
 static Expr* binary(Parser* parser, Expr* left) {
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: BINARY Expression\n");
+#endif
+
     Token op = parser->current;
     switch (op.type) {
     case TOKEN_PLUS:
@@ -159,27 +168,45 @@ static Expr* binary(Parser* parser, Expr* left) {
         .op = op,
         .right = right,
     };
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: end BINARY expression\n");
+#endif
+
     return CREATE_BINARY_EXPR(binary);
 }
 
 static Expr* grouping(Parser* parser) {
-    printf("GROUP Expression\n");
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: GROUP Expression\n");
+#endif
+
     Expr* inner = expression(parser);
     consume(
         parser,
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in group expression");
-    printf("en [GROUP]\n");
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: en [GROUP]\n");
+#endif
     return inner;
 }
 
 static Expr* primary(Parser* parser) {
-    printf("PRIMARY Expression\n");
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: PRIMARY Expression\n");
+#endif
+
     LiteralExpr literal = (LiteralExpr){
         .literal = parser->current,
     };
     Expr* expr = CREATE_LITERAL_EXPR(literal);
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: PRIMARY value ");
     print_token(parser->current);
-    printf("end PRIMARY Expression\n");
+    printf("[PARSER DEBUG]: end PRIMARY Expression\n");
+#endif
     return expr;
 }

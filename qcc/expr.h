@@ -1,7 +1,7 @@
 #ifndef QUARTZ_EXPR_H
 #define QUARTZ_EXPR_H
 
-#include "token.h"
+#include "lexer.h"
 
 typedef enum {
     EXPR_BINARY,

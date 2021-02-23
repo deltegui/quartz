@@ -31,20 +31,3 @@ uint8_t valuearray_write(ValueArray* arr, Value value) {
     arr->values[arr->size] = value;
     return arr->size++;
 }
-
-void valuearray_print(ValueArray* values) {
-    printf("--------[ VALUE ARRAY ]--------\n\n");
-    for (int i = 0; i < values->size; i++) {
-        printf("| %d\t\t", i);
-    }
-    printf("\n");
-    printf("|---------------|---------------|--------------\n");
-    for (int i = 0; i < values->size; i++) {
-        Value val = values->values[i];
-        switch (val.type) {
-        case VALUE_INTEGER: printf("| %d\t", AS_INTEGER(val)); break;
-        case VALUE_FLOAT: printf("| %f\t", AS_FLOAT(val)); break;
-        }
-    }
-    printf("\n\n");
-}

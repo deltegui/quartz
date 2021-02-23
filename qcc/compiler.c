@@ -3,6 +3,10 @@
 #include "expr.h"
 #include "values.h"
 
+#ifdef COMPILER_DEBUG
+#include "debug.h"
+#endif
+
 static void emit(uint8_t bytecode, int line);
 
 static void compile_literal(LiteralExpr* literal);
@@ -32,7 +36,10 @@ void free_compiler() {
 Chunk* compile(Expr* ast) {
     ACCEPT(ast);
     emit(OP_RETURN, -1);
+#ifdef COMPILER_DEBUG
     valuearray_print(&compiler.chunk.constants);
+    chunk_print(&compiler.chunk);
+#endif
     return &compiler.chunk;
 }
 

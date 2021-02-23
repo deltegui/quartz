@@ -1,6 +1,10 @@
 #include "common.h"
 #include "parser.h"
 
+#ifdef PARSER_DEBUG
+#include "debug.h"
+#endif
+
 Parser* create_parser(const char* source);
 void free_parser(Parser* parser);
 
@@ -138,7 +142,11 @@ Expr* parse(Parser* parser) {
     if (parser->next.type == TOKEN_END || parser->next.type == TOKEN_ERROR) {
         return NULL;
     }
-    return expression(parser);
+    Expr* ast = expression(parser);
+    #ifdef PARSER_DEBUG
+    ast_print(ast);
+    #endif
+    return ast;
 }
 
 static Expr* expression(Parser* parser) {
@@ -205,7 +213,7 @@ static Expr* primary(Parser* parser) {
 
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: PRIMARY value ");
-    print_token(parser->current);
+    token_print(parser->current);
     printf("[PARSER DEBUG]: end PRIMARY Expression\n");
 #endif
     return expr;

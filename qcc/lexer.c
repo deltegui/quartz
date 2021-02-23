@@ -1,5 +1,9 @@
 #include "lexer.h"
 
+#ifdef LEXER_DEBUG
+#include "debug.h"
+#endif
+
 Lexer* create_lexer(const char* buffer) {
     Lexer* lexer = (Lexer*) malloc(sizeof(Lexer));
     lexer->current = buffer;
@@ -49,7 +53,7 @@ static Token create_token(Lexer* lexer, TokenType type) {
     token.type = type;
 #ifdef LEXER_DEBUG
     printf("[LEXER DEBUG]: Readed ");
-    print_token(token);
+    token_print(token);
 #endif
     return token;
 }

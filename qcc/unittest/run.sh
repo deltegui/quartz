@@ -1,3 +1,5 @@
+#!/bin/sh
+
 if [ "$1" = "--help" ]; then
     echo "Use -ed to enable debug"
     exit 0

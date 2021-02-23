@@ -35,6 +35,4 @@ void valuearray_init(ValueArray* values);
 void valuearray_free(ValueArray* values);
 uint8_t valuearray_write(ValueArray* values, Value value);
 
-void valuearray_print(ValueArray* values);
-
 #endif

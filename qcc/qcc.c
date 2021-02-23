@@ -2,9 +2,12 @@
 #include "sysexits.h"
 #include "lexer.h"
 #include "parser.h"
-#include "astprint.h"
 #include "compiler.h"
 #include "vm.h"
+
+#ifdef DEBUG
+#include "debug.h"
+#endif
 
 // Reads a file from "source_name" and returns a string with
 // the contents of the file. The ownership of that string is
@@ -38,17 +41,19 @@ int main(int argc, char** argv) {
         return EX_USAGE;
     }
     const char* source = read_file(argv[1]);
+
+#ifdef DEBUG
     printf("Readed buffer:\n%s\n", source);
+#endif
+
     if (source == NULL) {
         return EX_OSFILE;
     }
     Parser* parser = create_parser(source);
     Expr* ast = parse(parser);
     if (!parser->has_error) {
-        ast_print(ast);
         init_compiler();
         Chunk* chunk = compile(ast);
-        chunk_print(chunk);
         vm_execute(chunk);
         free_compiler();
     }

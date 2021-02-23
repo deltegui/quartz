@@ -9,6 +9,7 @@
 #ifdef DEBUG
 #define LEXER_DEBUG
 #define PARSER_DEBUG
+#define COMPILER_DEBUG
 #endif
 
 #endif

@@ -1,7 +1,6 @@
 ﻿#include "common.h"
 #include "sysexits.h"
-#include "lexer.h"
-#include "parser.h"
+#include "chunk.h"
 #include "compiler.h"
 #include "vm.h"
 
@@ -49,16 +48,11 @@ int main(int argc, char** argv) {
     if (source == NULL) {
         return EX_OSFILE;
     }
-    Parser* parser = create_parser(source);
-    Expr* ast = parse(parser);
-    if (!parser->has_error) {
-        init_compiler();
-        Chunk* chunk = compile(ast);
-        vm_execute(chunk);
-        free_compiler();
-    }
-    free_parser(parser);
-    expr_free(ast);
+    Chunk chunk;
+    chunk_init(&chunk);
+    compile(source, &chunk);
+    vm_execute(&chunk);
+    chunk_free(&chunk);
     free((char*) source);
     return 0;
 }

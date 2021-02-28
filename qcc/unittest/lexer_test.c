@@ -6,31 +6,26 @@
 #define ASSERT_TOKEN_TYPE(tkn, t) assert_true(tkn.type == t)
 
 static void assert_types(const char* source, int size, ...) {
-    Lexer* lexer = create_lexer(source);
-    if (lexer == NULL) {
-        fail_msg("Lexer is null");
-    }
+    Lexer lexer;
+    init_lexer(&lexer, source);
     va_list tokens;
     va_start(tokens, size);
     for (int i = 0; i < size; i++) {
-        Token current = next_token(lexer);
+        Token current = next_token(&lexer);
         ASSERT_TOKEN_TYPE(current, va_arg(tokens, TokenType));
     }
-    Token end = next_token(lexer);
+    Token end = next_token(&lexer);
     ASSERT_TOKEN_TYPE(end, TOKEN_END);
-    free_lexer(lexer);
     va_end(tokens);
 }
 
 static void assert_tokens(const char* source, int size, ...) {
-    Lexer* lexer = create_lexer(source);
-    if (lexer == NULL) {
-        fail_msg("Lexer is null");
-    }
+    Lexer lexer;
+    init_lexer(&lexer, source);
     va_list tokens;
     va_start(tokens, size);
     for (int i = 0; i < size; i++) {
-        Token current = next_token(lexer);
+        Token current = next_token(&lexer);
         Token expected = va_arg(tokens, Token);
         assert_true(current.type == expected.type);
         assert_true(current.line == expected.line);
@@ -40,9 +35,8 @@ static void assert_tokens(const char* source, int size, ...) {
         sprintf(actual, "%.*s", current.length, current.start);
         assert_string_equal(actual, expected.start);
     }
-    Token end = next_token(lexer);
+    Token end = next_token(&lexer);
     ASSERT_TOKEN_TYPE(end, TOKEN_END);
-    free_lexer(lexer);
     va_end(tokens);
 }
 

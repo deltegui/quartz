@@ -4,16 +4,10 @@
 #include "debug.h"
 #endif
 
-Lexer* create_lexer(const char* buffer) {
-    Lexer* lexer = (Lexer*) malloc(sizeof(Lexer));
+void init_lexer(Lexer* lexer, const char* buffer) {
     lexer->current = buffer;
     lexer->start = buffer;
     lexer->line = 1;
-    return lexer;
-}
-
-void free_lexer(Lexer* lexer) {
-    free(lexer);
 }
 
 static bool is_at_end(Lexer* lexer) {

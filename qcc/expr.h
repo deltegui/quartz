@@ -29,8 +29,8 @@ typedef struct _Expr {
 } Expr;
 
 typedef struct {
-    void (*visit_binary)(BinaryExpr* binary);
-    void (*visit_literal)(LiteralExpr* literal);
+    void (*visit_binary)(void* ctx, BinaryExpr* binary);
+    void (*visit_literal)(void* ctx, LiteralExpr* literal);
 } ExprVisitor;
 
 #define IS_BINARY(expr) (expr.type == EXPR_BINARY)
@@ -41,6 +41,6 @@ typedef struct {
 
 Expr* expr_create(ExprType type, void* expr_node);
 void expr_free(Expr* expr);
-void expr_dispatch(ExprVisitor* visitor, Expr* expr);
+void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr);
 
 #endif

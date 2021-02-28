@@ -36,15 +36,12 @@ typedef struct {
     int line;
 } Lexer;
 
-// Creates a new Lexer struct in the heap, using
+// Initialize a exiting lexer using
 // the source file buffer. Notice that Tokens
 // returned by next_token function will use
 // that buffer, so dont free it until all tokens
 // are deleted too.
-Lexer* create_lexer(const char* buffer);
-
-// Free a lexer and its internal references.
-void free_lexer(Lexer* lexer);
+void init_lexer(Lexer* lexer, const char* buffer);
 
 // Get next token from a lexer. If a TOKEN_ERROR is returned
 // it means was an error. If a TOKEN_END is returned you have

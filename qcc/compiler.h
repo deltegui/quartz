@@ -2,10 +2,14 @@
 #define QUARTZ_COMPILER_H
 
 #include "chunk.h"
+#include "parser.h"
 #include "expr.h"
 
-void init_compiler();
-void free_compiler();
-Chunk* compile(Expr* ast);
+typedef struct {
+    Parser parser;
+    Chunk* chunk;
+} Compiler;
+
+void compile(const char* source, Chunk* output_chunk);
 
 #endif

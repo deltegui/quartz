@@ -80,18 +80,11 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     return left;
 }
 
-Parser* create_parser(const char* source) {
-    Parser* parser = (Parser*) malloc(sizeof(Parser));
+void init_parser(Parser* parser, const char* source) {
     parser->current.type = -1;
     parser->next. type = -1;
-    parser->lexer = create_lexer(source);
+    init_lexer(&parser->lexer, source);
     parser->has_error = false;
-    return parser;
-}
-
-void free_parser(Parser* parser) {
-    free_lexer(parser->lexer);
-    free(parser);
 }
 
 static void error(Parser* parser, const char* message) {
@@ -121,7 +114,7 @@ static void advance(Parser* parser) {
         return;
     }
     parser->current = parser->next;
-    parser->next = next_token(parser->lexer);
+    parser->next = next_token(&parser->lexer);
 }
 
 static bool consume(Parser* parser, TokenType expected, const char* message) {

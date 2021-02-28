@@ -101,15 +101,15 @@ void token_print(Token token) {
 
 static void print_offset();
 static void pretty_print(const char *msg, ...);
-static void print_binary(BinaryExpr* binary);
-static void print_literal(LiteralExpr *literal);
+static void print_binary(void* ctx, BinaryExpr* binary);
+static void print_literal(void* ctx, LiteralExpr *literal);
 
 ExprVisitor printer_visitor = (ExprVisitor){
     .visit_literal = print_literal,
     .visit_binary = print_binary,
 };
 
-#define ACCEPT(expr) expr_dispatch(&printer_visitor, expr)
+#define ACCEPT(expr) expr_dispatch(&printer_visitor, NULL, expr)
 
 int offset = 0;
 
@@ -131,7 +131,7 @@ static void pretty_print(const char *msg, ...) {
     printf("%s", msg);
 }
 
-static void print_binary(BinaryExpr* binary) {
+static void print_binary(void* ctx, BinaryExpr* binary) {
     pretty_print("Bianary: [\n");
     OFFSET({
         pretty_print("Left:\n");
@@ -150,7 +150,7 @@ static void print_binary(BinaryExpr* binary) {
     pretty_print("]\n");
 }
 
-static void print_literal(LiteralExpr *literal) {
+static void print_literal(void* ctx, LiteralExpr *literal) {
     pretty_print("Literal: [\n");
     OFFSET({
         pretty_print("Value: ");

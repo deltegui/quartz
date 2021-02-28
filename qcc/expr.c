@@ -37,11 +37,13 @@ void expr_free(Expr* expr) {
 // a property from expr, is a parameter of the macro. So the call
 // DISPATCH(visit_literal, literal) is accessing to the literal
 // property of the union in Expr struct.
-void expr_dispatch(ExprVisitor* visitor, Expr* expr) {
+// The void* ctx is a struct that have information needed to handle
+// the expression.
+void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     if (expr == NULL) {
         return;
     }
-#define DISPATCH(fn_visitor, node_type) visitor->fn_visitor(&expr->node_type)
+#define DISPATCH(fn_visitor, node_type) visitor->fn_visitor(ctx, &expr->node_type)
     switch (expr->type) {
     case EXPR_LITERAL: DISPATCH(visit_literal, literal); break;
     case EXPR_BINARY: DISPATCH(visit_binary, binary); break;

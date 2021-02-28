@@ -5,10 +5,10 @@
 #include "../expr.h"
 
 static inline void assert_has_errors(const char* source) {
-    Parser* parser = create_parser(source);
-    parse(parser);
-    assert_true(parser->has_error);
-    free_parser(parser);
+    Parser parser;
+    init_parser(&parser, source);
+    parse(&parser);
+    assert_true(parser.has_error);
 }
 
 static void assert_expr_equals(Expr* first, Expr* second) {
@@ -34,10 +34,10 @@ static void compare_asts(Expr* first, Expr* second) {
 }
 
 static void assert_ast(const char* source, Expr* expected_ast) {
-    Parser* parser = create_parser(source);
-    Expr* result = parse(parser);
+    Parser parser;
+    init_parser(&parser, source);
+    Expr* result = parse(&parser);
     compare_asts(result, expected_ast);
-    free_parser(parser);
 }
 
 LiteralExpr two = (LiteralExpr){

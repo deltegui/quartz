@@ -6,14 +6,13 @@
 #include "expr.h"
 
 typedef struct {
-    Lexer* lexer;
+    Lexer lexer;
     Token current;
     Token next;
     bool has_error;
 } Parser;
 
-Parser* create_parser(const char* source);
-void free_parser(Parser* parser);
+void init_parser(Parser* parser, const char* source);
 Expr* parse(Parser* parser);
 
 #endif

@@ -23,19 +23,22 @@ void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
     compiler->chunk = output;
 }
 
-void compile(const char* source, Chunk* output_chunk) {
+bool compile(const char* source, Chunk* output_chunk) {
     Compiler compiler;
     init_compiler(&compiler, source, output_chunk);
     Expr* ast = parse(&compiler.parser);
-    if (!compiler.parser.has_error) {
-        ACCEPT(&compiler, ast);
-        emit(&compiler, OP_RETURN, -1);
-#ifdef COMPILER_DEBUG
-        valuearray_print(&compiler.chunk->constants);
-        chunk_print(&compiler.chunk);
-#endif
+    if (compiler.parser.has_error) {
+        expr_free(ast);
+        return false;
     }
+    ACCEPT(&compiler, ast);
+    emit(&compiler, OP_RETURN, -1);
+#ifdef COMPILER_DEBUG
+    valuearray_print(&compiler.chunk->constants);
+    chunk_print(compiler.chunk);
+#endif
     expr_free(ast);
+    return true;
 }
 
 static void emit(Compiler* compiler, uint8_t bytecode, int line) {
@@ -45,8 +48,6 @@ static void emit(Compiler* compiler, uint8_t bytecode, int line) {
 static void compile_literal(void* ctx, LiteralExpr* literal) {
     Compiler* compiler = (Compiler*) ctx;
     Value value;
-    // @todo Change literal prop in LiteralExpr to token.
-    /*
     switch(literal->literal.type) {
     case TOKEN_INTEGER: {
         int i = (int) strtol(literal->literal.start, NULL, 10);
@@ -64,9 +65,6 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         fprintf(stderr, "Compile error: expected integer or float\n");
         exit(1);
     }
-    */
-    double d = (double) strtod(literal->literal.start, NULL);
-    value = FLOAT_VALUE(d);
     emit(compiler, OP_CONSTANT, literal->literal.line);
     uint8_t value_pos = valuearray_write(&compiler->chunk->constants, value);
     emit(compiler, value_pos, literal->literal.line);

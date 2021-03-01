@@ -34,12 +34,8 @@ const char* read_file(const char* source_name) {
     return buffer;
 }
 
-int main(int argc, char** argv) {
-    if (argc <= 1) {
-        fprintf(stderr, "You should pass the file to compile!");
-        return EX_USAGE;
-    }
-    const char* source = read_file(argv[1]);
+int compile_file(const char* file) {
+    const char* source = read_file(file);
 
 #ifdef DEBUG
     printf("Readed buffer:\n%s\n", source);
@@ -49,10 +45,39 @@ int main(int argc, char** argv) {
         return EX_OSFILE;
     }
     Chunk chunk;
-    chunk_init(&chunk);
-    compile(source, &chunk);
-    vm_execute(&chunk);
-    chunk_free(&chunk);
+    init_chunk(&chunk);
+    if (compile(source, &chunk)) {
+        vm_execute(&chunk);
+    }
+    free_chunk(&chunk);
     free((char*) source);
     return 0;
+}
+
+void repl() {
+#define BUFFER_SIZE 256
+    char input_buffer[BUFFER_SIZE];
+    Chunk chunk;
+    for (;;) {
+        init_chunk(&chunk);
+        printf("<qz> ");
+        if (!fgets(input_buffer, BUFFER_SIZE, stdin)) {
+            fprintf(stderr, "Error while reading from stdin!\n");
+            free_chunk(&chunk);
+            exit(EX_IOERR);
+        }
+        if (compile(input_buffer, &chunk)) {
+            vm_execute(&chunk);
+        }
+        free_chunk(&chunk);
+    }
+#undef BUFFER_SIZE
+}
+
+
+int main(int argc, char** argv) {
+    if (argc <= 1) {
+        repl();
+    }
+    return compile_file(argv[1]);
 }

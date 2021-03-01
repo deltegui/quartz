@@ -14,11 +14,113 @@ static inline Value stack_pop() {
     return *(--stack_top);
 }
 
-#define BINARY_OP(op) do {\
-    double b = AS_FLOAT(stack_pop());\
-    double a = AS_FLOAT(stack_pop());\
-    stack_push(FLOAT_VALUE(a op b));\
-} while(false)
+// OMG i really like this shitty part
+static inline void sum_op() {
+    Value b = stack_pop();
+    Value a = stack_pop();
+    if (IS_FLOAT(a) && IS_FLOAT(b)) {
+        double dB = AS_FLOAT(b);
+        double dA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(dA + dB));
+    }
+    if (IS_INTEGER(a) && IS_INTEGER(b)) {
+        int iB = AS_INTEGER(b);
+        int iA = AS_INTEGER(a);
+        stack_push(INTEGER_VALUE(iA + iB));
+    }
+    if (IS_FLOAT(a) && IS_INTEGER(b)) {
+        int iB = AS_INTEGER(b);
+        double iA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(iA + iB));
+    }
+    if (IS_INTEGER(a) && IS_FLOAT(b)) {
+        double iB = AS_FLOAT(b);
+        int iA = AS_INTEGER(a);
+        stack_push(FLOAT_VALUE(iA + iB));
+    }
+}
+
+static inline void sub_op() {
+    Value b = stack_pop();
+    Value a = stack_pop();
+    if (IS_FLOAT(a) && IS_FLOAT(b)) {
+        double dB = AS_FLOAT(b);
+        double dA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(dA - dB));
+    }
+    if (IS_INTEGER(a) && IS_INTEGER(b)) {
+        int iB = AS_INTEGER(b);
+        int iA = AS_INTEGER(a);
+        stack_push(INTEGER_VALUE(iA - iB));
+    }
+    if (IS_FLOAT(a) && IS_INTEGER(b)) {
+        int iB = AS_INTEGER(b);
+        double iA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(iA - iB));
+    }
+    if (IS_INTEGER(a) && IS_FLOAT(b)) {
+        double iB = AS_FLOAT(b);
+        int iA = AS_INTEGER(a);
+        stack_push(FLOAT_VALUE(iA - iB));
+    }
+}
+
+static inline void mul_op() {
+    Value b = stack_pop();
+    Value a = stack_pop();
+    if (IS_FLOAT(a) && IS_FLOAT(b)) {
+        double dB = AS_FLOAT(b);
+        double dA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(dA * dB));
+    }
+    if (IS_INTEGER(a) && IS_INTEGER(b)) {
+        int iB = AS_INTEGER(b);
+        int iA = AS_INTEGER(a);
+        stack_push(INTEGER_VALUE(iA * iB));
+    }
+    if (IS_FLOAT(a) && IS_INTEGER(b)) {
+        int iB = AS_INTEGER(b);
+        double iA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(iA * iB));
+    }
+    if (IS_INTEGER(a) && IS_FLOAT(b)) {
+        double iB = AS_FLOAT(b);
+        int iA = AS_INTEGER(a);
+        stack_push(FLOAT_VALUE(iA * iB));
+    }
+}
+
+static inline void div_op() {
+    Value b = stack_pop();
+    Value a = stack_pop();
+    if (IS_FLOAT(a) && IS_FLOAT(b)) {
+        double dB = AS_FLOAT(b);
+        double dA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(dA / dB));
+    }
+    if (IS_INTEGER(a) && IS_INTEGER(b)) {
+        double dB = (double) AS_INTEGER(b);
+        double dA = (double) AS_INTEGER(a);
+        stack_push(FLOAT_VALUE(dA / dB));
+    }
+    if (IS_FLOAT(a) && IS_INTEGER(b)) {
+        double dB = AS_INTEGER(b);
+        double dA = AS_FLOAT(a);
+        stack_push(FLOAT_VALUE(dA / dB));
+    }
+    if (IS_INTEGER(a) && IS_FLOAT(b)) {
+        double dB = AS_FLOAT(b);
+        double dA = AS_INTEGER(a);
+        stack_push(FLOAT_VALUE(dA / dB));
+    }
+}
+
+static void value_print(Value val) {
+    switch (val.type) {
+    case VALUE_INTEGER: printf("%d\n", AS_INTEGER(val)); break;
+    case VALUE_FLOAT: printf("%f\n", AS_FLOAT(val)); break;
+    }
+}
 
 void vm_execute(Chunk* chunk) {
     stack_top = stack;
@@ -27,19 +129,19 @@ void vm_execute(Chunk* chunk) {
     for (;;) {
         switch (READ_BYTE()) {
         case OP_ADD: {
-            BINARY_OP(+);
+            sum_op();
             break;
         }
         case OP_SUB: {
-            BINARY_OP(-);
+            sub_op();
             break;
         }
         case OP_MUL: {
-            BINARY_OP(*);
+            mul_op();
             break;
         }
         case OP_DIV: {
-            BINARY_OP(/);
+            div_op();
             break;
         }
         case OP_CONSTANT: {
@@ -49,8 +151,7 @@ void vm_execute(Chunk* chunk) {
             break;
         }
         case OP_RETURN: {
-            double result = AS_FLOAT(stack_pop());
-            printf("%f\n", result);
+            value_print(stack_pop());
             return;
         }
         }

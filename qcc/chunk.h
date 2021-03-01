@@ -21,8 +21,8 @@ typedef struct {
     ValueArray constants;
 } Chunk;
 
-void chunk_init(Chunk* chunk);
-void chunk_free(Chunk* chunk);
+void init_chunk(Chunk* chunk);
+void free_chunk(Chunk* chunk);
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
 
 #endif

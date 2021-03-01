@@ -3,7 +3,7 @@
 // must be managed using memory.h
 #include "memory.h"
 
-void chunk_init(Chunk* chunk) {
+void init_chunk(Chunk* chunk) {
     chunk->size = 0;
     chunk->capacity = 0;
     chunk->code = NULL;
@@ -11,7 +11,7 @@ void chunk_init(Chunk* chunk) {
     valuearray_init(&chunk->constants);
 }
 
-void chunk_free(Chunk* chunk) {
+void free_chunk(Chunk* chunk) {
     if (chunk->code != NULL) {
         FREE(uint8_t, chunk->code);
     }

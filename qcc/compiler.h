@@ -8,8 +8,9 @@
 typedef struct {
     Parser parser;
     Chunk* chunk;
+    bool has_error;
 } Compiler;
 
-void compile(const char* source, Chunk* output_chunk);
+bool compile(const char* source, Chunk* output_chunk);
 
 #endif

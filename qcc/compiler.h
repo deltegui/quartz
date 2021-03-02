@@ -11,6 +11,9 @@ typedef struct {
     bool has_error;
 } Compiler;
 
+// Compile a source a let the result into a already created
+// chunk. compile can return true or false. true means it was
+// able to compile the source. false means there was an error.
 bool compile(const char* source, Chunk* output_chunk);
 
 #endif

@@ -130,6 +130,6 @@ Token next_token(Lexer* lexer) {
     case '(': return create_token(lexer, TOKEN_LEFT_PAREN);
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '.': return create_token(lexer, TOKEN_DOT);
-    default: return create_token(lexer, TOKEN_ERROR);
+    default: return create_error(lexer, "Unkown character");
     }
 }

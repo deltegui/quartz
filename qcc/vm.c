@@ -14,105 +14,65 @@ static inline Value stack_pop() {
     return *(--stack_top);
 }
 
-// OMG i really like this shitty part
+// Well, i know macros should't be used
+// to define large pieces of code, but
+// this is the only way to generate the
+// same code to some binary operations
+// based only the operation itself.
+#define BINARY_OP(op) do {\
+    Value b = stack_pop();\
+    Value a = stack_pop();\
+    if (IS_FLOAT(a) && IS_FLOAT(b)) {\
+        double dB = AS_FLOAT(b);\
+        double dA = AS_FLOAT(a);\
+        stack_push(FLOAT_VALUE(dA op dB));\
+    }\
+    if (IS_INTEGER(a) && IS_INTEGER(b)) {\
+        int iB = AS_INTEGER(b);\
+        int iA = AS_INTEGER(a);\
+        stack_push(INTEGER_VALUE(iA op iB));\
+    }\
+    if (IS_FLOAT(a) && IS_INTEGER(b)) {\
+        int iB = AS_INTEGER(b);\
+        double iA = AS_FLOAT(a);\
+        stack_push(FLOAT_VALUE(iA op iB));\
+    }\
+    if (IS_INTEGER(a) && IS_FLOAT(b)) {\
+        double iB = AS_FLOAT(b);\
+        int iA = AS_INTEGER(a);\
+        stack_push(FLOAT_VALUE(iA op iB));\
+    }\
+} while (false)
+
 static inline void sum_op() {
-    Value b = stack_pop();
-    Value a = stack_pop();
-    if (IS_FLOAT(a) && IS_FLOAT(b)) {
-        double dB = AS_FLOAT(b);
-        double dA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(dA + dB));
-    }
-    if (IS_INTEGER(a) && IS_INTEGER(b)) {
-        int iB = AS_INTEGER(b);
-        int iA = AS_INTEGER(a);
-        stack_push(INTEGER_VALUE(iA + iB));
-    }
-    if (IS_FLOAT(a) && IS_INTEGER(b)) {
-        int iB = AS_INTEGER(b);
-        double iA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(iA + iB));
-    }
-    if (IS_INTEGER(a) && IS_FLOAT(b)) {
-        double iB = AS_FLOAT(b);
-        int iA = AS_INTEGER(a);
-        stack_push(FLOAT_VALUE(iA + iB));
-    }
+    BINARY_OP(+);
 }
 
 static inline void sub_op() {
-    Value b = stack_pop();
-    Value a = stack_pop();
-    if (IS_FLOAT(a) && IS_FLOAT(b)) {
-        double dB = AS_FLOAT(b);
-        double dA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(dA - dB));
-    }
-    if (IS_INTEGER(a) && IS_INTEGER(b)) {
-        int iB = AS_INTEGER(b);
-        int iA = AS_INTEGER(a);
-        stack_push(INTEGER_VALUE(iA - iB));
-    }
-    if (IS_FLOAT(a) && IS_INTEGER(b)) {
-        int iB = AS_INTEGER(b);
-        double iA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(iA - iB));
-    }
-    if (IS_INTEGER(a) && IS_FLOAT(b)) {
-        double iB = AS_FLOAT(b);
-        int iA = AS_INTEGER(a);
-        stack_push(FLOAT_VALUE(iA - iB));
-    }
+    BINARY_OP(-);
 }
 
 static inline void mul_op() {
-    Value b = stack_pop();
-    Value a = stack_pop();
-    if (IS_FLOAT(a) && IS_FLOAT(b)) {
-        double dB = AS_FLOAT(b);
-        double dA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(dA * dB));
-    }
-    if (IS_INTEGER(a) && IS_INTEGER(b)) {
-        int iB = AS_INTEGER(b);
-        int iA = AS_INTEGER(a);
-        stack_push(INTEGER_VALUE(iA * iB));
-    }
-    if (IS_FLOAT(a) && IS_INTEGER(b)) {
-        int iB = AS_INTEGER(b);
-        double iA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(iA * iB));
-    }
-    if (IS_INTEGER(a) && IS_FLOAT(b)) {
-        double iB = AS_FLOAT(b);
-        int iA = AS_INTEGER(a);
-        stack_push(FLOAT_VALUE(iA * iB));
-    }
+    BINARY_OP(*);
 }
 
+static inline double to_double(Value value) {
+    if (IS_FLOAT(value)) {
+        return AS_FLOAT(value);
+    }
+    return (double) AS_INTEGER(value);
+}
+
+// Div operation is special. The two
+// arguments of a div operation must
+// be casted to double and should obtain
+// a double.
 static inline void div_op() {
     Value b = stack_pop();
     Value a = stack_pop();
-    if (IS_FLOAT(a) && IS_FLOAT(b)) {
-        double dB = AS_FLOAT(b);
-        double dA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(dA / dB));
-    }
-    if (IS_INTEGER(a) && IS_INTEGER(b)) {
-        double dB = (double) AS_INTEGER(b);
-        double dA = (double) AS_INTEGER(a);
-        stack_push(FLOAT_VALUE(dA / dB));
-    }
-    if (IS_FLOAT(a) && IS_INTEGER(b)) {
-        double dB = AS_INTEGER(b);
-        double dA = AS_FLOAT(a);
-        stack_push(FLOAT_VALUE(dA / dB));
-    }
-    if (IS_INTEGER(a) && IS_FLOAT(b)) {
-        double dB = AS_FLOAT(b);
-        double dA = AS_INTEGER(a);
-        stack_push(FLOAT_VALUE(dA / dB));
-    }
+    double dB = to_double(b);
+    double dA = to_double(a);
+    stack_push(FLOAT_VALUE(dA / dB));
 }
 
 static void value_print(Value val) {

@@ -5,23 +5,6 @@
 #include "debug.h"
 #endif
 
-Parser* create_parser(const char* source);
-void free_parser(Parser* parser);
-
-static void error(Parser* parser, const char* message);
-static void error_next(Parser* parser, const char* message);
-static void error_at(Parser* parser, Token* token, const char* message);
-
-static void advance(Parser* parser);
-static bool consume(Parser* parser, TokenType expected, const char* msg);
-
-Expr* parse(Parser* parser);
-
-static Expr* expression(Parser* parser);
-static Expr* binary(Parser* parser, Expr* left);
-static Expr* grouping(Parser* parser);
-static Expr* primary(Parser* parser);
-
 typedef enum {
     PREC_NONE,
     PREC_ASSIGNMENT,  // =
@@ -44,6 +27,21 @@ typedef struct {
     SuffixParse infix;
     Precedence precedence;
 } ParseRule;
+
+static void error(Parser* parser, const char* message);
+static void error_next(Parser* parser, const char* message);
+static void error_at(Parser* parser, Token* token, const char* message);
+
+static void advance(Parser* parser);
+static bool consume(Parser* parser, TokenType expected, const char* msg);
+
+static ParseRule* get_rule(TokenType type);
+static Expr* parse_precendence(Parser* parser, Precedence precedence);
+
+static Expr* expression(Parser* parser);
+static Expr* binary(Parser* parser, Expr* left);
+static Expr* grouping(Parser* parser);
+static Expr* primary(Parser* parser);
 
 ParseRule rules[] = {
     [TOKEN_END]         = {NULL,        NULL,   PREC_NONE},
@@ -132,7 +130,11 @@ Expr* parse(Parser* parser) {
 #endif
 
     advance(parser);
-    if (parser->next.type == TOKEN_END || parser->next.type == TOKEN_ERROR) {
+    if (parser->next.type == TOKEN_ERROR) {
+        parser->has_error = true; // propagate lexer error to the consumer.
+        return NULL;
+    }
+    if (parser->next.type == TOKEN_END) {
         return NULL;
     }
     Expr* ast = expression(parser);

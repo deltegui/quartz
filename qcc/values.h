@@ -31,8 +31,8 @@ typedef struct {
     Value* values;
 } ValueArray;
 
-void valuearray_init(ValueArray* values);
-void valuearray_free(ValueArray* values);
+void init_valuearray(ValueArray* values);
+void free_valuearray(ValueArray* values);
 uint8_t valuearray_write(ValueArray* values, Value value);
 
 #endif

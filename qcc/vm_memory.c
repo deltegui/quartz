@@ -1,4 +1,4 @@
-#include "memory.h"
+#include "vm_memory.h"
 #include "common.h"
 
 void* qvm_realloc(void* ptr, size_t old_size, size_t size) {

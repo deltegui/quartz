@@ -36,11 +36,11 @@ typedef struct {
 #define IS_BINARY(expr) (expr.type == EXPR_BINARY)
 #define IS_LITERAL(expr) (expr.type == EXPR_LITERAL)
 
-#define CREATE_BINARY_EXPR(binary) expr_create(EXPR_BINARY, &binary)
-#define CREATE_LITERAL_EXPR(literal) expr_create(EXPR_LITERAL, &literal)
+#define CREATE_BINARY_EXPR(binary) create_expr(EXPR_BINARY, &binary)
+#define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)
 
-Expr* expr_create(ExprType type, void* expr_node);
-void expr_free(Expr* expr);
+Expr* create_expr(ExprType type, void* expr_node);
+void free_expr(Expr* expr);
 void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr);
 
 #endif

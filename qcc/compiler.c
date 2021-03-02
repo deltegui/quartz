@@ -5,9 +5,12 @@
 #include "debug.h"
 #endif
 
+static void error(Compiler* compiler, const char* message, int line);
+
 static void emit(Compiler* compiler, uint8_t bytecode, int line);
 
 static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
+
 static void compile_literal(void* ctx, LiteralExpr* literal);
 static void compile_binary(void* ctx, BinaryExpr* binary);
 
@@ -18,9 +21,15 @@ ExprVisitor compiler_visitor = (ExprVisitor){
 
 #define ACCEPT(compiler, expr) expr_dispatch(&compiler_visitor, compiler, expr)
 
+static void error(Compiler* compiler, const char* message, int line) {
+    fprintf(stderr, "[Line %d] Compile error: %s\n", line, message);
+    compiler->has_error = true;
+}
+
 void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
     init_parser(&compiler->parser, source);
     compiler->chunk = output;
+    compiler->has_error = false;
 }
 
 bool compile(const char* source, Chunk* output_chunk) {
@@ -28,7 +37,7 @@ bool compile(const char* source, Chunk* output_chunk) {
     init_compiler(&compiler, source, output_chunk);
     Expr* ast = parse(&compiler.parser);
     if (compiler.parser.has_error) {
-        expr_free(ast);
+        free_expr(ast);
         return false;
     }
     ACCEPT(&compiler, ast);
@@ -37,8 +46,8 @@ bool compile(const char* source, Chunk* output_chunk) {
     valuearray_print(&compiler.chunk->constants);
     chunk_print(compiler.chunk);
 #endif
-    expr_free(ast);
-    return true;
+    free_expr(ast);
+    return !compiler.has_error;
 }
 
 static void emit(Compiler* compiler, uint8_t bytecode, int line) {
@@ -60,10 +69,8 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         break;
     }
     default:
-        // @todo THIS IS SHIT. REWRITE THIS GENERIC PART OF
-        // THE COMPILATION.
-        fprintf(stderr, "Compile error: expected integer or float\n");
-        exit(1);
+        error(compiler, "Incompatible type in binary expression", literal->literal.line);
+        return;
     }
     emit(compiler, OP_CONSTANT, literal->literal.line);
     uint8_t value_pos = valuearray_write(&compiler->chunk->constants, value);

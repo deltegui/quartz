@@ -1,6 +1,6 @@
 #include "expr.h"
 
-Expr* expr_create(ExprType type, void* expr_node) {
+Expr* create_expr(ExprType type, void* expr_node) {
     Expr* expr = (Expr*) malloc(sizeof(Expr));
     switch(type) {
     case EXPR_BINARY:
@@ -15,14 +15,19 @@ Expr* expr_create(ExprType type, void* expr_node) {
     return expr;
 }
 
-void expr_free(Expr* expr) {
+// Normally, an Expr* is a tree-like data
+// structure, so this function should
+// iterate over all nodes and free memory
+// for each one. A node pointer can be NULL
+// so we must protect ourselves from that.
+void free_expr(Expr* expr) {
     if (expr == NULL) {
         return;
     }
     switch(expr->type) {
     case EXPR_BINARY:
-        expr_free(expr->binary.left);
-        expr_free(expr->binary.right);
+        free_expr(expr->binary.left);
+        free_expr(expr->binary.right);
         break;
     case EXPR_LITERAL:
         // There is nothing to free

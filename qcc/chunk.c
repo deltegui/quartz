@@ -1,14 +1,14 @@
 #include "chunk.h"
 // Chunk is a runtime data structure, so its memory
-// must be managed using memory.h
-#include "memory.h"
+// must be managed using vm_memory.h
+#include "vm_memory.h"
 
 void init_chunk(Chunk* chunk) {
     chunk->size = 0;
     chunk->capacity = 0;
     chunk->code = NULL;
     chunk->lines = NULL;
-    valuearray_init(&chunk->constants);
+    init_valuearray(&chunk->constants);
 }
 
 void free_chunk(Chunk* chunk) {
@@ -20,7 +20,7 @@ void free_chunk(Chunk* chunk) {
     }
     chunk->size = 0;
     chunk->capacity = 0;
-    valuearray_free(&chunk->constants);
+    free_valuearray(&chunk->constants);
 }
 
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line) {

@@ -1,15 +1,15 @@
 #include "values.h"
 // ValueArray is a runtime data structure, so its memory
-// must be managed by memory.h
-#include "memory.h"
+// must be managed by vm_memory.h
+#include "vm_memory.h"
 
-void valuearray_init(ValueArray* arr) {
+void init_valuearray(ValueArray* arr) {
     arr->size = 0;
     arr->capacity = 0;
     arr->values = NULL;
 }
 
-void valuearray_free(ValueArray* arr) {
+void free_valuearray(ValueArray* arr) {
     if (arr->values == NULL) {
         return;
     }

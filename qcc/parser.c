@@ -39,9 +39,11 @@ static ParseRule* get_rule(TokenType type);
 static Expr* parse_precendence(Parser* parser, Precedence precedence);
 
 static Expr* expression(Parser* parser);
-static Expr* binary(Parser* parser, Expr* left);
 static Expr* grouping(Parser* parser);
 static Expr* primary(Parser* parser);
+static Expr* unary(Parser* parser);
+
+static Expr* binary(Parser* parser, Expr* left);
 
 ParseRule rules[] = {
     [TOKEN_END]         = {NULL,        NULL,   PREC_NONE},
@@ -53,9 +55,16 @@ ParseRule rules[] = {
     [TOKEN_SLASH]       = {NULL,        binary, PREC_FACTOR},
     [TOKEN_LEFT_PAREN]  = {grouping,    NULL,   PREC_NONE},
     [TOKEN_RIGHT_PAREN] = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_DOT]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_BANG]        = {unary,       NULL,   PREC_UNARY},
+
+    [TOKEN_AND]         = {NULL,        binary, PREC_AND},
+    [TOKEN_OR]          = {NULL,        binary, PREC_OR},
 
     [TOKEN_INTEGER]     = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_FLOAT]       = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_TRUE]        = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_FALSE]       = {primary,     NULL,   PREC_PRIMARY},
 };
 
 static ParseRule* get_rule(TokenType type) {
@@ -71,6 +80,12 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     }
     Expr* left = prefix_parser(parser);
     while (precedence <= get_rule(parser->next.type)->precedence) {
+        // Left can be NULL if there was an error.
+        // @warning this short-circuit parser execution. This must be avoided.
+        // @todo subsitute this with panic mode when statements are introduced.
+        if (left == NULL) {
+            break;
+        }
         advance(parser);
         SuffixParse infix_parser = get_rule(parser->current.type)->infix;
         left = infix_parser(parser, left);
@@ -159,6 +174,8 @@ static Expr* binary(Parser* parser, Expr* left) {
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_SLASH:
+    case TOKEN_AND:
+    case TOKEN_OR:
         break;
     default:
         error_next(parser, "Expected arithmetic operation");
@@ -210,6 +227,28 @@ static Expr* primary(Parser* parser) {
     printf("[PARSER DEBUG]: PRIMARY value ");
     token_print(parser->current);
     printf("[PARSER DEBUG]: end PRIMARY Expression\n");
+#endif
+    return expr;
+}
+
+static Expr* unary(Parser* parser) {
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: UNARY Expression\n");
+#endif
+
+    Token op = parser->current;
+    ParseRule* rule = get_rule(op.type);
+    Expr* inner = parse_precendence(parser, (Precedence)(rule->precedence + 1));
+    UnaryExpr unary = (UnaryExpr){
+        .op = op,
+        .expr = inner,
+    };
+    Expr* expr = CREATE_UNARY_EXPR(unary);
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: UNARY operator: ");
+    token_print(parser->current);
+    printf("[PARSER DEBUG]: end UNARY Expression\n");
 #endif
     return expr;
 }

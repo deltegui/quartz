@@ -13,10 +13,12 @@ static void init_compiler(Compiler* compiler, const char* source, Chunk* output)
 
 static void compile_literal(void* ctx, LiteralExpr* literal);
 static void compile_binary(void* ctx, BinaryExpr* binary);
+static void compile_unary(void* ctx, UnaryExpr* unary);
 
 ExprVisitor compiler_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
     .visit_binary = compile_binary,
+    .visit_unary = compile_unary,
 };
 
 #define ACCEPT(compiler, expr) expr_dispatch(&compiler_visitor, compiler, expr)
@@ -68,8 +70,16 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         value = FLOAT_VALUE(d);
         break;
     }
+    case TOKEN_TRUE: {
+        value = BOOL_VALUE(true);
+        break;
+    }
+    case TOKEN_FALSE: {
+        value = BOOL_VALUE(false);
+        break;
+    }
     default:
-        error(compiler, "Incompatible type in binary expression", literal->literal.line);
+        error(compiler, "Unkown literal expression", literal->literal.line);
         return;
     }
     emit(compiler, OP_CONSTANT, literal->literal.line);
@@ -93,13 +103,32 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_SLASH:
         op = OP_DIV;
         break;
+    case TOKEN_AND:
+        op = OP_AND;
+        break;
+    case TOKEN_OR:
+        op = OP_OR;
+        break;
     default:
-        // @todo THIS IS SHIT. REWRITE THIS GENERIC PART OF
-        // THE COMPILATION.
-        fprintf(stderr, "Compile error: expected binary operation\n");
-        exit(1);
+        error(compiler, "Unkown binary operator in expression", binary->op.line);
+        return;
     }
     ACCEPT(compiler, binary->left); // Compile left argument
     ACCEPT(compiler, binary->right); // Compile right argument
     emit(compiler, op, binary->op.line);
+}
+
+static void compile_unary(void* ctx, UnaryExpr* unary) {
+    Compiler* compiler = (Compiler*) ctx;
+    OpCode op;
+    switch(unary->op.type) {
+    case TOKEN_BANG:
+        op = OP_NOT;
+        break;
+    default:
+        error(compiler, "Unkown unary operator in expression", unary->op.line);
+        return;
+    }
+    ACCEPT(compiler, unary->expr);
+    emit(compiler, op, unary->op.line);
 }

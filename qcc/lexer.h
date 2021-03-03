@@ -17,10 +17,17 @@ typedef enum {
     TOKEN_LEFT_PAREN,
     TOKEN_RIGHT_PAREN,
     TOKEN_DOT,
+    TOKEN_BANG,
+
+    // Two character tokens
+    TOKEN_AND,
+    TOKEN_OR,
 
     // Multi-character tokens
     TOKEN_INTEGER,
     TOKEN_FLOAT,
+    TOKEN_TRUE,
+    TOKEN_FALSE
 } TokenType;
 
 typedef struct {

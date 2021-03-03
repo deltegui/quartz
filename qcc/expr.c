@@ -11,6 +11,10 @@ Expr* create_expr(ExprType type, void* expr_node) {
         expr->type = EXPR_LITERAL;
         expr->literal = *(LiteralExpr*)expr_node;
         break;
+    case EXPR_UNARY:
+        expr->type = EXPR_UNARY;
+        expr->unary = *(UnaryExpr*)expr_node;
+        break;
     }
     return expr;
 }
@@ -30,6 +34,7 @@ void free_expr(Expr* expr) {
         free_expr(expr->binary.right);
         break;
     case EXPR_LITERAL:
+    case EXPR_UNARY:
         // There is nothing to free
         break;
     }
@@ -52,6 +57,7 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     switch (expr->type) {
     case EXPR_LITERAL: DISPATCH(visit_literal, literal); break;
     case EXPR_BINARY: DISPATCH(visit_binary, binary); break;
+    case EXPR_UNARY: DISPATCH(visit_unary, unary); break;
     }
 #undef DISPATCH
 }

@@ -1,8 +1,36 @@
+#include "string.h"
 #include "lexer.h"
 
 #ifdef LEXER_DEBUG
 #include "debug.h"
 #endif
+
+static bool is_at_end(Lexer* lexer);
+static char peek(Lexer* lexer);
+static bool match(Lexer* lexer, char c);
+static bool match_next(Lexer* lexer, char next);
+static void advance(Lexer* lexer);
+static bool consume_if(Lexer* lexer, char expected);
+
+static Token create_token(Lexer* lexer, TokenType type);
+static Token create_error(Lexer* lexer, const char* message);
+
+static void skip_whitespaces(Lexer* lexer);
+static bool is_numeric(Lexer* lexer);
+static Token scan_number(Lexer* lexer);
+static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len);
+static Token scan_identifier(Lexer* lexer);
+Token next_token(Lexer* lexer);
+
+#define CONSUME_UNTIL(lexer, character) do {\
+    if (peek(lexer) == character) {\
+        break;\
+    }\
+    if (match_next(lexer, '\0')) {\
+        break;\
+    }\
+    advance(lexer);\
+} while (true)
 
 void init_lexer(Lexer* lexer, const char* buffer) {
     lexer->current = buffer;
@@ -39,6 +67,14 @@ static void advance(Lexer* lexer) {
     lexer->current++;
 }
 
+static bool consume_if(Lexer* lexer, char expected) {
+    if (match(lexer, expected)) {
+        advance(lexer);
+        return true;
+    }
+    return false;
+}
+
 static Token create_token(Lexer* lexer, TokenType type) {
     Token token;
     token.length = (int) (lexer->current - lexer->start);
@@ -59,10 +95,6 @@ static Token create_error(Lexer* lexer, const char* message) {
 }
 
 static void skip_whitespaces(Lexer* lexer) {
-#define CONSUME_UNTIL(character)\
-while(peek(lexer) != character && !is_at_end(lexer))\
-advance(lexer)
-
     for (;;) {
         switch (*lexer->current) {
         case '\n':
@@ -74,7 +106,7 @@ advance(lexer)
             break;
         case '/':
             if (match_next(lexer, '/')) {
-                CONSUME_UNTIL('\n');
+                CONSUME_UNTIL(lexer, '\n');
             } else {
                 return;
             }
@@ -83,8 +115,6 @@ advance(lexer)
             return;
         }
     }
-
-#undef CONSUME_UNITL
 }
 
 static bool is_numeric(Lexer* lexer) {
@@ -112,6 +142,34 @@ static Token scan_number(Lexer* lexer) {
     return create_token(lexer, TOKEN_FLOAT);
 }
 
+static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len) {
+#define START_OVERFLOWS lexer->start + start > lexer->current
+#define END_OVERFLOWS lexer->start + len > lexer->current
+    if (START_OVERFLOWS || END_OVERFLOWS) {
+        return false;
+    }
+    return memcmp(lexer->start + start, subpart, len - start) == 0;
+#undef START_OVERFLOWS
+#undef END_OVERFLOWS
+}
+
+static Token scan_identifier(Lexer* lexer) {
+    CONSUME_UNTIL(lexer, ' ');
+    switch (*lexer->start) {
+    case 't': {
+        if (match_subtoken(lexer, "rue", 1, 4)) {
+            return create_token(lexer, TOKEN_TRUE);
+        }
+    }
+    case 'f': {
+        if (match_subtoken(lexer, "alse", 1, 5)) {
+            return create_token(lexer, TOKEN_FALSE);
+        }
+    }
+    }
+    return create_error(lexer, "Unkown identifier");
+}
+
 Token next_token(Lexer* lexer) {
     skip_whitespaces(lexer);
     if (is_at_end(lexer)) {
@@ -130,6 +188,17 @@ Token next_token(Lexer* lexer) {
     case '(': return create_token(lexer, TOKEN_LEFT_PAREN);
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '.': return create_token(lexer, TOKEN_DOT);
-    default: return create_error(lexer, "Unkown character");
+    case '!': return create_token(lexer, TOKEN_BANG);
+    case '&': {
+        if (consume_if(lexer, '&')) {
+            return create_token(lexer, TOKEN_AND);
+        }
+    }
+    case '|': {
+        if (consume_if(lexer, '|')) {
+            return create_token(lexer, TOKEN_OR);
+        }
+    }
+    default: return scan_identifier(lexer);
     }
 }

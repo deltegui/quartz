@@ -68,17 +68,34 @@ static inline double to_double(Value value) {
 // be casted to double and should obtain
 // a double.
 static inline void div_op() {
-    Value b = stack_pop();
-    Value a = stack_pop();
-    double dB = to_double(b);
-    double dA = to_double(a);
-    stack_push(FLOAT_VALUE(dA / dB));
+    double b = to_double(stack_pop());
+    double a = to_double(stack_pop());
+    stack_push(FLOAT_VALUE(a / b));
 }
 
+static inline void and_op() {
+    bool b = AS_BOOL(stack_pop());
+    bool a = AS_BOOL(stack_pop());
+    stack_push(BOOL_VALUE(a && b));
+}
+
+static inline void or_op() {
+    bool b = AS_BOOL(stack_pop());
+    bool a = AS_BOOL(stack_pop());
+    stack_push(BOOL_VALUE(a || b));
+}
+
+static inline void not_op() {
+    bool a = AS_BOOL(stack_pop());
+    stack_push(BOOL_VALUE(!a));
+}
+
+// @todo value print comes from debug.c. Fix this shitty thing.
 static void value_print(Value val) {
     switch (val.type) {
     case VALUE_INTEGER: printf("%d\n", AS_INTEGER(val)); break;
     case VALUE_FLOAT: printf("%f\n", AS_FLOAT(val)); break;
+    case VALUE_BOOL: printf("%s\n", AS_BOOL(val) ? "true" : "false"); break;
     }
 }
 
@@ -102,6 +119,18 @@ void vm_execute(Chunk* chunk) {
         }
         case OP_DIV: {
             div_op();
+            break;
+        }
+        case OP_AND: {
+            and_op();
+            break;
+        }
+        case OP_OR: {
+            or_op();
+            break;
+        }
+        case OP_NOT: {
+            not_op();
             break;
         }
         case OP_CONSTANT: {

@@ -5,6 +5,7 @@ static void value_print(Value val) {
     switch (val.type) {
     case VALUE_INTEGER: printf("%d", AS_INTEGER(val)); break;
     case VALUE_FLOAT: printf("%f", AS_FLOAT(val)); break;
+    case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
     }
 }
 
@@ -25,8 +26,11 @@ static const char* OpCodeStrings[] = {
     "OP_SUB",
     "OP_MUL",
     "OP_DIV",
+    "OP_NOT",
+    "OP_AND",
+    "OP_OR",
     "OP_CONSTANT",
-    "OP_RETURN",
+    "OP_RETURN"
 };
 
 static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
@@ -54,7 +58,10 @@ void chunk_print(Chunk* chunk) {
         case OP_SUB:
         case OP_MUL:
         case OP_DIV:
-        case OP_RETURN: {
+        case OP_RETURN:
+        case OP_NOT:
+        case OP_AND:
+        case OP_OR: {
             chunk_opcode_print(chunk, i++);
             break;
         }
@@ -83,8 +90,13 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_LEFT_PAREN: return "LeftParen";
     case TOKEN_RIGHT_PAREN: return "RightParen";
     case TOKEN_DOT: return "Dot";
+    case TOKEN_BANG: return "Bang";
+    case TOKEN_AND: return "And";
+    case TOKEN_OR: return "Or";
     case TOKEN_INTEGER: return "Integer";
     case TOKEN_FLOAT: return "Float";
+    case TOKEN_TRUE: return "True";
+    case TOKEN_FALSE: return "False";
     default: return "Unknown";
     }
 }
@@ -102,11 +114,13 @@ void token_print(Token token) {
 static void print_offset();
 static void pretty_print(const char *msg, ...);
 static void print_binary(void* ctx, BinaryExpr* binary);
+static void print_unary(void* ctx, UnaryExpr* unary);
 static void print_literal(void* ctx, LiteralExpr *literal);
 
 ExprVisitor printer_visitor = (ExprVisitor){
     .visit_literal = print_literal,
     .visit_binary = print_binary,
+    .visit_unary = print_unary,
 };
 
 #define ACCEPT(expr) expr_dispatch(&printer_visitor, NULL, expr)
@@ -155,6 +169,19 @@ static void print_literal(void* ctx, LiteralExpr *literal) {
     OFFSET({
         pretty_print("Value: ");
         token_print(literal->literal);
+    });
+    pretty_print("]\n");
+}
+
+static void print_unary(void* ctx, UnaryExpr* unary) {
+    pretty_print("Unary: [\n");
+    OFFSET({
+        pretty_print("Op: ");
+        token_print(unary->op);
+        pretty_print("Expr: \n");
+        OFFSET({
+            ACCEPT(unary->expr);
+        });
     });
     pretty_print("]\n");
 }

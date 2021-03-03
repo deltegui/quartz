@@ -14,5 +14,7 @@ void chunk_print(Chunk* chunk);
 void token_print(Token token);
 void valuearray_print(ValueArray* values);
 void ast_print(Expr* ast);
+void stack_print(Value* stack_top, Value* stack);
+void opcode_print(uint8_t op);
 
 #endif

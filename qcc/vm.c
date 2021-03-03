@@ -1,6 +1,10 @@
 #include "vm.h"
 #include "values.h"
 
+#ifdef VM_DEBUG
+#include "debug.h"
+#endif
+
 #define STACK_MAX 256
 
 Value stack[STACK_MAX];
@@ -93,17 +97,24 @@ static inline void not_op() {
 // @todo value print comes from debug.c. Fix this shitty thing.
 static void value_print(Value val) {
     switch (val.type) {
-    case VALUE_INTEGER: printf("%d\n", AS_INTEGER(val)); break;
-    case VALUE_FLOAT: printf("%f\n", AS_FLOAT(val)); break;
-    case VALUE_BOOL: printf("%s\n", AS_BOOL(val) ? "true" : "false"); break;
+    case VALUE_INTEGER: printf("%d", AS_INTEGER(val)); break;
+    case VALUE_FLOAT: printf("%f", AS_FLOAT(val)); break;
+    case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
     }
 }
 
 void vm_execute(Chunk* chunk) {
+#ifdef VM_DEBUG
+    printf("--------[ EXECUTION ]--------\n\n");
+#endif
+
     stack_top = stack;
     uint8_t* pc = chunk->code;
 #define READ_BYTE() *(pc++)
     for (;;) {
+#ifdef VM_DEBUG
+        opcode_print(*pc);
+#endif
         switch (READ_BYTE()) {
         case OP_ADD: {
             sum_op();
@@ -141,9 +152,14 @@ void vm_execute(Chunk* chunk) {
         }
         case OP_RETURN: {
             value_print(stack_pop());
+            printf("\n");
             return;
         }
         }
+#ifdef VM_DEBUG
+        stack_print(stack_top, stack);
+        printf("\n\n");
+#endif
     }
 #undef READ_BYTE
 }

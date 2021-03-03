@@ -108,7 +108,7 @@ static void should_scan_reserved_words() {
             .line = 1,
             .start = "false",
             .type = TOKEN_FALSE
-        }.type = TOKEN_TRUE
+        }
     );
 }
 

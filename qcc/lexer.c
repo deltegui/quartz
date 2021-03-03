@@ -22,15 +22,9 @@ static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len
 static Token scan_identifier(Lexer* lexer);
 Token next_token(Lexer* lexer);
 
-#define CONSUME_UNTIL(lexer, character) do {\
-    if (peek(lexer) == character) {\
-        break;\
-    }\
-    if (match_next(lexer, '\0')) {\
-        break;\
-    }\
-    advance(lexer);\
-} while (true)
+#define CONSUME_UNTIL(lexer, character)\
+    while(peek(lexer) != character && !is_at_end(lexer))\
+        advance(lexer)
 
 void init_lexer(Lexer* lexer, const char* buffer) {
     lexer->current = buffer;
@@ -125,6 +119,13 @@ static bool is_numeric(Lexer* lexer) {
 #undef ASCII_NINE
 }
 
+static bool is_alpha(Lexer* lexer) {
+    char c = *lexer->current;
+    return (c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z') ||
+        c == '_';
+}
+
 static Token scan_number(Lexer* lexer) {
     while (is_numeric(lexer)) {
         lexer->current++;
@@ -154,7 +155,8 @@ static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len
 }
 
 static Token scan_identifier(Lexer* lexer) {
-    CONSUME_UNTIL(lexer, ' ');
+    while (is_numeric(lexer) || is_alpha(lexer))
+        advance(lexer);
     switch (*lexer->start) {
     case 't': {
         if (match_subtoken(lexer, "rue", 1, 4)) {

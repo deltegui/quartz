@@ -33,6 +33,21 @@ static const char* OpCodeStrings[] = {
     "OP_RETURN"
 };
 
+void opcode_print(uint8_t op) {
+    // @warning this be out of range.
+    printf("%s\n", OpCodeStrings[op]);
+}
+
+void stack_print(Value* stack_top, Value* stack) {
+    Value* current = (stack_top - 1);
+    while (current >= stack) {
+        printf("[ ");
+        value_print(*current);
+        printf(" ] ");
+        current = current - 1;
+    }
+}
+
 static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
     printf("[%02d;%02d]\t", i, chunk->lines[i]);
     va_list params;

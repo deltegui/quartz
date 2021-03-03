@@ -81,6 +81,68 @@ static void should_scan_arithmetic_operators() {
     );
 }
 
+static void should_scan_boolean_operators() {
+    assert_types(
+        "  !   && ! || &&",
+        5,
+        TOKEN_BANG,
+        TOKEN_AND,
+        TOKEN_BANG,
+        TOKEN_OR,
+        TOKEN_AND
+    );
+}
+
+static void should_scan_reserved_words() {
+    assert_tokens(
+        "true false",
+        2,
+        (Token){
+            .length = 4,
+            .line = 1,
+            .start = "true",
+            .type = TOKEN_TRUE
+        },
+        (Token){
+            .length = 5,
+            .line = 1,
+            .start = "false",
+            .type = TOKEN_FALSE
+        }.type = TOKEN_TRUE
+    );
+}
+
+static void should_scan_reserved_words_correctly() {
+    assert_tokens(
+        "  true\n  (false)",
+        4,
+        (Token){
+            .length = 4,
+            .line = 1,
+            .start = "true",
+            .type = TOKEN_TRUE
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = "(",
+            .type = TOKEN_LEFT_PAREN
+        },
+        (Token){
+            .length = 5,
+            .line = 1,
+            .start = "false",
+            .type = TOKEN_FALSE
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = ")",
+            .type = TOKEN_RIGHT_PAREN
+        }
+    );
+}
+
 static void should_create_number_tokens_correctly() {
     assert_tokens(
         "13.2323    9043  ",
@@ -115,7 +177,9 @@ int main(void) {
         cmocka_unit_test(should_scan_arithmetic_operators),
         cmocka_unit_test(should_create_number_tokens_correctly),
         cmocka_unit_test(should_fail_if_float_is_malformed),
-        cmocka_unit_test(should_scan_numbers)
+        cmocka_unit_test(should_scan_numbers),
+        cmocka_unit_test(should_scan_reserved_words),
+        cmocka_unit_test(should_scan_boolean_operators)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

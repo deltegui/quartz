@@ -17,6 +17,9 @@ static inline void assert_value_equal(Value expected, Value other) {
     case VALUE_FLOAT:
         assert_float_equal(AS_FLOAT(expected), AS_FLOAT(other), 4);
         break;
+    case VALUE_BOOL:
+        assert_int_equal(AS_BOOL(expected), AS_BOOL(other));
+        break;
     }
 }
 

@@ -20,12 +20,17 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         assert_expr_equals(first->binary.right, second->binary.right);
         break;
     }
-    case EXPR_LITERAL:
+    case EXPR_LITERAL: {
         assert_true(first->literal.literal.type == second->literal.literal.type);
         char actual[first->literal.literal.length + 1];
         sprintf(actual, "%.*s", first->literal.literal.length, first->literal.literal.start);
         assert_string_equal(actual, second->literal.literal.start);
         break;
+    }
+    case EXPR_UNARY: {
+        assert_true(first->unary.op.type == second->unary.op.type);
+        break;
+    }
     }
 }
 

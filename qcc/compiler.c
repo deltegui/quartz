@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include "typechecker.h"
 #include "values.h"
 
 #ifdef COMPILER_DEBUG
@@ -38,7 +39,7 @@ bool compile(const char* source, Chunk* output_chunk) {
     Compiler compiler;
     init_compiler(&compiler, source, output_chunk);
     Expr* ast = parse(&compiler.parser);
-    if (compiler.parser.has_error) {
+    if (compiler.parser.has_error || !typecheck(ast)) {
         free_expr(ast);
         return false;
     }

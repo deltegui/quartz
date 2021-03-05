@@ -1,0 +1,6 @@
+**/build/
+qcc
+/cmake-build-debug/
+/.idea/
+/a.out/
+/qcc.dSYM/

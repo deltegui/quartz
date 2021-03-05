@@ -22,6 +22,6 @@ echo "\n\n-------- [PARSER TESTS] --------"
 sh -c "$CC $MACROS ./parser_test.c ../parser.c ../expr.c ../lexer.c ../debug.c $LIBS $AND_EXEC"
 
 echo "\n\n-------- [COMPILER TESTS] --------"
-sh -c "$CC $MACROS ./compiler_test.c ../vm_memory.c ../values.c ../parser.c ../expr.c ../chunk.c ../lexer.c ../compiler.c ../debug.c $LIBS $AND_EXEC"
+sh -c "$CC $MACROS ./compiler_test.c ../typechecker.c ../vm_memory.c ../values.c ../parser.c ../expr.c ../chunk.c ../lexer.c ../compiler.c ../debug.c $LIBS $AND_EXEC"
 
 rm $BIN

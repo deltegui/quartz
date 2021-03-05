@@ -34,9 +34,10 @@ void free_expr(Expr* expr) {
         free_expr(expr->binary.right);
         break;
     case EXPR_LITERAL:
-    case EXPR_UNARY:
         // There is nothing to free
         break;
+    case EXPR_UNARY:
+        free_expr(expr->unary.expr);
     }
     free(expr);
 }

@@ -88,6 +88,10 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
         }
         advance(parser);
         SuffixParse infix_parser = get_rule(parser->current.type)->infix;
+        // @todo is this really necessay?
+        if (infix_parser == NULL) {
+            break;
+        }
         left = infix_parser(parser, left);
     }
     return left;
@@ -153,9 +157,9 @@ Expr* parse(Parser* parser) {
         return NULL;
     }
     Expr* ast = expression(parser);
-    #ifdef PARSER_DEBUG
+#ifdef PARSER_DEBUG
     ast_print(ast);
-    #endif
+#endif
     return ast;
 }
 
@@ -192,7 +196,6 @@ static Expr* binary(Parser* parser, Expr* left) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: end BINARY expression\n");
 #endif
-
     return CREATE_BINARY_EXPR(binary);
 }
 

@@ -143,6 +143,7 @@ static void should_fail() {
     assert_has_errors(" 2 + ");
     assert_has_errors(" 2 / ");
     assert_has_errors(" 2 - ");
+    assert_has_errors(" 2 ** 3 ");
 }
 
 int main(void) {

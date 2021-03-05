@@ -6,7 +6,6 @@ typedef enum {
     INT_TYPE,
     FLOAT_TYPE,
     BOOL_TYPE,
-
     UNKNOWN_TYPE,
 } Type;
 
@@ -42,7 +41,7 @@ static void print_type(Type type) {
 
 static void error(Typechecker* checker, const char* msg, Token* token) {
     printf(
-        "[Line %d] %s: '%.*s'",
+        "[Line %d] Type error: %s: '%.*s'",
         token->line,
         msg,
         token->length,

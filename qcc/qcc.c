@@ -1,4 +1,5 @@
-﻿#include "common.h"
+﻿#include <string.h>
+#include "common.h"
 #include "sysexits.h"
 #include "chunk.h"
 #include "compiler.h"
@@ -54,6 +55,10 @@ int compile_file(const char* file) {
     return 0;
 }
 
+static inline bool strempty(const char* str) {
+    return strlen(str) == 0 || ( strlen(str) == 1 && str[0] == '\n' );
+}
+
 void repl() {
 #define BUFFER_SIZE 256
     char input_buffer[BUFFER_SIZE];
@@ -65,6 +70,9 @@ void repl() {
             fprintf(stderr, "Error while reading from stdin!\n");
             free_chunk(&chunk);
             exit(EX_IOERR);
+        }
+        if (strempty(input_buffer)) {
+            continue;
         }
         if (compile(input_buffer, &chunk)) {
             vm_execute(&chunk);

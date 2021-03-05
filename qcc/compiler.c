@@ -110,6 +110,9 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_OR:
         op = OP_OR;
         break;
+    case TOKEN_PERCENT:
+        op = OP_MOD;
+        break;
     default:
         error(compiler, "Unkown binary operator in expression", binary->op.line);
         return;
@@ -125,6 +128,12 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
     switch(unary->op.type) {
     case TOKEN_BANG:
         op = OP_NOT;
+        break;
+    case TOKEN_PLUS:
+        op = OP_NOP;
+        break;
+    case TOKEN_MINUS:
+        op = OP_INVERT_SIGN;
         break;
     default:
         error(compiler, "Unkown unary operator in expression", unary->op.line);

@@ -26,11 +26,14 @@ static const char* OpCodeStrings[] = {
     "OP_SUB",
     "OP_MUL",
     "OP_DIV",
+    "OP_MOD",
+    "OP_INVERT_SIGN",
     "OP_NOT",
     "OP_AND",
     "OP_OR",
     "OP_CONSTANT",
-    "OP_RETURN"
+    "OP_NOP",
+    "OP_RETURN",
 };
 
 void opcode_print(uint8_t op) {
@@ -39,12 +42,12 @@ void opcode_print(uint8_t op) {
 }
 
 void stack_print(Value* stack_top, Value* stack) {
-    Value* current = (stack_top - 1);
-    while (current >= stack) {
+    Value* current = stack;
+    while (current < stack_top) {
         printf("[ ");
         value_print(*current);
         printf(" ] ");
-        current = current - 1;
+        current = current + 1;
     }
 }
 
@@ -73,8 +76,11 @@ void chunk_print(Chunk* chunk) {
         case OP_SUB:
         case OP_MUL:
         case OP_DIV:
+        case OP_MOD:
+        case OP_INVERT_SIGN:
         case OP_RETURN:
         case OP_NOT:
+        case OP_NOP:
         case OP_AND:
         case OP_OR: {
             chunk_opcode_print(chunk, i++);

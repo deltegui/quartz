@@ -49,10 +49,11 @@ ParseRule rules[] = {
     [TOKEN_END]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_ERROR]       = {NULL,        NULL,   PREC_NONE},
 
-    [TOKEN_PLUS]        = {NULL,        binary, PREC_TERM},
-    [TOKEN_MINUS]       = {NULL,        binary, PREC_TERM},
+    [TOKEN_PLUS]        = {unary,       binary, PREC_TERM},
+    [TOKEN_MINUS]       = {unary,       binary, PREC_TERM},
     [TOKEN_STAR]        = {NULL,        binary, PREC_FACTOR},
     [TOKEN_SLASH]       = {NULL,        binary, PREC_FACTOR},
+    [TOKEN_PERCENT]     = {NULL,        binary, PREC_FACTOR},
     [TOKEN_LEFT_PAREN]  = {grouping,    NULL,   PREC_NONE},
     [TOKEN_RIGHT_PAREN] = {NULL,        NULL,   PREC_NONE},
     [TOKEN_DOT]         = {NULL,        NULL,   PREC_NONE},
@@ -84,12 +85,14 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
         // @warning this short-circuit parser execution. This must be avoided.
         // @todo subsitute this with panic mode when statements are introduced.
         if (left == NULL) {
+            error(parser, "Unknown prefix");
             break;
         }
         advance(parser);
         SuffixParse infix_parser = get_rule(parser->current.type)->infix;
         // @todo is this really necessay?
         if (infix_parser == NULL) {
+            error_next(parser, "Unknown infix operator");
             break;
         }
         left = infix_parser(parser, left);
@@ -178,6 +181,7 @@ static Expr* binary(Parser* parser, Expr* left) {
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_SLASH:
+    case TOKEN_PERCENT:
     case TOKEN_AND:
     case TOKEN_OR:
         break;

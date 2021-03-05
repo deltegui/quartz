@@ -9,10 +9,13 @@ typedef enum {
     OP_SUB,
     OP_MUL,
     OP_DIV,
+    OP_MOD,
+    OP_INVERT_SIGN,
     OP_NOT,
     OP_AND,
     OP_OR,
     OP_CONSTANT,
+    OP_NOP,
     OP_RETURN,
 } OpCode;
 

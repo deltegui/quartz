@@ -103,7 +103,8 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     switch (binary->op.type) {
     case TOKEN_PLUS:
     case TOKEN_MINUS:
-    case TOKEN_STAR: {
+    case TOKEN_STAR:
+    case TOKEN_PERCENT: {
         if (left_type == INT_TYPE && right_type == INT_TYPE) {
             checker->last_type = INT_TYPE;
             return;
@@ -115,7 +116,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
             checker->last_type = FLOAT_TYPE;
             return;
         }
-        ERROR("Invalid types for binary operation");
+        ERROR("Invalid types for numeric operation");
         return;
     }
     case TOKEN_AND:
@@ -153,6 +154,15 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
             return;
         }
         ERROR("Invalid type for not operation");
+        return;
+    }
+    case TOKEN_PLUS:
+    case TOKEN_MINUS: {
+        if (is_number_type(inner_type)) {
+            checker->last_type = inner_type;
+            return;
+        }
+        ERROR("Cannot apply plus or minus unary operation");
         return;
     }
     default: {

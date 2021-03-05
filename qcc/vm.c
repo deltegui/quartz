@@ -1,5 +1,6 @@
 #include "vm.h"
 #include "values.h"
+#include "math.h"
 
 #ifdef VM_DEBUG
 #include "debug.h"
@@ -94,6 +95,31 @@ static inline void not_op() {
     stack_push(BOOL_VALUE(!a));
 }
 
+static inline void mod_op() {
+    Value b = stack_pop();
+    Value a = stack_pop();
+    if (IS_INTEGER(a) && IS_INTEGER(b)) {
+        int ai = AS_INTEGER(a);
+        int bi = AS_INTEGER(b);
+        stack_push(INTEGER_VALUE(ai % bi));
+        return;
+    }
+    double ad;
+    double bd;
+    if (IS_INTEGER(a) && IS_FLOAT(b)) {
+        ad = (double) AS_INTEGER(a);
+        bd = AS_FLOAT(b);
+    } else if (IS_FLOAT(a) && IS_INTEGER(b)) {
+        ad = AS_FLOAT(a);
+        bd = (double) AS_INTEGER(b);
+    } else {
+        ad = AS_FLOAT(a);
+        bd = AS_FLOAT(b);
+    }
+    double modulus = fmod(ad, bd);
+    stack_push(FLOAT_VALUE(modulus));
+}
+
 // @todo value print comes from debug.c. Fix this shitty thing.
 static void value_print(Value val) {
     switch (val.type) {
@@ -132,6 +158,17 @@ void vm_execute(Chunk* chunk) {
             div_op();
             break;
         }
+        case OP_INVERT_SIGN: {
+            Value val = stack_pop();
+            if (IS_FLOAT(val)) {
+                double d = AS_FLOAT(val);
+                stack_push(FLOAT_VALUE(d * -1));
+            } else {
+                int i = AS_INTEGER(val);
+                stack_push(INTEGER_VALUE(i * -1));
+            }
+            break;
+        }
         case OP_AND: {
             and_op();
             break;
@@ -144,6 +181,12 @@ void vm_execute(Chunk* chunk) {
             not_op();
             break;
         }
+        case OP_MOD: {
+            mod_op();
+            break;
+        }
+        case OP_NOP:
+            break;
         case OP_CONSTANT: {
             uint8_t index = READ_BYTE();
             Value val = chunk->constants.values[index];

@@ -11,11 +11,8 @@
 
 static inline void assert_value_equal(Value expected, Value other) {
     switch (expected.type) {
-    case VALUE_INTEGER:
-        assert_int_equal(AS_INTEGER(expected), AS_INTEGER(other));
-        break;
-    case VALUE_FLOAT:
-        assert_float_equal(AS_FLOAT(expected), AS_FLOAT(other), 4);
+    case VALUE_NUMBER:
+        assert_float_equal(AS_NUMBER(expected), AS_NUMBER(other), 4);
         break;
     case VALUE_BOOL:
         assert_int_equal(AS_BOOL(expected), AS_BOOL(other));
@@ -52,8 +49,8 @@ static void should_emit_binary() {
     Chunk my;
     init_chunk(&my);
     CHUNK({
-        emit_constant(&my, INTEGER_VALUE(2), 1);
-        emit_constant(&my, INTEGER_VALUE(2), 1);
+        emit_constant(&my, NUMBER_VALUE(2), 1);
+        emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_ADD, 1);
     });
     assert_compiled_chunk("2+2", &my);
@@ -64,10 +61,10 @@ static void should_emit_complex_calc() {
     Chunk my;
     init_chunk(&my);
     CHUNK({
-        emit_constant(&my, INTEGER_VALUE(5), 1);
-        emit_constant(&my, INTEGER_VALUE(4), 1);
+        emit_constant(&my, NUMBER_VALUE(5), 1);
+        emit_constant(&my, NUMBER_VALUE(4), 1);
         chunk_write(&my, OP_ADD, 1);
-        emit_constant(&my, INTEGER_VALUE(2), 1);
+        emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_MUL, 1);
     });
     assert_compiled_chunk("(5+4)*2", &my);

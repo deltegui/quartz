@@ -6,10 +6,14 @@
 #include "debug.h"
 #endif
 
+typedef struct {
+    Parser parser;
+    Chunk* chunk;
+    bool has_error;
+} Compiler;
+
 static void error(Compiler* compiler, const char* message, int line);
-
 static void emit(Compiler* compiler, uint8_t bytecode, int line);
-
 static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
 
 static void compile_literal(void* ctx, LiteralExpr* literal);
@@ -35,13 +39,17 @@ void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
     compiler->has_error = false;
 }
 
-bool compile(const char* source, Chunk* output_chunk) {
+CompilationResult compile(const char* source, Chunk* output_chunk) {
     Compiler compiler;
     init_compiler(&compiler, source, output_chunk);
     Expr* ast = parse(&compiler.parser);
-    if (compiler.parser.has_error || !typecheck(ast)) {
+    if (compiler.parser.has_error) {
+        free_expr(ast); // Although parser had errors, the ast exists.
+        return PARSING_ERROR;
+    }
+    if (!typecheck(ast)) {
         free_expr(ast);
-        return false;
+        return TYPE_ERROR;
     }
     ACCEPT(&compiler, ast);
     emit(&compiler, OP_RETURN, -1);
@@ -50,7 +58,10 @@ bool compile(const char* source, Chunk* output_chunk) {
     chunk_print(compiler.chunk);
 #endif
     free_expr(ast);
-    return !compiler.has_error;
+    if (compiler.has_error) {
+        return COMPILATION_ERROR;
+    }
+    return COMPILATION_OK;
 }
 
 static void emit(Compiler* compiler, uint8_t bytecode, int line) {
@@ -61,14 +72,9 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
     Compiler* compiler = (Compiler*) ctx;
     Value value;
     switch(literal->literal.type) {
-    case TOKEN_INTEGER: {
-        int i = (int) strtol(literal->literal.start, NULL, 10);
-        value = INTEGER_VALUE(i);
-        break;
-    }
-    case TOKEN_FLOAT: {
+    case TOKEN_NUMBER: {
         double d = (double) strtod(literal->literal.start, NULL);
-        value = FLOAT_VALUE(d);
+        value = NUMBER_VALUE(d);
         break;
     }
     case TOKEN_TRUE: {
@@ -133,7 +139,7 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
         op = OP_NOP;
         break;
     case TOKEN_MINUS:
-        op = OP_INVERT_SIGN;
+        op = OP_NEGATE;
         break;
     default:
         error(compiler, "Unkown unary operator in expression", unary->op.line);

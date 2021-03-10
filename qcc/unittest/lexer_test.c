@@ -60,9 +60,9 @@ static void should_scan_numbers() {
     assert_types(
         "1 +    3.2",
         3,
-        TOKEN_INTEGER,
+        TOKEN_NUMBER,
         TOKEN_PLUS,
-        TOKEN_FLOAT
+        TOKEN_NUMBER
     );
 }
 
@@ -151,13 +151,13 @@ static void should_create_number_tokens_correctly() {
             .length = 7,
             .line = 1,
             .start = "13.2323",
-            .type = TOKEN_FLOAT
+            .type = TOKEN_NUMBER
         },
         (Token){
             .length = 4,
             .line = 1,
             .start = "9043",
-            .type = TOKEN_INTEGER
+            .type = TOKEN_NUMBER
         }
     );
 }

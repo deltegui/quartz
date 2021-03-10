@@ -5,10 +5,10 @@
 // Include this around a ifdef DEBUG / endif.
 
 #include "common.h"
-#include "chunk.h" // for chunk_print
-#include "lexer.h" // for token_print
-#include "values.h" // for valuearray_print
-#include "expr.h" // for astprint
+#include "chunk.h"  // for chunk_print
+#include "lexer.h"  // for token_print
+#include "values.h" // for valuearray_print and vlaues
+#include "expr.h"   // for astprint
 
 void chunk_print(Chunk* chunk);
 void token_print(Token token);

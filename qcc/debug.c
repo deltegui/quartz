@@ -1,14 +1,6 @@
 #include <stdarg.h>
 #include "debug.h"
 
-static void value_print(Value val) {
-    switch (val.type) {
-    case VALUE_INTEGER: printf("%d", AS_INTEGER(val)); break;
-    case VALUE_FLOAT: printf("%f", AS_FLOAT(val)); break;
-    case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
-    }
-}
-
 void valuearray_print(ValueArray* values) {
     printf("--------[ VALUE ARRAY ]--------\n\n");
     printf("| Index\t| Value\n");
@@ -27,7 +19,7 @@ static const char* OpCodeStrings[] = {
     "OP_MUL",
     "OP_DIV",
     "OP_MOD",
-    "OP_INVERT_SIGN",
+    "OP_NEGATE",
     "OP_NOT",
     "OP_AND",
     "OP_OR",
@@ -77,7 +69,7 @@ void chunk_print(Chunk* chunk) {
         case OP_MUL:
         case OP_DIV:
         case OP_MOD:
-        case OP_INVERT_SIGN:
+        case OP_NEGATE:
         case OP_RETURN:
         case OP_NOT:
         case OP_NOP:
@@ -114,8 +106,7 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_BANG: return "Bang";
     case TOKEN_AND: return "And";
     case TOKEN_OR: return "Or";
-    case TOKEN_INTEGER: return "Integer";
-    case TOKEN_FLOAT: return "Float";
+    case TOKEN_NUMBER: return "Number";
     case TOKEN_TRUE: return "True";
     case TOKEN_FALSE: return "False";
     default: return "Unknown";

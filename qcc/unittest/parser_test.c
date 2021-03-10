@@ -50,7 +50,7 @@ LiteralExpr two = (LiteralExpr){
         .length = 1,
         .line = 1,
         .start = "2",
-        .type = TOKEN_INTEGER
+        .type = TOKEN_NUMBER
     },
 };
 
@@ -59,7 +59,7 @@ LiteralExpr five = (LiteralExpr){
         .length = 1,
         .line = 1,
         .start = "5",
-        .type = TOKEN_INTEGER
+        .type = TOKEN_NUMBER
     },
 };
 

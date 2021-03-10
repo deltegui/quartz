@@ -64,17 +64,16 @@ void repl() {
     char input_buffer[BUFFER_SIZE];
     Chunk chunk;
     for (;;) {
-        init_chunk(&chunk);
         printf("<qz> ");
         if (!fgets(input_buffer, BUFFER_SIZE, stdin)) {
             fprintf(stderr, "Error while reading from stdin!\n");
-            free_chunk(&chunk);
             exit(EX_IOERR);
         }
         if (strempty(input_buffer)) {
             continue;
         }
-        if (compile(input_buffer, &chunk)) {
+        init_chunk(&chunk);
+        if (compile(input_buffer, &chunk) == COMPILATION_OK) {
             vm_execute(&chunk);
         }
         free_chunk(&chunk);

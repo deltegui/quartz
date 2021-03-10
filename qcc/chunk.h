@@ -10,7 +10,7 @@ typedef enum {
     OP_MUL,
     OP_DIV,
     OP_MOD,
-    OP_INVERT_SIGN,
+    OP_NEGATE,
     OP_NOT,
     OP_AND,
     OP_OR,

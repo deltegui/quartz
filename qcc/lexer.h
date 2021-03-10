@@ -24,8 +24,7 @@ typedef enum {
     TOKEN_OR,
 
     // Multi-character tokens
-    TOKEN_INTEGER,
-    TOKEN_FLOAT,
+    TOKEN_NUMBER,
     TOKEN_TRUE,
     TOKEN_FALSE
 } TokenType;

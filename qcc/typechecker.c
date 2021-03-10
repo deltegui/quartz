@@ -3,8 +3,7 @@
 #include "lexer.h"
 
 typedef enum {
-    INT_TYPE,
-    FLOAT_TYPE,
+    NUMBER_TYPE,
     BOOL_TYPE,
     UNKNOWN_TYPE,
 } Type;
@@ -14,9 +13,8 @@ typedef struct {
     bool has_error;
 } Typechecker;
 
-static bool is_number_type(Type type);
-static void print_type(Type type);
 static void error(Typechecker* checker, const char* msg, Token* token);
+static void print_type(Type type);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_binary(void* ctx, BinaryExpr* binary);
@@ -30,15 +28,6 @@ ExprVisitor typechecker_visitor = (ExprVisitor){
 
 #define ACCEPT(typechecker, expr) expr_dispatch(&typechecker_visitor, typechecker, expr)
 
-static void print_type(Type type) {
-    switch (type) {
-    case INT_TYPE: printf("Int"); return;
-    case FLOAT_TYPE: printf("Float"); return;
-    case BOOL_TYPE: printf("Bool"); return;
-    case UNKNOWN_TYPE: printf("Unknown"); return;
-    }
-}
-
 static void error(Typechecker* checker, const char* msg, Token* token) {
     printf(
         "[Line %d] Type error: %s: '%.*s'",
@@ -48,6 +37,14 @@ static void error(Typechecker* checker, const char* msg, Token* token) {
         token->start);
     checker->has_error = true;
     checker->last_type = UNKNOWN_TYPE;
+}
+
+static void print_type(Type type) {
+    switch (type) {
+    case NUMBER_TYPE: printf("Number"); return;
+    case BOOL_TYPE: printf("Bool"); return;
+    case UNKNOWN_TYPE: printf("Unknown"); return;
+    }
 }
 
 bool typecheck(Expr* ast) {
@@ -61,12 +58,8 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     Typechecker* checker = (Typechecker*) ctx;
 
     switch (literal->literal.type) {
-    case TOKEN_INTEGER: {
-        checker->last_type = INT_TYPE;
-        return;
-    }
-    case TOKEN_FLOAT: {
-        checker->last_type = FLOAT_TYPE;
+    case TOKEN_NUMBER: {
+        checker->last_type = NUMBER_TYPE;
         return;
     }
     case TOKEN_TRUE:
@@ -80,10 +73,6 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
         return;
     }
     }
-}
-
-static bool is_number_type(Type type) {
-    return type == INT_TYPE || type == FLOAT_TYPE;
 }
 
 static void typecheck_binary(void* ctx, BinaryExpr* binary) {
@@ -104,16 +93,10 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_PLUS:
     case TOKEN_MINUS:
     case TOKEN_STAR:
-    case TOKEN_PERCENT: {
-        if (left_type == INT_TYPE && right_type == INT_TYPE) {
-            checker->last_type = INT_TYPE;
-            return;
-        }
-        // continue to TOKEN_SLASH. DO NOT BREAK OR RETURN HERE.
-    }
+    case TOKEN_PERCENT:
     case TOKEN_SLASH: {
-        if (is_number_type(left_type) && is_number_type(right_type)) {
-            checker->last_type = FLOAT_TYPE;
+        if (left_type == NUMBER_TYPE && right_type == NUMBER_TYPE) {
+            checker->last_type = NUMBER_TYPE;
             return;
         }
         ERROR("Invalid types for numeric operation");
@@ -158,7 +141,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     }
     case TOKEN_PLUS:
     case TOKEN_MINUS: {
-        if (is_number_type(inner_type)) {
+        if (inner_type == NUMBER_TYPE) {
             checker->last_type = inner_type;
             return;
         }

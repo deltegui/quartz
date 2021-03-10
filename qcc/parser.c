@@ -62,8 +62,7 @@ ParseRule rules[] = {
     [TOKEN_AND]         = {NULL,        binary, PREC_AND},
     [TOKEN_OR]          = {NULL,        binary, PREC_OR},
 
-    [TOKEN_INTEGER]     = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_FLOAT]       = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_NUMBER]      = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_TRUE]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_FALSE]       = {primary,     NULL,   PREC_PRIMARY},
 };

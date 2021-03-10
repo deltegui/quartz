@@ -3,6 +3,13 @@
 // must be managed by vm_memory.h
 #include "vm_memory.h"
 
+void value_print(Value val) {
+    switch (val.type) {
+    case VALUE_NUMBER: printf("%f", AS_NUMBER(val)); break;
+    case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
+    }
+}
+
 void init_valuearray(ValueArray* arr) {
     arr->size = 0;
     arr->capacity = 0;

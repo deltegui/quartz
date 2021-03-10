@@ -131,7 +131,7 @@ static Token scan_number(Lexer* lexer) {
         lexer->current++;
     }
     if (!match(lexer, '.')) {
-        return create_token(lexer, TOKEN_INTEGER);
+        return create_token(lexer, TOKEN_NUMBER);
     }
     advance(lexer); // consume dot
     if (!is_numeric(lexer)) {
@@ -140,7 +140,7 @@ static Token scan_number(Lexer* lexer) {
     while (is_numeric(lexer)) {
         lexer->current++;
     }
-    return create_token(lexer, TOKEN_FLOAT);
+    return create_token(lexer, TOKEN_NUMBER);
 }
 
 static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len) {

@@ -85,6 +85,12 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         value = BOOL_VALUE(false);
         break;
     }
+    case TOKEN_STRING: {
+        // @todo probably this part should change.
+        ObjString* str = new_string(&literal->literal);
+        value = OBJ_VALUE(str);
+        break;
+    }
     default:
         error(compiler, "Unkown literal expression", literal->literal.line);
         return;
@@ -123,8 +129,8 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
         error(compiler, "Unkown binary operator in expression", binary->op.line);
         return;
     }
-    ACCEPT(compiler, binary->left); // Compile left argument
-    ACCEPT(compiler, binary->right); // Compile right argument
+    ACCEPT(compiler, binary->left);
+    ACCEPT(compiler, binary->right);
     emit(compiler, op, binary->op.line);
 }
 

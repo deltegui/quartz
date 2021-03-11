@@ -109,6 +109,7 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_NUMBER: return "Number";
     case TOKEN_TRUE: return "True";
     case TOKEN_FALSE: return "False";
+    case TOKEN_STRING: return "String";
     default: return "Unknown";
     }
 }
@@ -197,5 +198,3 @@ static void print_unary(void* ctx, UnaryExpr* unary) {
     });
     pretty_print("]\n");
 }
-
-

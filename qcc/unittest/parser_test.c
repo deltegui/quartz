@@ -91,6 +91,13 @@ Token star_token = (Token){
     .type = TOKEN_STAR
 };
 
+Token example_str = (Token){
+    .length = 12,
+    .line = 1,
+    .start = "Hello world!",
+    .type = TOKEN_STRING,
+};
+
 static void should_parse_additions() {
     BinaryExpr sum = (BinaryExpr){
         .left = CREATE_LITERAL_EXPR(two),
@@ -146,12 +153,20 @@ static void should_fail() {
     assert_has_errors(" 2 ** 3 ");
 }
 
+static void should_parse_strings() {
+    assert_ast(
+        "   'Hello world!'   ",
+        CREATE_LITERAL_EXPR(example_str)
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_additions),
         cmocka_unit_test(should_parse_precedence),
         cmocka_unit_test(should_parse_grouping),
-        cmocka_unit_test(should_fail)
+        cmocka_unit_test(should_fail),
+        cmocka_unit_test(should_parse_strings)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

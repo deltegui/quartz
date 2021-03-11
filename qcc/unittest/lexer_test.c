@@ -170,6 +170,39 @@ static void should_fail_if_float_is_malformed() {
     );
 }
 
+static void should_create_string_tokens_correctly() {
+    assert_tokens(
+        "\"\"    'Hola' \n    \"Hola Mundo!! ñ\"  ",
+        3,
+        (Token){
+            .length = 0,
+            .line = 1,
+            .start = "",
+            .type = TOKEN_STRING
+        },
+        (Token){
+            .length = 4,
+            .line = 1,
+            .start = "Hola",
+            .type = TOKEN_STRING
+        },
+        (Token){
+            .length = 15,
+            .line = 2,
+            .start = "Hola Mundo!! ñ",
+            .type = TOKEN_STRING
+        }
+    );
+}
+
+static void should_fail_if_string_is_malformed() {
+    assert_types(
+        "    ' este string no se acaba  ",
+        1,
+        TOKEN_ERROR
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_scan_empty_text),
@@ -179,7 +212,9 @@ int main(void) {
         cmocka_unit_test(should_fail_if_float_is_malformed),
         cmocka_unit_test(should_scan_numbers),
         cmocka_unit_test(should_scan_reserved_words),
-        cmocka_unit_test(should_scan_boolean_operators)
+        cmocka_unit_test(should_scan_boolean_operators),
+        cmocka_unit_test(should_create_string_tokens_correctly),
+        cmocka_unit_test(should_fail_if_string_is_malformed)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

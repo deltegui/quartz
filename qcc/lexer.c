@@ -10,14 +10,17 @@ static char peek(Lexer* lexer);
 static bool match(Lexer* lexer, char c);
 static bool match_next(Lexer* lexer, char next);
 static void advance(Lexer* lexer);
-static bool consume_if(Lexer* lexer, char expected);
+static bool consume(Lexer* lexer, char expected);
 
 static Token create_token(Lexer* lexer, TokenType type);
 static Token create_error(Lexer* lexer, const char* message);
 
 static void skip_whitespaces(Lexer* lexer);
 static bool is_numeric(Lexer* lexer);
+static bool is_alpha(Lexer* lexer);
+static bool is_string_quote(Lexer* lexer);
 static Token scan_number(Lexer* lexer);
+static Token scan_string(Lexer* lexer);
 static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len);
 static Token scan_identifier(Lexer* lexer);
 Token next_token(Lexer* lexer);
@@ -61,7 +64,7 @@ static void advance(Lexer* lexer) {
     lexer->current++;
 }
 
-static bool consume_if(Lexer* lexer, char expected) {
+static bool consume(Lexer* lexer, char expected) {
     if (match(lexer, expected)) {
         advance(lexer);
         return true;
@@ -126,9 +129,14 @@ static bool is_alpha(Lexer* lexer) {
         c == '_';
 }
 
+static bool is_string_quote(Lexer* lexer) {
+    char c = *lexer->current;
+    return (c == '\'' || c == '\"');
+}
+
 static Token scan_number(Lexer* lexer) {
     while (is_numeric(lexer)) {
-        lexer->current++;
+        advance(lexer);
     }
     if (!match(lexer, '.')) {
         return create_token(lexer, TOKEN_NUMBER);
@@ -138,9 +146,23 @@ static Token scan_number(Lexer* lexer) {
         return create_error(lexer, "Malformed float: Expected to have numbers after dot");
     }
     while (is_numeric(lexer)) {
-        lexer->current++;
+        advance(lexer);
     }
     return create_token(lexer, TOKEN_NUMBER);
+}
+
+static Token scan_string(Lexer* lexer) {
+    advance(lexer); // Consume first quote
+    lexer->start = lexer->current; // Omit first quote
+    while (!is_string_quote(lexer) && !is_at_end(lexer)) {
+        advance(lexer);
+    }
+    if (!is_string_quote(lexer)) {
+        return create_error(lexer, "Malformed string: expected string to end with '\"'");
+    }
+    Token str_token = create_token(lexer, TOKEN_STRING);
+    advance(lexer); //Consume last quote
+    return str_token;
 }
 
 static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len) {
@@ -181,6 +203,9 @@ Token next_token(Lexer* lexer) {
     if (is_numeric(lexer)) {
         return scan_number(lexer);
     }
+    if (is_string_quote(lexer)) {
+        return scan_string(lexer);
+    }
     switch (*lexer->current++) {
     case '+': return create_token(lexer, TOKEN_PLUS);
     case '-': return create_token(lexer, TOKEN_MINUS);
@@ -192,12 +217,12 @@ Token next_token(Lexer* lexer) {
     case '.': return create_token(lexer, TOKEN_DOT);
     case '!': return create_token(lexer, TOKEN_BANG);
     case '&': {
-        if (consume_if(lexer, '&')) {
+        if (consume(lexer, '&')) {
             return create_token(lexer, TOKEN_AND);
         }
     }
     case '|': {
-        if (consume_if(lexer, '|')) {
+        if (consume(lexer, '|')) {
             return create_token(lexer, TOKEN_OR);
         }
     }

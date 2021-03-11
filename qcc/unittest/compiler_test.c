@@ -17,6 +17,9 @@ static inline void assert_value_equal(Value expected, Value other) {
     case VALUE_BOOL:
         assert_int_equal(AS_BOOL(expected), AS_BOOL(other));
         break;
+    case VALUE_OBJ:
+        assert_true(false); // @todo Should we compare pointers directly?
+        break;
     }
 }
 

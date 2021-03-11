@@ -26,7 +26,8 @@ typedef enum {
     // Multi-character tokens
     TOKEN_NUMBER,
     TOKEN_TRUE,
-    TOKEN_FALSE
+    TOKEN_FALSE,
+    TOKEN_STRING,
 } TokenType;
 
 typedef struct {

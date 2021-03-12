@@ -190,6 +190,11 @@ static Token scan_identifier(Lexer* lexer) {
             return create_token(lexer, TOKEN_FALSE);
         }
     }
+    case 'n': {
+        if (match_subtoken(lexer, "il", 1, 3)) {
+            return create_token(lexer, TOKEN_NIL);
+        }
+    }
     }
     return create_error(lexer, "Unkown identifier");
 }

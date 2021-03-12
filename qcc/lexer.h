@@ -27,6 +27,7 @@ typedef enum {
     TOKEN_NUMBER,
     TOKEN_TRUE,
     TOKEN_FALSE,
+    TOKEN_NIL,
     TOKEN_STRING,
 } TokenType;
 

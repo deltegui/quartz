@@ -65,6 +65,7 @@ ParseRule rules[] = {
     [TOKEN_NUMBER]      = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_TRUE]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_FALSE]       = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_NIL]         = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]      = {primary,     NULL,   PREC_PRIMARY},
 };
 

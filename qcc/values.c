@@ -8,6 +8,7 @@ void value_print(Value val) {
     switch (val.type) {
     case VALUE_NUMBER: printf("%f", AS_NUMBER(val)); break;
     case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
+    case VALUE_NIL: printf("nil"); break;
     case VALUE_OBJ: printf("Object"); break; // @todo this should be changed
     }
 }

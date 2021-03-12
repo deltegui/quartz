@@ -114,7 +114,7 @@ static void should_scan_reserved_words() {
 
 static void should_scan_reserved_words_correctly() {
     assert_tokens(
-        "  true\n  (false)",
+        "  true\n  (false) \r\n nil",
         4,
         (Token){
             .length = 4,
@@ -139,6 +139,12 @@ static void should_scan_reserved_words_correctly() {
             .line = 1,
             .start = ")",
             .type = TOKEN_RIGHT_PAREN
+        },
+        (Token){
+            .length = 3,
+            .line = 1,
+            .start = "nil",
+            .type = TOKEN_NIL
         }
     );
 }

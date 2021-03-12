@@ -45,6 +45,33 @@ static void assert_ast(const char* source, Expr* expected_ast) {
     compare_asts(result, expected_ast);
 }
 
+LiteralExpr true_ = (LiteralExpr){
+    .literal = (Token){
+        .length = 4,
+        .line = 1,
+        .start = "true",
+        .type = TOKEN_TRUE
+    },
+};
+
+LiteralExpr false_ = (LiteralExpr){
+    .literal = (Token){
+        .length = 5,
+        .line = 1,
+        .start = "false",
+        .type = TOKEN_FALSE
+    },
+};
+
+LiteralExpr nil = (LiteralExpr){
+    .literal = (Token){
+        .length = 3,
+        .line = 1,
+        .start = "nil",
+        .type = TOKEN_NIL
+    },
+};
+
 LiteralExpr two = (LiteralExpr){
     .literal = (Token){
         .length = 1,
@@ -160,13 +187,29 @@ static void should_parse_strings() {
     );
 }
 
+static void should_parse_reserved_words_as_literals() {
+    assert_ast(
+        " true   ",
+        CREATE_LITERAL_EXPR(true_)
+    );
+    assert_ast(
+        " \n    false  ",
+        CREATE_LITERAL_EXPR(false_)
+    );
+    assert_ast(
+        "     nil        ",
+        CREATE_LITERAL_EXPR(nil)
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_additions),
         cmocka_unit_test(should_parse_precedence),
         cmocka_unit_test(should_parse_grouping),
         cmocka_unit_test(should_fail),
-        cmocka_unit_test(should_parse_strings)
+        cmocka_unit_test(should_parse_strings),
+        cmocka_unit_test(should_parse_reserved_words_as_literals)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

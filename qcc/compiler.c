@@ -85,6 +85,10 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         value = BOOL_VALUE(false);
         break;
     }
+    case TOKEN_NIL: {
+        value = NIL_VALUE();
+        break;
+    }
     case TOKEN_STRING: {
         // @todo probably this part should change.
         ObjString* str = new_string(&literal->literal);

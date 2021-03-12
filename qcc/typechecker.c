@@ -5,6 +5,7 @@
 typedef enum {
     NUMBER_TYPE,
     BOOL_TYPE,
+    NIL_TYPE,
     STRING_TYPE,
     UNKNOWN_TYPE,
 } Type;
@@ -45,6 +46,7 @@ static void print_type(Type type) {
     case NUMBER_TYPE: printf("Number"); return;
     case BOOL_TYPE: printf("Bool"); return;
     case STRING_TYPE: printf("String"); return;
+    case NIL_TYPE: printf("Nil"); return;
     case UNKNOWN_TYPE: printf("Unknown"); return;
     }
 }
@@ -68,6 +70,9 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     case TOKEN_FALSE: {
         checker->last_type = BOOL_TYPE;
         return;
+    }
+    case TOKEN_NIL: {
+        checker->last_type = NIL_TYPE;
     }
     case TOKEN_STRING: {
         checker->last_type = STRING_TYPE;

@@ -58,9 +58,12 @@ ParseRule rules[] = {
     [TOKEN_RIGHT_PAREN] = {NULL,        NULL,   PREC_NONE},
     [TOKEN_DOT]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_BANG]        = {unary,       NULL,   PREC_UNARY},
+    [TOKEN_EQUAL]       = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_AND]         = {NULL,        binary, PREC_AND},
     [TOKEN_OR]          = {NULL,        binary, PREC_OR},
+    [TOKEN_EQUAL_EQUAL] = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_BANG_EQUAL]  = {NULL,        binary, PREC_EQUALITY},
 
     [TOKEN_NUMBER]      = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_TRUE]        = {primary,     NULL,   PREC_PRIMARY},
@@ -185,6 +188,8 @@ static Expr* binary(Parser* parser, Expr* left) {
     case TOKEN_PERCENT:
     case TOKEN_AND:
     case TOKEN_OR:
+    case TOKEN_EQUAL_EQUAL:
+    case TOKEN_BANG_EQUAL:
         break;
     default:
         error_next(parser, "Expected arithmetic operation");

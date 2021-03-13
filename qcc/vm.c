@@ -29,6 +29,12 @@ static inline Value stack_pop() {
     bool a = AS_BOOL(stack_pop());\
     stack_push(BOOL_VALUE(a op b))
 
+static inline bool last_values_equal() {
+    Value b = stack_pop();
+    Value a = stack_pop();
+    return value_equals(a, b);
+}
+
 void vm_execute(Chunk* chunk) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
@@ -85,6 +91,25 @@ void vm_execute(Chunk* chunk) {
         }
         case OP_NOP:
             break;
+        case OP_TRUE:
+            stack_push(BOOL_VALUE(true));
+            break;
+        case OP_FALSE:
+            stack_push(BOOL_VALUE(false));
+            break;
+        case OP_NIL:
+            stack_push(NIL_VALUE());
+            break;
+        case OP_EQUAL: {
+            bool result = last_values_equal();
+            stack_push(BOOL_VALUE(result));
+            break;
+        }
+        case OP_NOT_EQUAL: {
+            bool result = last_values_equal();
+            stack_push(BOOL_VALUE(!result));
+            break;
+        }
         case OP_CONSTANT: {
             uint8_t index = READ_BYTE();
             Value val = chunk->constants.values[index];

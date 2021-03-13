@@ -5,18 +5,30 @@
 #include "values.h"
 
 typedef enum {
+    // Number operations
     OP_ADD,
     OP_SUB,
     OP_MUL,
     OP_DIV,
     OP_MOD,
     OP_NEGATE,
+
+    // Boolean operations
     OP_NOT,
     OP_AND,
     OP_OR,
-    OP_CONSTANT,
+    OP_EQUAL,
+    OP_NOT_EQUAL,
+
+    // Reserved words and other special operations
+    OP_TRUE,
+    OP_FALSE,
+    OP_NIL,
     OP_NOP,
     OP_RETURN,
+
+    // Declarations
+    OP_CONSTANT,
 } OpCode;
 
 typedef struct {

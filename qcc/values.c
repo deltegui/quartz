@@ -13,6 +13,31 @@ void value_print(Value val) {
     }
 }
 
+bool value_equals(Value first, Value second) {
+    switch (first.type) {
+    case VALUE_NUMBER: {
+        if (!IS_NUMBER(second)) {
+            return false;
+        }
+        return AS_NUMBER(first) == AS_NUMBER(second);
+    }
+    case VALUE_BOOL: {
+        if (!IS_BOOL(second)) {
+            return false;
+        }
+        return AS_BOOL(first) == AS_BOOL(second);
+    }
+    case VALUE_NIL:
+        return IS_NIL(second);
+    case VALUE_OBJ: {
+        if (!IS_OBJ(second)) {
+            return false;
+        }
+        return AS_OBJ(first) == AS_OBJ(second);
+    }
+    }
+}
+
 void init_valuearray(ValueArray* arr) {
     arr->size = 0;
     arr->capacity = 0;

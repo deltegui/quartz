@@ -83,13 +83,16 @@ static void should_scan_arithmetic_operators() {
 
 static void should_scan_boolean_operators() {
     assert_types(
-        "  !   && ! || &&",
-        5,
+        "  !   && ! || &&   ==   !=   =",
+        8,
         TOKEN_BANG,
         TOKEN_AND,
         TOKEN_BANG,
         TOKEN_OR,
-        TOKEN_AND
+        TOKEN_AND,
+        TOKEN_EQUAL_EQUAL,
+        TOKEN_BANG_EQUAL,
+        TOKEN_EQUAL
     );
 }
 

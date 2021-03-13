@@ -68,25 +68,29 @@ static void emit(Compiler* compiler, uint8_t bytecode, int line) {
     chunk_write(compiler->chunk, bytecode, line);
 }
 
+// @todo Maybe can this function be rewrited in a way that express the difference
+// between reserved words and real literals
 static void compile_literal(void* ctx, LiteralExpr* literal) {
     Compiler* compiler = (Compiler*) ctx;
     Value value;
-    switch(literal->literal.type) {
+    switch (literal->literal.type) {
+    // We start with reserved words that have its own opcode.
+    case TOKEN_TRUE: {
+        emit(compiler, OP_TRUE, literal->literal.line);
+        return;
+    }
+    case TOKEN_FALSE: {
+        emit(compiler, OP_FALSE, literal->literal.line);
+        return;
+    }
+    case TOKEN_NIL: {
+        emit(compiler, OP_NIL, literal->literal.line);
+        return;
+    }
+    // Continue creating linerals
     case TOKEN_NUMBER: {
         double d = (double) strtod(literal->literal.start, NULL);
         value = NUMBER_VALUE(d);
-        break;
-    }
-    case TOKEN_TRUE: {
-        value = BOOL_VALUE(true);
-        break;
-    }
-    case TOKEN_FALSE: {
-        value = BOOL_VALUE(false);
-        break;
-    }
-    case TOKEN_NIL: {
-        value = NIL_VALUE();
         break;
     }
     case TOKEN_STRING: {
@@ -128,6 +132,12 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
         break;
     case TOKEN_PERCENT:
         op = OP_MOD;
+        break;
+    case TOKEN_EQUAL_EQUAL:
+        op = OP_EQUAL;
+        break;
+    case TOKEN_BANG_EQUAL:
+        op = OP_NOT_EQUAL;
         break;
     default:
         error(compiler, "Unkown binary operator in expression", binary->op.line);

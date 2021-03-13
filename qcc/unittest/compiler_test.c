@@ -77,10 +77,23 @@ static void should_emit_complex_calc() {
     free_chunk(&my);
 }
 
+static void should_emit_comparisions() {
+    Chunk my;
+    init_chunk(&my);
+    CHUNK({
+        emit_constant(&my, NUMBER_VALUE(1), 1);
+        emit_constant(&my, NUMBER_VALUE(2), 1);
+        chunk_write(&my, OP_EQUAL, 1);
+    });
+    assert_compiled_chunk("1 == 2", &my);
+    free_chunk(&my);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_emit_binary),
-        cmocka_unit_test(should_emit_complex_calc)
+        cmocka_unit_test(should_emit_complex_calc),
+        cmocka_unit_test(should_emit_comparisions)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

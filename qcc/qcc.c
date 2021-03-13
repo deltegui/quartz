@@ -47,7 +47,7 @@ int compile_file(const char* file) {
     }
     Chunk chunk;
     init_chunk(&chunk);
-    if (compile(source, &chunk)) {
+    if (compile(source, &chunk) == COMPILATION_OK) {
         vm_execute(&chunk);
     }
     free_chunk(&chunk);

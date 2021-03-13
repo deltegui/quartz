@@ -220,7 +220,6 @@ Token next_token(Lexer* lexer) {
     case '(': return create_token(lexer, TOKEN_LEFT_PAREN);
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '.': return create_token(lexer, TOKEN_DOT);
-    case '!': return create_token(lexer, TOKEN_BANG);
     case '&': {
         if (consume(lexer, '&')) {
             return create_token(lexer, TOKEN_AND);
@@ -230,6 +229,18 @@ Token next_token(Lexer* lexer) {
         if (consume(lexer, '|')) {
             return create_token(lexer, TOKEN_OR);
         }
+    }
+    case '=': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_EQUAL_EQUAL);
+        }
+        return create_token(lexer, TOKEN_EQUAL);
+    }
+    case '!': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_BANG_EQUAL);
+        }
+        return create_token(lexer, TOKEN_BANG);
     }
     default: return scan_identifier(lexer);
     }

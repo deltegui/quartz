@@ -23,9 +23,14 @@ static const char* OpCodeStrings[] = {
     "OP_NOT",
     "OP_AND",
     "OP_OR",
-    "OP_CONSTANT",
+    "OP_EQUAL",
+    "OP_NOT_EQUAL",
+    "OP_TRUE",
+    "OP_FALSE",
+    "OP_NIL",
     "OP_NOP",
     "OP_RETURN",
+    "OP_CONSTANT",
 };
 
 void opcode_print(uint8_t op) {
@@ -74,7 +79,12 @@ void chunk_print(Chunk* chunk) {
         case OP_NOT:
         case OP_NOP:
         case OP_AND:
-        case OP_OR: {
+        case OP_OR:
+        case OP_TRUE:
+        case OP_FALSE:
+        case OP_NIL:
+        case OP_EQUAL:
+        case OP_NOT_EQUAL: {
             chunk_opcode_print(chunk, i++);
             break;
         }
@@ -110,6 +120,9 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_TRUE: return "True";
     case TOKEN_FALSE: return "False";
     case TOKEN_STRING: return "String";
+    case TOKEN_NIL: return "Nil";
+    case TOKEN_EQUAL_EQUAL: return "EqualEqual";
+    case TOKEN_BANG_EQUAL: return "BangEqual";
     default: return "Unknown";
     }
 }

@@ -3,6 +3,7 @@
 
 #include "../parser.h"
 #include "../expr.h"
+#include "../debug.h"
 
 static inline void assert_has_errors(const char* source) {
     Parser parser;
@@ -118,6 +119,20 @@ Token star_token = (Token){
     .type = TOKEN_STAR
 };
 
+Token bang_equal = (Token){
+    .length = 2,
+    .line = 1,
+    .start = "!=",
+    .type = TOKEN_BANG_EQUAL
+};
+
+Token equal_equal = (Token){
+    .length = 2,
+    .line = 1,
+    .start = "==",
+    .type = TOKEN_EQUAL_EQUAL
+};
+
 Token example_str = (Token){
     .length = 12,
     .line = 1,
@@ -187,6 +202,23 @@ static void should_parse_strings() {
     );
 }
 
+static void should_parse_equality() {
+    BinaryExpr equality = (BinaryExpr){
+        .left = CREATE_LITERAL_EXPR(two),
+        .op = equal_equal,
+        .right = CREATE_LITERAL_EXPR(two)
+    };
+    BinaryExpr not_equal = (BinaryExpr){
+        .left = CREATE_BINARY_EXPR(equality),
+        .op = bang_equal,
+        .right = CREATE_LITERAL_EXPR(five)
+    };
+    assert_ast(
+        " 2 == 2 != 5 ",
+        CREATE_BINARY_EXPR(not_equal)
+    );
+}
+
 static void should_parse_reserved_words_as_literals() {
     assert_ast(
         " true   ",
@@ -209,7 +241,8 @@ int main(void) {
         cmocka_unit_test(should_parse_grouping),
         cmocka_unit_test(should_fail),
         cmocka_unit_test(should_parse_strings),
-        cmocka_unit_test(should_parse_reserved_words_as_literals)
+        cmocka_unit_test(should_parse_reserved_words_as_literals),
+        cmocka_unit_test(should_parse_equality)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

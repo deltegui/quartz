@@ -73,6 +73,7 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     }
     case TOKEN_NIL: {
         checker->last_type = NIL_TYPE;
+        return;
     }
     case TOKEN_STRING: {
         checker->last_type = STRING_TYPE;
@@ -120,6 +121,15 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
             return;
         }
         ERROR("Invalid types for boolean operation");
+        return;
+    }
+    case TOKEN_EQUAL_EQUAL:
+    case TOKEN_BANG_EQUAL: {
+        if (left_type == right_type) {
+            checker->last_type = BOOL_TYPE;
+            return;
+        }
+        ERROR("Elements with different types arent coparable");
         return;
     }
     default: {

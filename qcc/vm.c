@@ -74,9 +74,9 @@ void vm_execute(Chunk* chunk) {
             break;
         }
         case OP_NEGATE: {
-            Value val = stack_pop();
+            Value val = *qvm.stack_top;
             double d = AS_NUMBER(val);
-            stack_push(NUMBER_VALUE(d * -1));
+            *qvm.stack_top = NUMBER_VALUE(d * -1);
             break;
         }
         case OP_AND: {

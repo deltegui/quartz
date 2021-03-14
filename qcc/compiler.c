@@ -94,8 +94,7 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         break;
     }
     case TOKEN_STRING: {
-        // @todo probably this part should change.
-        ObjString* str = new_string(&literal->literal);
+        ObjString* str = copy_string(literal->literal.start, literal->literal.length);
         value = OBJ_VALUE(str);
         break;
     }

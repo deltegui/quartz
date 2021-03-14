@@ -4,6 +4,7 @@
 typedef struct {
     ObjString* key;
     Value value;
+    int probe_sequence_length;
 } Entry;
 
 typedef struct {

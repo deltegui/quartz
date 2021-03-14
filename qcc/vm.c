@@ -1,22 +1,29 @@
 #include "vm.h"
 #include "values.h"
 #include "math.h"
+#include "vm_memory.h"
 
 #ifdef VM_DEBUG
 #include "debug.h"
 #endif
 
-#define STACK_MAX 256
+QVM qvm;
 
-Value stack[STACK_MAX];
-Value* stack_top;
+static void init_qvm(QVM* qvm) {
+    qvm->stack_top = qvm->stack;
+    qvm->objects = NULL;
+}
+
+static void free_qvm(QVM* qvm) {
+    free_objects();
+}
 
 static inline void stack_push(Value val) {
-    *(stack_top++) = val;
+    *(qvm.stack_top++) = val;
 }
 
 static inline Value stack_pop() {
-    return *(--stack_top);
+    return *(--qvm.stack_top);
 }
 
 #define NUM_BINARY_OP(op)\
@@ -40,9 +47,11 @@ void vm_execute(Chunk* chunk) {
     printf("--------[ EXECUTION ]--------\n\n");
 #endif
 
-    stack_top = stack;
+    init_qvm(&qvm);
     uint8_t* pc = chunk->code;
+
 #define READ_BYTE() *(pc++)
+
     for (;;) {
 #ifdef VM_DEBUG
         opcode_print(*pc);
@@ -123,9 +132,10 @@ void vm_execute(Chunk* chunk) {
         }
         }
 #ifdef VM_DEBUG
-        stack_print(stack_top, stack);
+        stack_print(qvm.stack_top, qvm.stack);
         printf("\n\n");
 #endif
     }
+    free_qvm(&qvm);
 #undef READ_BYTE
 }

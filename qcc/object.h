@@ -7,14 +7,18 @@ typedef enum {
     STRING_OBJ,
 } ObjType;
 
-typedef struct {
+typedef struct Obj {
     ObjType obj_type;
+    struct Obj* next;
 } Obj;
 
+// Here we use flexible array member. This lets you to
+// avoid double indirection using pointers, which let
+// us have better performance.
 typedef struct {
     Obj obj;
     int length;
-    const char* cstr;
+    char cstr[];
 } ObjString;
 
 #define IS_STRING(obj) (obj->obj_type == STRING_OBJ)
@@ -22,6 +26,7 @@ typedef struct {
 #define AS_STRING_OBJ(obj) ((ObjString*) obj)
 #define AS_CSTRING(obj) ( ((ObjString*) obj)->cstr )
 
-ObjString* new_string(Token* token);
+void print_object(Obj* obj);
+ObjString* copy_string(const char* str, int length);
 
 #endif

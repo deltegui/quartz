@@ -15,13 +15,16 @@ if [ "$1" = "-ed" ]; then
     MACROS="-D DEBUG"
 fi
 
+SOURCES=`find ../*.c -maxdepth 1 ! -name qcc.c | tr '\n' ' '`
+echo $SOURCES
+
 echo "\n\n-------- [LEXER TESTS] --------"
-sh -c "$CC $MACROS ./lexer_test.c ../lexer.c ../debug.c ../expr.c ../values.c ../vm_memory.c ../object.c $LIBS $AND_EXEC"
+sh -c "$CC $MACROS ./lexer_test.c $SOURCES $LIBS $AND_EXEC"
 
 echo "\n\n-------- [PARSER TESTS] --------"
-sh -c "$CC $MACROS ./parser_test.c ../parser.c ../expr.c ../values.c ../vm_memory.c ../lexer.c ../debug.c $LIBS $AND_EXEC"
+sh -c "$CC $MACROS ./parser_test.c $SOURCES $LIBS $AND_EXEC"
 
 echo "\n\n-------- [COMPILER TESTS] --------"
-sh -c "$CC $MACROS ./compiler_test.c ../typechecker.c ../vm_memory.c ../values.c ../parser.c ../expr.c ../chunk.c ../object.c ../lexer.c ../compiler.c ../debug.c $LIBS $AND_EXEC"
+sh -c "$CC $MACROS ./compiler_test.c $SOURCES $LIBS $AND_EXEC"
 
 rm $BIN

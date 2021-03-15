@@ -11,8 +11,10 @@ typedef struct {
     Obj* objects;
 } QVM;
 
-extern QVM qvm;
+void init_qvm();
+void free_qvm();
+void qvm_execute(Chunk* chunk);
 
-void vm_execute(Chunk* chunk);
+extern QVM qvm;
 
 #endif

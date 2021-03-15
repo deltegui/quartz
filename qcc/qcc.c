@@ -47,9 +47,11 @@ int compile_file(const char* file) {
     }
     Chunk chunk;
     init_chunk(&chunk);
+    init_qvm();
     if (compile(source, &chunk) == COMPILATION_OK) {
-        vm_execute(&chunk);
+        qvm_execute(&chunk);
     }
+    free_qvm();
     free_chunk(&chunk);
     free((char*) source);
     return 0;
@@ -73,9 +75,11 @@ void repl() {
             continue;
         }
         init_chunk(&chunk);
+        init_qvm();
         if (compile(input_buffer, &chunk) == COMPILATION_OK) {
-            vm_execute(&chunk);
+            qvm_execute(&chunk);
         }
+        free_qvm();
         free_chunk(&chunk);
     }
 #undef BUFFER_SIZE

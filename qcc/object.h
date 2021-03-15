@@ -28,5 +28,6 @@ typedef struct {
 
 void print_object(Obj* obj);
 ObjString* copy_string(const char* str, int length);
+ObjString* concat_string(ObjString* first, ObjString* second);
 
 #endif

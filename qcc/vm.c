@@ -9,12 +9,12 @@
 
 QVM qvm;
 
-static void init_qvm(QVM* qvm) {
-    qvm->stack_top = qvm->stack;
-    qvm->objects = NULL;
+void init_qvm() {
+    qvm.stack_top = qvm.stack;
+    qvm.objects = NULL;
 }
 
-static void free_qvm(QVM* qvm) {
+void free_qvm() {
     free_objects();
 }
 
@@ -24,6 +24,10 @@ static inline void stack_push(Value val) {
 
 static inline Value stack_pop() {
     return *(--qvm.stack_top);
+}
+
+static inline Value stack_peek(uint8_t distance) {
+    return *(qvm.stack_top - distance - 1);
 }
 
 #define NUM_BINARY_OP(op)\
@@ -36,18 +40,23 @@ static inline Value stack_pop() {
     bool a = AS_BOOL(stack_pop());\
     stack_push(BOOL_VALUE(a op b))
 
+#define STRING_CONCAT()\
+    ObjString* b = AS_STRING_OBJ(AS_OBJ(stack_pop()));\
+    ObjString* a = AS_STRING_OBJ(AS_OBJ(stack_pop()));\
+    ObjString* concat = concat_string(a, b);\
+    stack_push(OBJ_VALUE(concat))
+
 static inline bool last_values_equal() {
     Value b = stack_pop();
     Value a = stack_pop();
     return value_equals(a, b);
 }
 
-void vm_execute(Chunk* chunk) {
+void qvm_execute(Chunk* chunk) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
 #endif
 
-    init_qvm(&qvm);
     uint8_t* pc = chunk->code;
 
 #define READ_BYTE() *(pc++)
@@ -58,6 +67,13 @@ void vm_execute(Chunk* chunk) {
 #endif
         switch (READ_BYTE()) {
         case OP_ADD: {
+            Value second = stack_peek(0);
+            Value first = stack_peek(1);
+            // @todo this can be replaced with just checking runtime type
+            if (IS_OBJ(second) && IS_STRING(AS_OBJ(second)) && IS_OBJ(first) && IS_STRING(AS_OBJ(first))) {
+                STRING_CONCAT();
+                break;
+            }
             NUM_BINARY_OP(+);
             break;
         }
@@ -136,6 +152,5 @@ void vm_execute(Chunk* chunk) {
         printf("\n\n");
 #endif
     }
-    free_qvm(&qvm);
 #undef READ_BYTE
 }

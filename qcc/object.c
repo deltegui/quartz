@@ -24,10 +24,18 @@ ObjString* copy_string(const char* str, int length) {
     return obj_str;
 }
 
+ObjString* concat_string(ObjString* first, ObjString* second) {
+    int concat_length = first->length + second->length;
+    char buffer[concat_length];
+    memcpy(buffer, first->cstr, first->length);
+    memcpy(((char*)buffer) + first->length, second->cstr, second->length);
+    return copy_string(buffer, concat_length);
+}
+
 void print_object(Obj* obj) {
     switch (obj->obj_type) {
     case STRING_OBJ: {
-        printf("%s", AS_CSTRING(obj));
+        printf("'%s'", AS_CSTRING(obj));
         break;
     }
     }

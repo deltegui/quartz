@@ -1,7 +1,12 @@
 #ifndef QUARTZ_COMMON_H
 #define QUARTZ_COMMON_H
 
+#ifndef DEBUG
+#define NDEBUG // disables assertions
+#endif
+
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>

@@ -102,7 +102,13 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     printf("'\n")
 
     switch (binary->op.type) {
-    case TOKEN_PLUS:
+    case TOKEN_PLUS: {
+        if (left_type == STRING_TYPE && right_type == STRING_TYPE) {
+            checker->last_type = STRING_TYPE;
+            return;
+        }
+        // just continue to NUMBER_TYPE
+    }
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_PERCENT:

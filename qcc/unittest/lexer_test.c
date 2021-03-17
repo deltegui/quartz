@@ -177,6 +177,13 @@ static void should_fail_if_float_is_malformed() {
         1,
         TOKEN_ERROR
     );
+    /*
+    assert_types(
+        "  5.5.5   ",
+        1,
+        TOKEN_ERROR
+    );
+    */
 }
 
 static void should_create_string_tokens_correctly() {

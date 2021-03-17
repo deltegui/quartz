@@ -25,7 +25,7 @@ bool value_equals(Value first, Value second);
 
 #define NUMBER_VALUE(i) ((Value){ VALUE_NUMBER, { .number = i } })
 #define BOOL_VALUE(b) ((Value){ VALUE_BOOL, { .boolean = b } })
-#define NIL_VALUE(val) ((Value){ VALUE_NIL, { .object = NULL } })
+#define NIL_VALUE() ((Value){ VALUE_NIL, { .object = NULL } })
 #define OBJ_VALUE(obj) ((Value){ VALUE_OBJ, { .object = (Obj*) obj } })
 
 #define IS_NUMBER(val) (val.type == VALUE_NUMBER)

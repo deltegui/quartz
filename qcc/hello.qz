@@ -1,1 +1,4 @@
-'hola mundo. ' + ' desde españa'
+' multiline
+string is something that                                    quartz
+                            manages correctly
+' + 'hola'

@@ -17,8 +17,9 @@ typedef struct Obj {
 // us have better performance.
 typedef struct {
     Obj obj;
+    uint32_t hash;
     int length;
-    char cstr[];
+    char cstr[]; // @todo would be better to call this just 'chars'?
 } ObjString;
 
 #define IS_STRING(obj) (obj->obj_type == STRING_OBJ)

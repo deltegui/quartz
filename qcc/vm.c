@@ -10,13 +10,13 @@
 QVM qvm;
 
 void init_qvm() {
-    init_table(qvm.strings);
+    init_table(&qvm.strings);
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
 }
 
 void free_qvm() {
-    free_table(qvm.strings);
+    free_table(&qvm.strings);
     free_objects();
 }
 

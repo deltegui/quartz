@@ -10,7 +10,7 @@ typedef struct {
     Value stack[STACK_MAX];
     Value* stack_top;
     Obj* objects;
-    Table* strings;
+    Table strings;
 } QVM;
 
 void init_qvm();

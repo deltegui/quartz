@@ -38,12 +38,12 @@ static uint32_t hash_string(const char* chars, int length) {
 
 ObjString* copy_string(const char* chars, int length) {
     uint32_t hash = hash_string(chars, length);
-    ObjString* interned = table_find_string(qvm.strings, chars, length, hash);
+    ObjString* interned = table_find_string(&qvm.strings, chars, length, hash);
     if (interned != NULL) {
         return interned;
     }
     ObjString* str = alloc_string(chars, length, hash);
-    table_set(qvm.strings, str, NIL_VALUE());
+    table_set(&qvm.strings, str, NIL_VALUE());
     return str;
 }
 

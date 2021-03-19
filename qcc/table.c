@@ -8,6 +8,9 @@
 #define IS_ENTRY_EMPTY(table, index) (table->entries[index].key == NULL)
 #define SHOULD_INTERCHANGE_ENTRY(table, index, dist) (table->entries[index].distance < dist)
 
+static void table_insert(Table* table, ObjString* key, Value value);
+static void table_adjust_capacity(Table* table, int capacity);
+
 void init_table(Table* table) {
     table->entries = NULL;
     table->size = 0;
@@ -23,6 +26,29 @@ void free_table(Table* table) {
     init_table(table);
 }
 
+static void table_adjust_capacity(Table* table, int capacity) {
+    Entry* old_entries = table->entries;
+    int old_capacity = table->capacity;
+
+    table->entries = ALLOC(Entry, capacity);
+    table->capacity = capacity;
+    table->size = 0;
+    table->max_distance = 0;
+
+    for (int i = 0; i < table->capacity; i++) {
+        table->entries[i].key = NULL;
+        table->entries[i].value = NIL_VALUE();
+    }
+
+    for (int i = 0; i < old_capacity; i++) {
+        if (old_entries[i].key != NULL) {
+            table_insert(table, old_entries[i].key, old_entries[i].value);
+        }
+    }
+
+    FREE_ARRAY(Entry, old_entries, old_capacity);
+}
+
 static void table_insert(Table* table, ObjString* key, Value value) {
     uint32_t index = key->hash & (table->capacity - 1);
     Entry current_entry = (Entry){
@@ -35,6 +61,10 @@ static void table_insert(Table* table, ObjString* key, Value value) {
         if (IS_ENTRY_EMPTY(table, current_index)) {
             table->entries[current_index] = current_entry;
             table->size++;
+            return;
+        }
+        if (table->entries[current_index].key == current_entry.key) {
+            table->entries[current_index] = current_entry;
             return;
         }
         if (SHOULD_INTERCHANGE_ENTRY(table, current_index, current_entry.distance)) {
@@ -55,14 +85,16 @@ static void table_insert(Table* table, ObjString* key, Value value) {
 
 void table_set(Table* table, ObjString* key, Value value) {
     if (TABLE_SHOULD_GROW(table)) {
-        int old_capacity = table->capacity;
-        table->capacity = GROW_CAPACITY(table->capacity);
-        table->entries = GROW_ARRAY(Entry, table->entries, old_capacity, table->capacity);
+        int capacity = GROW_CAPACITY(table->capacity);
+        table_adjust_capacity(table, capacity);
     }
     table_insert(table, key, value);
 }
 
 Value table_find(Table* table, ObjString* key) {
+    if (table->entries == NULL) {
+        return NIL_VALUE();
+    }
     uint32_t index = key->hash & (table->capacity - 1);
     int distance = 0;
     while (distance <= table->max_distance) {
@@ -81,6 +113,9 @@ Value table_find(Table* table, ObjString* key) {
 }
 
 ObjString* table_find_string(Table* table, const char* chars, int length, uint32_t hash) {
+    if (table->entries == NULL) {
+        return NULL;
+    }
     uint32_t index = hash & (table->capacity - 1);
     int distance = 0;
     while (distance <= table->max_distance) {

@@ -109,6 +109,10 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
         }
         // just continue to NUMBER_TYPE
     }
+    case TOKEN_LOWER:
+    case TOKEN_LOWER_EQUAL:
+    case TOKEN_GREATER:
+    case TOKEN_GREATER_EQUAL:
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_PERCENT:

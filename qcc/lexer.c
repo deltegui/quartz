@@ -220,6 +220,18 @@ Token next_token(Lexer* lexer) {
     case '(': return create_token(lexer, TOKEN_LEFT_PAREN);
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '.': return create_token(lexer, TOKEN_DOT);
+    case '<': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_LOWER_EQUAL);
+        }
+        return create_token(lexer, TOKEN_LOWER);
+    }
+    case '>': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_GREATER_EQUAL);
+        }
+        return create_token(lexer, TOKEN_GREATER);
+    }
     case '&': {
         if (consume(lexer, '&')) {
             return create_token(lexer, TOKEN_AND);

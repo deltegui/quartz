@@ -14,6 +14,7 @@ typedef struct {
 
 static void error(Compiler* compiler, const char* message, int line);
 static void emit(Compiler* compiler, uint8_t bytecode, int line);
+static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second, int line);
 static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
 
 static void compile_literal(void* ctx, LiteralExpr* literal);
@@ -68,6 +69,11 @@ static void emit(Compiler* compiler, uint8_t bytecode, int line) {
     chunk_write(compiler->chunk, bytecode, line);
 }
 
+static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second, int line) {
+    chunk_write(compiler->chunk, first, line);
+    chunk_write(compiler->chunk, second, line);
+}
+
 // @todo Maybe can this function be rewrited in a way that express the difference
 // between reserved words and real literals
 static void compile_literal(void* ctx, LiteralExpr* literal) {
@@ -109,42 +115,33 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
 
 static void compile_binary(void* ctx, BinaryExpr* binary) {
     Compiler* compiler = (Compiler*) ctx;
-    OpCode op;
+    ACCEPT(compiler, binary->left);
+    ACCEPT(compiler, binary->right);
+
+#define EMIT(byte) emit(compiler, byte, binary->op.line)
+#define EMIT_BYTES(first, second) emit_bytes(compiler, first, second, binary->op.line)
+
     switch(binary->op.type) {
-    case TOKEN_PLUS:
-        op = OP_ADD;
-        break;
-    case TOKEN_MINUS:
-        op = OP_SUB;
-        break;
-    case TOKEN_STAR:
-        op = OP_MUL;
-        break;
-    case TOKEN_SLASH:
-        op = OP_DIV;
-        break;
-    case TOKEN_AND:
-        op = OP_AND;
-        break;
-    case TOKEN_OR:
-        op = OP_OR;
-        break;
-    case TOKEN_PERCENT:
-        op = OP_MOD;
-        break;
-    case TOKEN_EQUAL_EQUAL:
-        op = OP_EQUAL;
-        break;
-    case TOKEN_BANG_EQUAL:
-        op = OP_NOT_EQUAL;
-        break;
+    case TOKEN_PLUS: EMIT(OP_ADD); break;
+    case TOKEN_MINUS: EMIT(OP_SUB); break;
+    case TOKEN_STAR: EMIT(OP_MUL); break;
+    case TOKEN_SLASH: EMIT(OP_DIV); break;
+    case TOKEN_AND: EMIT(OP_AND); break;
+    case TOKEN_OR: EMIT(OP_OR); break;
+    case TOKEN_PERCENT: EMIT(OP_MOD); break;
+    case TOKEN_EQUAL_EQUAL: EMIT(OP_EQUAL); break;
+    case TOKEN_BANG_EQUAL: EMIT_BYTES(OP_EQUAL, OP_NOT); break;
+    case TOKEN_LOWER: EMIT(OP_LOWER); break;
+    case TOKEN_LOWER_EQUAL: EMIT_BYTES(OP_GREATER, OP_NOT); break;
+    case TOKEN_GREATER: EMIT(OP_GREATER); break;
+    case TOKEN_GREATER_EQUAL: EMIT_BYTES(OP_LOWER, OP_NOT); break;
     default:
         error(compiler, "Unkown binary operator in expression", binary->op.line);
         return;
     }
-    ACCEPT(compiler, binary->left);
-    ACCEPT(compiler, binary->right);
-    emit(compiler, op, binary->op.line);
+
+#undef EMIT
+#undef EMIT_BYTES
 }
 
 static void compile_unary(void* ctx, UnaryExpr* unary) {

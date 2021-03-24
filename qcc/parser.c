@@ -46,30 +46,34 @@ static Expr* unary(Parser* parser);
 static Expr* binary(Parser* parser, Expr* left);
 
 ParseRule rules[] = {
-    [TOKEN_END]         = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_ERROR]       = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_ERROR]         = {NULL,        NULL,   PREC_NONE},
 
-    [TOKEN_PLUS]        = {unary,       binary, PREC_TERM},
-    [TOKEN_MINUS]       = {unary,       binary, PREC_TERM},
-    [TOKEN_STAR]        = {NULL,        binary, PREC_FACTOR},
-    [TOKEN_SLASH]       = {NULL,        binary, PREC_FACTOR},
-    [TOKEN_PERCENT]     = {NULL,        binary, PREC_FACTOR},
-    [TOKEN_LEFT_PAREN]  = {grouping,    NULL,   PREC_NONE},
-    [TOKEN_RIGHT_PAREN] = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_DOT]         = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_BANG]        = {unary,       NULL,   PREC_UNARY},
-    [TOKEN_EQUAL]       = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_PLUS]          = {unary,       binary, PREC_TERM},
+    [TOKEN_MINUS]         = {unary,       binary, PREC_TERM},
+    [TOKEN_STAR]          = {NULL,        binary, PREC_FACTOR},
+    [TOKEN_SLASH]         = {NULL,        binary, PREC_FACTOR},
+    [TOKEN_PERCENT]       = {NULL,        binary, PREC_FACTOR},
+    [TOKEN_LEFT_PAREN]    = {grouping,    NULL,   PREC_NONE},
+    [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_DOT]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_BANG]          = {unary,       NULL,   PREC_UNARY},
+    [TOKEN_EQUAL]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_LOWER]         = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_GREATER]       = {NULL,        binary, PREC_EQUALITY},
 
-    [TOKEN_AND]         = {NULL,        binary, PREC_AND},
-    [TOKEN_OR]          = {NULL,        binary, PREC_OR},
-    [TOKEN_EQUAL_EQUAL] = {NULL,        binary, PREC_EQUALITY},
-    [TOKEN_BANG_EQUAL]  = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_AND]           = {NULL,        binary, PREC_AND},
+    [TOKEN_OR]            = {NULL,        binary, PREC_OR},
+    [TOKEN_EQUAL_EQUAL]   = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_EQUALITY},
 
-    [TOKEN_NUMBER]      = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_TRUE]        = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_FALSE]       = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_NIL]         = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_STRING]      = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_NUMBER]        = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_TRUE]          = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
 };
 
 static ParseRule* get_rule(TokenType type) {
@@ -190,6 +194,10 @@ static Expr* binary(Parser* parser, Expr* left) {
     case TOKEN_OR:
     case TOKEN_EQUAL_EQUAL:
     case TOKEN_BANG_EQUAL:
+    case TOKEN_LOWER:
+    case TOKEN_LOWER_EQUAL:
+    case TOKEN_GREATER:
+    case TOKEN_GREATER_EQUAL:
         break;
     default:
         error_next(parser, "Expected arithmetic operation");

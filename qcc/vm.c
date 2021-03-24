@@ -48,12 +48,6 @@ static inline Value stack_peek(uint8_t distance) {
     ObjString* concat = concat_string(a, b);\
     stack_push(OBJ_VALUE(concat))
 
-static inline bool last_values_equal() {
-    Value b = stack_pop();
-    Value a = stack_pop();
-    return value_equals(a, b);
-}
-
 void qvm_execute(Chunk* chunk) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
@@ -128,13 +122,22 @@ void qvm_execute(Chunk* chunk) {
             stack_push(NIL_VALUE());
             break;
         case OP_EQUAL: {
-            bool result = last_values_equal();
+            Value b = stack_pop();
+            Value a = stack_pop();
+            bool result = value_equals(a, b);
             stack_push(BOOL_VALUE(result));
             break;
         }
-        case OP_NOT_EQUAL: {
-            bool result = last_values_equal();
-            stack_push(BOOL_VALUE(!result));
+        case OP_GREATER: {
+            double b = AS_NUMBER(stack_pop());
+            double a = AS_NUMBER(stack_pop());
+            stack_push(BOOL_VALUE(a > b));
+            break;
+        }
+        case OP_LOWER: {
+            double b = AS_NUMBER(stack_pop());
+            double a = AS_NUMBER(stack_pop());
+            stack_push(BOOL_VALUE(a < b));
             break;
         }
         case OP_CONSTANT: {

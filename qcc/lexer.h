@@ -19,12 +19,16 @@ typedef enum {
     TOKEN_DOT,
     TOKEN_BANG,
     TOKEN_EQUAL,
+    TOKEN_LOWER,
+    TOKEN_GREATER,
 
     // Two character tokens
     TOKEN_AND,
     TOKEN_OR,
     TOKEN_EQUAL_EQUAL,
     TOKEN_BANG_EQUAL,
+    TOKEN_LOWER_EQUAL,
+    TOKEN_GREATER_EQUAL,
 
     // Multi-character tokens
     TOKEN_NUMBER,

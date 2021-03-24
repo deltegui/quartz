@@ -18,7 +18,8 @@ typedef enum {
     OP_AND,
     OP_OR,
     OP_EQUAL,
-    OP_NOT_EQUAL,
+    OP_GREATER,
+    OP_LOWER,
 
     // Reserved words and other special operations
     OP_TRUE,

@@ -24,7 +24,8 @@ static const char* OpCodeStrings[] = {
     "OP_AND",
     "OP_OR",
     "OP_EQUAL",
-    "OP_NOT_EQUAL",
+    "OP_GREATER",
+    "OP_LOWER",
     "OP_TRUE",
     "OP_FALSE",
     "OP_NIL",
@@ -84,7 +85,8 @@ void chunk_print(Chunk* chunk) {
         case OP_FALSE:
         case OP_NIL:
         case OP_EQUAL:
-        case OP_NOT_EQUAL: {
+        case OP_LOWER:
+        case OP_GREATER: {
             chunk_opcode_print(chunk, i++);
             break;
         }
@@ -103,26 +105,30 @@ void chunk_print(Chunk* chunk) {
 
 static const char* token_type_print(TokenType type) {
     switch (type) {
-    case TOKEN_END: return "End";
-    case TOKEN_ERROR: return "Error";
-    case TOKEN_PLUS: return "Plus";
-    case TOKEN_MINUS: return "Minus";
-    case TOKEN_STAR: return "Star";
-    case TOKEN_SLASH: return "Slash";
-    case TOKEN_PERCENT: return "Percent";
-    case TOKEN_LEFT_PAREN: return "LeftParen";
-    case TOKEN_RIGHT_PAREN: return "RightParen";
-    case TOKEN_DOT: return "Dot";
-    case TOKEN_BANG: return "Bang";
-    case TOKEN_AND: return "And";
-    case TOKEN_OR: return "Or";
-    case TOKEN_NUMBER: return "Number";
-    case TOKEN_TRUE: return "True";
-    case TOKEN_FALSE: return "False";
-    case TOKEN_STRING: return "String";
-    case TOKEN_NIL: return "Nil";
-    case TOKEN_EQUAL_EQUAL: return "EqualEqual";
-    case TOKEN_BANG_EQUAL: return "BangEqual";
+    case TOKEN_END: return "TokenEnd";
+    case TOKEN_ERROR: return "TokenError";
+    case TOKEN_PLUS: return "TokenPlus";
+    case TOKEN_MINUS: return "TokenMinus";
+    case TOKEN_STAR: return "TokenStar";
+    case TOKEN_SLASH: return "TokenSlash";
+    case TOKEN_PERCENT: return "TokenPercent";
+    case TOKEN_LEFT_PAREN: return "TokenLeftParen";
+    case TOKEN_RIGHT_PAREN: return "TokenRightParen";
+    case TOKEN_DOT: return "TokenDot";
+    case TOKEN_BANG: return "TokenBang";
+    case TOKEN_AND: return "TokenAnd";
+    case TOKEN_OR: return "TokenOr";
+    case TOKEN_NUMBER: return "TokenNumber";
+    case TOKEN_TRUE: return "TokenTrue";
+    case TOKEN_FALSE: return "TokenFalse";
+    case TOKEN_STRING: return "TokenString";
+    case TOKEN_NIL: return "TokenNil";
+    case TOKEN_EQUAL_EQUAL: return "TokenEqualEqual";
+    case TOKEN_BANG_EQUAL: return "TokenBangEqual";
+    case TOKEN_LOWER: return "TokenLower";
+    case TOKEN_GREATER: return "TokenGreater";
+    case TOKEN_LOWER_EQUAL: return "TokenLowerEqual";
+    case TOKEN_GREATER_EQUAL: return "TokenGreaterEqual";
     default: return "Unknown";
     }
 }

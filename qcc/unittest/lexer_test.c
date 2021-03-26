@@ -177,6 +177,7 @@ static void should_fail_if_float_is_malformed() {
         1,
         TOKEN_ERROR
     );
+    // @todo this should work, but it doesnt.
     /*
     assert_types(
         "  5.5.5   ",
@@ -219,8 +220,46 @@ static void should_fail_if_string_is_malformed() {
     );
 }
 
+static void should_scan_global_declarations() {
+    assert_tokens(
+        "   var demo = 12;     ",
+        5,
+        (Token){
+            .length = 3,
+            .line = 1,
+            .start = "var",
+            .type = TOKEN_VAR
+        },
+        (Token){
+            .length = 4,
+            .line = 1,
+            .start = "demo",
+            .type = TOKEN_IDENTIFIER
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = "=",
+            .type = TOKEN_EQUAL
+        },
+        (Token){
+            .length = 2,
+            .line = 1,
+            .start = "12",
+            .type = TOKEN_NUMBER
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = ";",
+            .type = TOKEN_SEMICOLON
+        }
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_scan_global_declarations),
         cmocka_unit_test(should_scan_empty_text),
         cmocka_unit_test(should_omit_spaces),
         cmocka_unit_test(should_scan_arithmetic_operators),

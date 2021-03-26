@@ -5,11 +5,46 @@
 #include "../expr.h"
 #include "../debug.h"
 
+static inline void assert_has_errors(const char* source);
+static void assert_stmt_equals(Stmt* first, Stmt* second);
+static void assert_list_stmt_equals(ListStmt* first, ListStmt* second);
+static void assert_expr_equals(Expr* first, Expr* second);
+static void compare_asts(Stmt* first, Stmt* second);
+static void assert_ast(const char* source, Stmt* expected_ast);
+static void assert_expr_ast(const char* source, Expr* expected);
+
 static inline void assert_has_errors(const char* source) {
     Parser parser;
     init_parser(&parser, source);
     parse(&parser);
     assert_true(parser.has_error);
+}
+
+static void assert_stmt_equals(Stmt* first, Stmt* second) {
+    assert_true(first->type == second->type);
+    switch (first->type) {
+    case EXPR_STMT: {
+        assert_expr_equals(first->expr.inner, second->expr.inner);
+        break;
+    }
+    case VAR_STMT: {
+        // @todo implement
+        fail();
+        break;
+    }
+    case LIST_STMT: {
+        assert_list_stmt_equals(&first->list, &second->list);
+        break;
+    }
+    }
+}
+
+static void assert_list_stmt_equals(ListStmt* first, ListStmt* second) {
+    assert_true(first->length == second->length);
+    assert_true(first->capacity == second->capacity);
+    for (int i = 0; i < first->length; i++) {
+        assert_stmt_equals(first->stmts[i], second->stmts[i]);
+    }
 }
 
 static void assert_expr_equals(Expr* first, Expr* second) {
@@ -35,15 +70,25 @@ static void assert_expr_equals(Expr* first, Expr* second) {
     }
 }
 
-static void compare_asts(Expr* first, Expr* second) {
-    assert_expr_equals(first, second);
+static void compare_asts(Stmt* first, Stmt* second) {
+    assert_stmt_equals(first, second);
 }
 
-static void assert_ast(const char* source, Expr* expected_ast) {
+static void assert_ast(const char* source, Stmt* expected_ast) {
     Parser parser;
     init_parser(&parser, source);
-    Expr* result = parse(&parser);
+    Stmt* result = parse(&parser);
     compare_asts(result, expected_ast);
+}
+
+static void assert_expr_ast(const char* source, Expr* expected) {
+    ExprStmt expr_stmt = (ExprStmt){
+        .inner = expected,
+    };
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, CREATE_EXPR_STMT(expr_stmt));
+    assert_ast(source, CREATE_LIST_STMT(list));
+    free(list);
 }
 
 LiteralExpr true_ = (LiteralExpr){
@@ -146,8 +191,8 @@ static void should_parse_additions() {
         .op = sum_token,
         .right = CREATE_LITERAL_EXPR(two)
     };
-    assert_ast(
-        "2+2",
+    assert_expr_ast(
+        "2+2;",
         CREATE_BINARY_EXPR(sum)
     );
 }
@@ -163,8 +208,8 @@ static void should_parse_precedence() {
         .op = sub_token,
         .right = CREATE_BINARY_EXPR(division)
     };
-    assert_ast(
-        "   2-  2 / 5  ",
+    assert_expr_ast(
+        "   2-  2 / 5 ; ",
         CREATE_BINARY_EXPR(substract)
     );
 }
@@ -180,24 +225,25 @@ static void should_parse_grouping() {
         .op = star_token,
         .right = CREATE_LITERAL_EXPR(five)
     };
-    assert_ast(
+    assert_expr_ast(
         " ( 2 + 2 ) * 5 ",
         CREATE_BINARY_EXPR(mul)
     );
 }
 
 static void should_fail() {
-    assert_has_errors(" ) 2 + 2 ( ");
-    assert_has_errors(" 2 * ");
-    assert_has_errors(" 2 + ");
-    assert_has_errors(" 2 / ");
-    assert_has_errors(" 2 - ");
-    assert_has_errors(" 2 ** 3 ");
+    assert_has_errors(" ) 2 + 2 (; ");
+    assert_has_errors(" 2 *; ");
+    assert_has_errors(" 2 +; ");
+    assert_has_errors(" 2 /; ");
+    assert_has_errors(" 2 -; ");
+    assert_has_errors(" 2 ** 3; ");
+    assert_has_errors(" 2  ");
 }
 
 static void should_parse_strings() {
-    assert_ast(
-        "   'Hello world!'   ",
+    assert_expr_ast(
+        "   'Hello world!';   ",
         CREATE_LITERAL_EXPR(example_str)
     );
 }
@@ -213,23 +259,23 @@ static void should_parse_equality() {
         .op = bang_equal,
         .right = CREATE_LITERAL_EXPR(five)
     };
-    assert_ast(
-        " 2 == 2 != 5 ",
+    assert_expr_ast(
+        " 2 == 2 != 5; ",
         CREATE_BINARY_EXPR(not_equal)
     );
 }
 
 static void should_parse_reserved_words_as_literals() {
-    assert_ast(
-        " true   ",
+    assert_expr_ast(
+        " true;   ",
         CREATE_LITERAL_EXPR(true_)
     );
-    assert_ast(
-        " \n    false  ",
+    assert_expr_ast(
+        " \n    false;  ",
         CREATE_LITERAL_EXPR(false_)
     );
-    assert_ast(
-        "     nil        ",
+    assert_expr_ast(
+        "     nil;        ",
         CREATE_LITERAL_EXPR(nil)
     );
 }

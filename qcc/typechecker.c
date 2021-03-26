@@ -1,6 +1,7 @@
 #include "typechecker.h"
 #include "common.h"
 #include "lexer.h"
+#include "expr.h"
 
 typedef enum {
     NUMBER_TYPE,
@@ -22,13 +23,22 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_binary(void* ctx, BinaryExpr* binary);
 static void typecheck_unary(void* ctx, UnaryExpr* unary);
 
-ExprVisitor typechecker_visitor = (ExprVisitor){
+ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
     .visit_binary = typecheck_binary,
     .visit_unary = typecheck_unary,
 };
 
-#define ACCEPT(typechecker, expr) expr_dispatch(&typechecker_visitor, typechecker, expr)
+static void typecheck_expr(void* ctx, ExprStmt* expr);
+static void typecheck_var(void* ctx, VarStmt* var);
+
+StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
+    .visit_expr = typecheck_expr,
+    .visit_var = typecheck_var,
+};
+
+#define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
+#define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
 
 static void error(Typechecker* checker, const char* msg, Token* token) {
     printf(
@@ -51,11 +61,19 @@ static void print_type(Type type) {
     }
 }
 
-bool typecheck(Expr* ast) {
+bool typecheck(Stmt* ast) {
     Typechecker checker;
     checker.has_error = false;
-    ACCEPT(&checker, ast);
+    ACCEPT_STMT(&checker, ast);
     return !checker.has_error;
+}
+
+static void typecheck_expr(void* ctx, ExprStmt* expr) {
+    ACCEPT_EXPR(ctx, expr->inner);
+}
+
+static void typecheck_var(void* ctx, VarStmt* var) {
+    // @todo implement this.
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
@@ -89,9 +107,9 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
 
 static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     Typechecker* checker = (Typechecker*) ctx;
-    ACCEPT(checker, binary->left);
+    ACCEPT_EXPR(checker, binary->left);
     Type left_type = checker->last_type;
-    ACCEPT(checker, binary->right);
+    ACCEPT_EXPR(checker, binary->right);
     Type right_type = checker->last_type;
 
 #define ERROR(msg) error(checker, msg, &binary->op);\
@@ -153,7 +171,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
 
 static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     Typechecker* checker = (Typechecker*) ctx;
-    ACCEPT(checker, unary->expr);
+    ACCEPT_EXPR(checker, unary->expr);
     Type inner_type = checker->last_type;
 
 #define ERROR(msg) error(checker, msg, &unary->op);\

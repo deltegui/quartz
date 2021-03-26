@@ -195,8 +195,13 @@ static Token scan_identifier(Lexer* lexer) {
             return create_token(lexer, TOKEN_NIL);
         }
     }
+    case 'v': {
+        if (match_subtoken(lexer, "ar", 1, 3)) {
+            return create_token(lexer, TOKEN_VAR);
+        }
     }
-    return create_error(lexer, "Unkown identifier");
+    }
+    return create_token(lexer, TOKEN_IDENTIFIER);
 }
 
 Token next_token(Lexer* lexer) {
@@ -220,6 +225,7 @@ Token next_token(Lexer* lexer) {
     case '(': return create_token(lexer, TOKEN_LEFT_PAREN);
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '.': return create_token(lexer, TOKEN_DOT);
+    case ';': return create_token(lexer, TOKEN_SEMICOLON);
     case '<': {
         if (consume(lexer, '=')) {
             return create_token(lexer, TOKEN_LOWER_EQUAL);

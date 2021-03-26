@@ -28,6 +28,9 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
+static ParseRule* get_rule(TokenType type);
+static Expr* parse_precendence(Parser* parser, Precedence precedence);
+
 static void error(Parser* parser, const char* message);
 static void error_next(Parser* parser, const char* message);
 static void error_at(Parser* parser, Token* token, const char* message);
@@ -35,8 +38,8 @@ static void error_at(Parser* parser, Token* token, const char* message);
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenType expected, const char* msg);
 
-static ParseRule* get_rule(TokenType type);
-static Expr* parse_precendence(Parser* parser, Precedence precedence);
+static Stmt* statement(Parser* parser);
+static Stmt* stmt_expr(Parser* parser);
 
 static Expr* expression(Parser* parser);
 static Expr* grouping(Parser* parser);
@@ -154,7 +157,7 @@ static bool consume(Parser* parser, TokenType expected, const char* message) {
     return true;
 }
 
-Expr* parse(Parser* parser) {
+Stmt* parse(Parser* parser) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: Parser start\n");
 #endif
@@ -167,11 +170,29 @@ Expr* parse(Parser* parser) {
     if (parser->next.type == TOKEN_END) {
         return NULL;
     }
-    Expr* ast = expression(parser);
+    ListStmt* list = create_list_stmt();
+    Stmt* ast = statement(parser);
+    list_stmt_add(list, ast);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
-    return ast;
+    return CREATE_LIST_STMT(list);
+}
+
+static Stmt* statement(Parser* parser) {
+    switch (parser->current.type) {
+    default:
+        return stmt_expr(parser);
+    }
+}
+
+static Stmt* stmt_expr(Parser* parser) {
+    Expr* expr = expression(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expected statement to end with ';'");
+    ExprStmt expr_stmt = (ExprStmt){
+        .inner = expr,
+    };
+    return CREATE_EXPR_STMT(expr_stmt);
 }
 
 static Expr* expression(Parser* parser) {

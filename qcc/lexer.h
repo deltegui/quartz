@@ -21,6 +21,7 @@ typedef enum {
     TOKEN_EQUAL,
     TOKEN_LOWER,
     TOKEN_GREATER,
+    TOKEN_SEMICOLON,
 
     // Two character tokens
     TOKEN_AND,
@@ -31,11 +32,13 @@ typedef enum {
     TOKEN_GREATER_EQUAL,
 
     // Multi-character tokens
+    TOKEN_VAR,
     TOKEN_NUMBER,
     TOKEN_TRUE,
     TOKEN_FALSE,
     TOKEN_NIL,
     TOKEN_STRING,
+    TOKEN_IDENTIFIER,
 } TokenType;
 
 typedef struct {

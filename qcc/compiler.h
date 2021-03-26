@@ -4,6 +4,7 @@
 #include "chunk.h"
 #include "parser.h"
 #include "expr.h"
+#include "stmt.h"
 
 typedef enum {
     COMPILATION_ERROR,

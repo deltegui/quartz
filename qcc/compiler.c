@@ -21,13 +21,22 @@ static void compile_literal(void* ctx, LiteralExpr* literal);
 static void compile_binary(void* ctx, BinaryExpr* binary);
 static void compile_unary(void* ctx, UnaryExpr* unary);
 
-ExprVisitor compiler_visitor = (ExprVisitor){
+ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
     .visit_binary = compile_binary,
     .visit_unary = compile_unary,
 };
 
-#define ACCEPT(compiler, expr) expr_dispatch(&compiler_visitor, compiler, expr)
+static void compile_expr(void* ctx, ExprStmt* expr);
+static void compile_var(void* ctx, VarStmt* var);
+
+StmtVisitor compiler_stmt_visitor = (StmtVisitor){
+    .visit_expr = compile_expr,
+    .visit_var = compile_var,
+};
+
+#define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
+#define ACCEPT_EXPR(compiler, expr) expr_dispatch(&compiler_expr_visitor, compiler, expr)
 
 static void error(Compiler* compiler, const char* message, int line) {
     fprintf(stderr, "[Line %d] Compile error: %s\n", line, message);
@@ -43,22 +52,22 @@ void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
 CompilationResult compile(const char* source, Chunk* output_chunk) {
     Compiler compiler;
     init_compiler(&compiler, source, output_chunk);
-    Expr* ast = parse(&compiler.parser);
+    Stmt* ast = parse(&compiler.parser);
     if (compiler.parser.has_error) {
-        free_expr(ast); // Although parser had errors, the ast exists.
+        free_stmt(ast); // Although parser had errors, the ast exists.
         return PARSING_ERROR;
     }
     if (!typecheck(ast)) {
-        free_expr(ast);
+        free_stmt(ast);
         return TYPE_ERROR;
     }
-    ACCEPT(&compiler, ast);
+    ACCEPT_STMT(&compiler, ast);
     emit(&compiler, OP_RETURN, -1);
 #ifdef COMPILER_DEBUG
     valuearray_print(&compiler.chunk->constants);
     chunk_print(compiler.chunk);
 #endif
-    free_expr(ast);
+    free_stmt(ast);
     if (compiler.has_error) {
         return COMPILATION_ERROR;
     }
@@ -72,6 +81,14 @@ static void emit(Compiler* compiler, uint8_t bytecode, int line) {
 static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second, int line) {
     chunk_write(compiler->chunk, first, line);
     chunk_write(compiler->chunk, second, line);
+}
+
+static void compile_expr(void* ctx, ExprStmt* expr) {
+    ACCEPT_EXPR(ctx, expr->inner);
+}
+
+static void compile_var(void* ctx, VarStmt* var) {
+    //@todo implement
 }
 
 // @todo Maybe can this function be rewrited in a way that express the difference
@@ -115,8 +132,8 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
 
 static void compile_binary(void* ctx, BinaryExpr* binary) {
     Compiler* compiler = (Compiler*) ctx;
-    ACCEPT(compiler, binary->left);
-    ACCEPT(compiler, binary->right);
+    ACCEPT_EXPR(compiler, binary->left);
+    ACCEPT_EXPR(compiler, binary->right);
 
 #define EMIT(byte) emit(compiler, byte, binary->op.line)
 #define EMIT_BYTES(first, second) emit_bytes(compiler, first, second, binary->op.line)
@@ -161,6 +178,6 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
         error(compiler, "Unkown unary operator in expression", unary->op.line);
         return;
     }
-    ACCEPT(compiler, unary->expr);
+    ACCEPT_EXPR(compiler, unary->expr);
     emit(compiler, op, unary->op.line);
 }

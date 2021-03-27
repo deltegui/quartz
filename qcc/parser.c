@@ -64,15 +64,15 @@ ParseRule rules[] = {
     [TOKEN_DOT]           = {NULL,        NULL,   PREC_NONE},
     [TOKEN_BANG]          = {unary,       NULL,   PREC_UNARY},
     [TOKEN_EQUAL]         = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_LOWER]         = {NULL,        binary, PREC_EQUALITY},
-    [TOKEN_GREATER]       = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_LOWER]         = {NULL,        binary, PREC_COMPARISON},
+    [TOKEN_GREATER]       = {NULL,        binary, PREC_COMPARISON},
 
     [TOKEN_AND]           = {NULL,        binary, PREC_AND},
     [TOKEN_OR]            = {NULL,        binary, PREC_OR},
     [TOKEN_EQUAL_EQUAL]   = {NULL,        binary, PREC_EQUALITY},
     [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
-    [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_EQUALITY},
-    [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
 
     [TOKEN_NUMBER]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_TRUE]          = {primary,     NULL,   PREC_PRIMARY},
@@ -97,10 +97,10 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
         // Left can be NULL if there was an error.
         // @warning this short-circuit parser execution. This must be avoided.
         // @todo subsitute this with panic mode when statements are introduced.
-        if (left == NULL) {
+        /*if (left == NULL) {
             error(parser, "Unknown prefix");
             break;
-        }
+        }*/
         advance(parser);
         SuffixParse infix_parser = get_rule(parser->current.type)->infix;
         // @todo is this really necessay?
@@ -144,10 +144,9 @@ static void error_at(Parser* parser, Token* token, const char* message) {
 }
 
 static void panic(Parser* parser) {
-    while(parser->current.type != TOKEN_SEMICOLON && parser->current.type != TOKEN_END) {
+    while(parser->next.type != TOKEN_SEMICOLON && parser->next.type != TOKEN_END) {
         advance(parser);
     }
-    advance(parser);
 }
 
 static void advance(Parser* parser) {

@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include "debug.h"
+#include "expr.h"
 
 void valuearray_print(ValueArray* values) {
     printf("--------[ VALUE ARRAY ]--------\n\n");
@@ -31,6 +32,7 @@ static const char* OpCodeStrings[] = {
     "OP_NIL",
     "OP_NOP",
     "OP_RETURN",
+    "OP_POP",
     "OP_CONSTANT",
 };
 
@@ -86,6 +88,7 @@ void chunk_print(Chunk* chunk) {
         case OP_NIL:
         case OP_EQUAL:
         case OP_LOWER:
+        case OP_POP:
         case OP_GREATER: {
             chunk_opcode_print(chunk, i++);
             break;
@@ -145,24 +148,34 @@ void token_print(Token token) {
 
 static void print_offset();
 static void pretty_print(const char *msg, ...);
+
 static void print_binary(void* ctx, BinaryExpr* binary);
 static void print_unary(void* ctx, UnaryExpr* unary);
 static void print_literal(void* ctx, LiteralExpr *literal);
 
-ExprVisitor printer_visitor = (ExprVisitor){
+ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
     .visit_binary = print_binary,
     .visit_unary = print_unary,
 };
 
-#define ACCEPT(expr) expr_dispatch(&printer_visitor, NULL, expr)
+static void print_expr(void* ctx, ExprStmt* expr);
+static void print_var(void* ctx, VarStmt* var);
+
+StmtVisitor printer_stmt_visitor = (StmtVisitor){
+    .visit_expr = print_expr,
+    .visit_var = print_var,
+};
+
+#define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
+#define ACCEPT_EXPR(expr) expr_dispatch(&printer_expr_visitor, NULL, expr)
 
 int offset = 0;
 
 #define OFFSET(...) do { offset++; __VA_ARGS__ offset--; } while(false)
 
-void ast_print(Expr* root) {
-    ACCEPT(root);
+void ast_print(Stmt* root) {
+    ACCEPT_STMT(root);
 }
 
 static void print_offset() {
@@ -177,12 +190,24 @@ static void pretty_print(const char *msg, ...) {
     printf("%s", msg);
 }
 
+static void print_expr(void* ctx, ExprStmt* expr) {
+    pretty_print("Expr Stmt: [\n");
+    OFFSET({
+        ACCEPT_EXPR(expr->inner);
+    });
+    pretty_print("]\n");
+}
+
+static void print_var(void* ctx, VarStmt* var) {
+    // @todo implement
+}
+
 static void print_binary(void* ctx, BinaryExpr* binary) {
     pretty_print("Bianary: [\n");
     OFFSET({
         pretty_print("Left:\n");
         OFFSET({
-            ACCEPT(binary->left);
+            ACCEPT_EXPR(binary->left);
         });
 
         pretty_print("Operator: ");
@@ -190,7 +215,7 @@ static void print_binary(void* ctx, BinaryExpr* binary) {
 
         pretty_print("Right: \n");
         OFFSET({
-            ACCEPT(binary->right);
+            ACCEPT_EXPR(binary->right);
         });
     });
     pretty_print("]\n");
@@ -212,7 +237,7 @@ static void print_unary(void* ctx, UnaryExpr* unary) {
         token_print(unary->op);
         pretty_print("Expr: \n");
         OFFSET({
-            ACCEPT(unary->expr);
+            ACCEPT_EXPR(unary->expr);
         });
     });
     pretty_print("]\n");

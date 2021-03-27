@@ -34,10 +34,12 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence);
 static void error(Parser* parser, const char* message);
 static void error_next(Parser* parser, const char* message);
 static void error_at(Parser* parser, Token* token, const char* message);
+static void panic(Parser* parser);
 
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenType expected, const char* msg);
 
+static Stmt* global(Parser* parser);
 static Stmt* statement(Parser* parser);
 static Stmt* stmt_expr(Parser* parser);
 
@@ -138,6 +140,14 @@ static void error_at(Parser* parser, Token* token, const char* message) {
     }
     fprintf(stderr, ": %s\n", message);
     parser->has_error = true;
+    panic(parser);
+}
+
+static void panic(Parser* parser) {
+    while(parser->current.type != TOKEN_SEMICOLON && parser->current.type != TOKEN_END) {
+        advance(parser);
+    }
+    advance(parser);
 }
 
 static void advance(Parser* parser) {
@@ -170,12 +180,19 @@ Stmt* parse(Parser* parser) {
     if (parser->next.type == TOKEN_END) {
         return NULL;
     }
-    ListStmt* list = create_list_stmt();
-    Stmt* ast = statement(parser);
-    list_stmt_add(list, ast);
+    Stmt* ast = global(parser);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
+    return ast;
+}
+
+static Stmt* global(Parser* parser) {
+    ListStmt* list = create_list_stmt();
+    while (parser->next.type != TOKEN_END) {
+        Stmt* stmt = statement(parser);
+        list_stmt_add(list, stmt);
+    }
     return CREATE_LIST_STMT(list);
 }
 

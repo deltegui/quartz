@@ -1,6 +1,5 @@
 #include <stdarg.h>
 #include "./common.h"
-
 #include "../compiler.h"
 #include "../chunk.h"
 
@@ -40,8 +39,13 @@ static void assert_chunk(Chunk* expected, Chunk* emitted) {
 static void assert_compiled_chunk(const char* source, Chunk* expected) {
     Chunk compiled;
     init_chunk(&compiled);
-    compile(source, &compiled);
-    assert_chunk(expected, &compiled);
+    CompilationResult result = compile(source, &compiled);
+    switch (result) {
+    case PARSING_ERROR: printf("PARSING_ERROR!"); break;
+    case TYPE_ERROR: printf("TYPE_ERROR!"); break;
+    case COMPILATION_ERROR: printf("COMPILATION_ERROR!"); break;
+    case COMPILATION_OK: assert_chunk(expected, &compiled); break;
+    }
     free_chunk(&compiled);
 }
 
@@ -58,8 +62,9 @@ static void should_emit_binary() {
         emit_constant(&my, NUMBER_VALUE(2), 1);
         emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_ADD, 1);
+        chunk_write(&my, OP_POP, 1);
     });
-    assert_compiled_chunk("2+2", &my);
+    assert_compiled_chunk("2+2;", &my);
     free_chunk(&my);
 }
 
@@ -72,8 +77,9 @@ static void should_emit_complex_calc() {
         chunk_write(&my, OP_ADD, 1);
         emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_MUL, 1);
+        chunk_write(&my, OP_POP, 1);
     });
-    assert_compiled_chunk("(5+4)*2", &my);
+    assert_compiled_chunk("(5+4)*2;", &my);
     free_chunk(&my);
 }
 
@@ -84,8 +90,9 @@ static void should_emit_comparisions() {
         emit_constant(&my, NUMBER_VALUE(1), 1);
         emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_EQUAL, 1);
+        chunk_write(&my, OP_POP, 1);
     });
-    assert_compiled_chunk("1 == 2", &my);
+    assert_compiled_chunk("1 == 2;", &my);
     free_chunk(&my);
 }
 

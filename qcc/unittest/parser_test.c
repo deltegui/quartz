@@ -33,7 +33,7 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case LIST_STMT: {
-        assert_list_stmt_equals(&first->list, &second->list);
+        assert_list_stmt_equals(first->list, second->list);
         break;
     }
     }

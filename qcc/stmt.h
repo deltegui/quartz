@@ -34,7 +34,7 @@ typedef struct _Stmt {
     union {
         ExprStmt expr;
         VarStmt var;
-        ListStmt list;
+        ListStmt* list;
     };
 } Stmt;
 

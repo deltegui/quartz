@@ -28,6 +28,9 @@ typedef enum {
     OP_NOP,
     OP_RETURN,
 
+    // Stack operations
+    OP_POP,
+
     // Declarations
     OP_CONSTANT,
 } OpCode;

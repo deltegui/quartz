@@ -9,12 +9,13 @@
 typedef struct {
     Parser parser;
     Chunk* chunk;
+    int last_line;
     bool has_error;
 } Compiler;
 
-static void error(Compiler* compiler, const char* message, int line);
-static void emit(Compiler* compiler, uint8_t bytecode, int line);
-static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second, int line);
+static void error(Compiler* compiler, const char* message);
+static void emit(Compiler* compiler, uint8_t bytecode);
+static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second);
 static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
 
 static void compile_literal(void* ctx, LiteralExpr* literal);
@@ -38,14 +39,15 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
 #define ACCEPT_EXPR(compiler, expr) expr_dispatch(&compiler_expr_visitor, compiler, expr)
 
-static void error(Compiler* compiler, const char* message, int line) {
-    fprintf(stderr, "[Line %d] Compile error: %s\n", line, message);
+static void error(Compiler* compiler, const char* message) {
+    fprintf(stderr, "[Line %d] Compile error: %s\n", compiler->last_line, message);
     compiler->has_error = true;
 }
 
 void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
     init_parser(&compiler->parser, source);
     compiler->chunk = output;
+    compiler->last_line = 1;
     compiler->has_error = false;
 }
 
@@ -62,7 +64,7 @@ CompilationResult compile(const char* source, Chunk* output_chunk) {
         return TYPE_ERROR;
     }
     ACCEPT_STMT(&compiler, ast);
-    emit(&compiler, OP_RETURN, -1);
+    emit(&compiler, OP_RETURN);
 #ifdef COMPILER_DEBUG
     valuearray_print(&compiler.chunk->constants);
     chunk_print(compiler.chunk);
@@ -74,17 +76,19 @@ CompilationResult compile(const char* source, Chunk* output_chunk) {
     return COMPILATION_OK;
 }
 
-static void emit(Compiler* compiler, uint8_t bytecode, int line) {
-    chunk_write(compiler->chunk, bytecode, line);
+static void emit(Compiler* compiler, uint8_t bytecode) {
+    chunk_write(compiler->chunk, bytecode, compiler->last_line);
 }
 
-static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second, int line) {
-    chunk_write(compiler->chunk, first, line);
-    chunk_write(compiler->chunk, second, line);
+static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second) {
+    chunk_write(compiler->chunk, first, compiler->last_line);
+    chunk_write(compiler->chunk, second, compiler->last_line);
 }
 
 static void compile_expr(void* ctx, ExprStmt* expr) {
-    ACCEPT_EXPR(ctx, expr->inner);
+    Compiler* compiler = (Compiler*)ctx;
+    ACCEPT_EXPR(compiler, expr->inner);
+    emit(compiler, OP_POP);
 }
 
 static void compile_var(void* ctx, VarStmt* var) {
@@ -95,19 +99,20 @@ static void compile_var(void* ctx, VarStmt* var) {
 // between reserved words and real literals
 static void compile_literal(void* ctx, LiteralExpr* literal) {
     Compiler* compiler = (Compiler*) ctx;
+    compiler->last_line = literal->literal.line;
     Value value;
     switch (literal->literal.type) {
     // We start with reserved words that have its own opcode.
     case TOKEN_TRUE: {
-        emit(compiler, OP_TRUE, literal->literal.line);
+        emit(compiler, OP_TRUE);
         return;
     }
     case TOKEN_FALSE: {
-        emit(compiler, OP_FALSE, literal->literal.line);
+        emit(compiler, OP_FALSE);
         return;
     }
     case TOKEN_NIL: {
-        emit(compiler, OP_NIL, literal->literal.line);
+        emit(compiler, OP_NIL);
         return;
     }
     // Continue creating linerals
@@ -122,21 +127,23 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         break;
     }
     default:
-        error(compiler, "Unkown literal expression", literal->literal.line);
+        error(compiler, "Unkown literal expression");
         return;
     }
-    emit(compiler, OP_CONSTANT, literal->literal.line);
+    emit(compiler, OP_CONSTANT);
     uint8_t value_pos = valuearray_write(&compiler->chunk->constants, value);
-    emit(compiler, value_pos, literal->literal.line);
+    emit(compiler, value_pos);
 }
 
 static void compile_binary(void* ctx, BinaryExpr* binary) {
     Compiler* compiler = (Compiler*) ctx;
+    compiler->last_line = binary->op.line;
+
     ACCEPT_EXPR(compiler, binary->left);
     ACCEPT_EXPR(compiler, binary->right);
 
-#define EMIT(byte) emit(compiler, byte, binary->op.line)
-#define EMIT_BYTES(first, second) emit_bytes(compiler, first, second, binary->op.line)
+#define EMIT(byte) emit(compiler, byte)
+#define EMIT_BYTES(first, second) emit_bytes(compiler, first, second)
 
     switch(binary->op.type) {
     case TOKEN_PLUS: EMIT(OP_ADD); break;
@@ -153,7 +160,7 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_GREATER: EMIT(OP_GREATER); break;
     case TOKEN_GREATER_EQUAL: EMIT_BYTES(OP_LOWER, OP_NOT); break;
     default:
-        error(compiler, "Unkown binary operator in expression", binary->op.line);
+        error(compiler, "Unkown binary operator in expression");
         return;
     }
 
@@ -163,6 +170,8 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
 
 static void compile_unary(void* ctx, UnaryExpr* unary) {
     Compiler* compiler = (Compiler*) ctx;
+    compiler->last_line = unary->op.line;
+
     OpCode op;
     switch(unary->op.type) {
     case TOKEN_BANG:
@@ -175,9 +184,9 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
         op = OP_NEGATE;
         break;
     default:
-        error(compiler, "Unkown unary operator in expression", unary->op.line);
+        error(compiler, "Unkown unary operator in expression");
         return;
     }
     ACCEPT_EXPR(compiler, unary->expr);
-    emit(compiler, op, unary->op.line);
+    emit(compiler, op);
 }

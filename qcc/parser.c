@@ -94,16 +94,14 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     }
     Expr* left = prefix_parser(parser);
     while (precedence <= get_rule(parser->next.type)->precedence) {
-        // Left can be NULL if there was an error.
-        // @warning this short-circuit parser execution. This must be avoided.
-        // @todo subsitute this with panic mode when statements are introduced.
-        /*if (left == NULL) {
+        // @todo these NULL checks are for errors while parsing expr. Are necessary?
+        if (left == NULL) {
             error(parser, "Unknown prefix");
             break;
-        }*/
+        }
         advance(parser);
         SuffixParse infix_parser = get_rule(parser->current.type)->infix;
-        // @todo is this really necessay?
+        // @todo take a look to previous todo
         if (infix_parser == NULL) {
             error_next(parser, "Unknown infix operator");
             break;

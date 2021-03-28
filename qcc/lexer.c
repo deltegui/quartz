@@ -15,7 +15,8 @@ static bool consume(Lexer* lexer, char expected);
 static Token create_token(Lexer* lexer, TokenType type);
 static Token create_error(Lexer* lexer, const char* message);
 
-static void skip_whitespaces(Lexer* lexer);
+static bool skip_whitespaces(Lexer* lexer);
+static bool consume_multiline_comment(Lexer* lexer);
 static bool is_numeric(Lexer* lexer);
 static bool is_alpha(Lexer* lexer);
 static bool is_string_quote(Lexer* lexer);
@@ -91,7 +92,8 @@ static Token create_error(Lexer* lexer, const char* message) {
     return create_token(lexer, TOKEN_ERROR);
 }
 
-static void skip_whitespaces(Lexer* lexer) {
+static bool skip_whitespaces(Lexer* lexer) {
+    bool ok = true;
     for (;;) {
         switch (*lexer->current) {
         case '\n':
@@ -104,14 +106,37 @@ static void skip_whitespaces(Lexer* lexer) {
         case '/':
             if (match_next(lexer, '/')) {
                 CONSUME_UNTIL(lexer, '\n');
+            } else if (match_next(lexer, '*')) {
+                ok = ok && consume_multiline_comment(lexer);
             } else {
-                return;
+                return ok;
             }
             break;
         default:
-            return;
+            return ok;
         }
     }
+}
+
+static bool consume_multiline_comment(Lexer* lexer) {
+    int comment_start_line = lexer->line;
+    while (! (match(lexer, '*') && match_next(lexer, '/')) ) {
+        if (is_at_end(lexer)) {
+            fprintf(
+                stderr,
+                "[Line %d] Expected comment that starts in line %d to end with '*/' at end of file.\n",
+                lexer->line,
+                comment_start_line);
+            return false;
+        }
+        if (match(lexer, '\n')) {
+            lexer->line++;
+        }
+        advance(lexer);
+    }
+    consume(lexer, '*');
+    consume(lexer, '/');
+    return true;
 }
 
 static bool is_numeric(Lexer* lexer) {
@@ -156,6 +181,9 @@ static Token scan_string(Lexer* lexer) {
     lexer->start = lexer->current; // Omit first quote
     while (!is_string_quote(lexer) && !is_at_end(lexer)) {
         advance(lexer);
+        if (match(lexer, '\n')) {
+            lexer->line++;
+        }
     }
     if (!is_string_quote(lexer)) {
         return create_error(lexer, "Malformed string: expected string to end with '\"'");
@@ -205,7 +233,9 @@ static Token scan_identifier(Lexer* lexer) {
 }
 
 Token next_token(Lexer* lexer) {
-    skip_whitespaces(lexer);
+    if (!skip_whitespaces(lexer)) {
+        return create_token(lexer, TOKEN_ERROR);
+    }
     if (is_at_end(lexer)) {
         return create_token(lexer, TOKEN_END);
     }
@@ -242,11 +272,13 @@ Token next_token(Lexer* lexer) {
         if (consume(lexer, '&')) {
             return create_token(lexer, TOKEN_AND);
         }
+        return create_error(lexer, "Unkown '&' character");
     }
     case '|': {
         if (consume(lexer, '|')) {
             return create_token(lexer, TOKEN_OR);
         }
+        return create_error(lexer, "Unkown '|' character");
     }
     case '=': {
         if (consume(lexer, '=')) {

@@ -1,5 +1,16 @@
+
+
+
+
+
+
+/**
+Hello world
+this is a demo
+for multiline strings */
 2*6;
 1+ 2;
 "ABB"+ "a";
 var a: Bool = "ABB" == "A";
 print a + "A";
+*/

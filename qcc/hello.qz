@@ -1,6 +1,6 @@
 
 
-"
+print "
 multiline
 
 strings pussy";
@@ -11,9 +11,10 @@ strings pussy";
 Hello world
 this is a demo
 for multiline strings */
-2*6;
-1+ 2;
-"ABB"+ "a";
+print 2*6;
+print 1+ 2;
+print "ABB"+ "a";
+/*
 var a: Bool = "ABB" == "A";
 print a + "A";
 */

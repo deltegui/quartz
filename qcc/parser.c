@@ -34,7 +34,7 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence);
 static void error(Parser* parser, const char* message);
 static void error_prev(Parser* parser, const char* message);
 static void error_at(Parser* parser, Token* token, const char* message);
-static void panic(Parser* parser);
+static void syncronize(Parser* parser);
 
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenType expected, const char* msg);
@@ -93,7 +93,7 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     advance(parser);
     PrefixParse prefix_parser = get_rule(parser->prev.type)->prefix;
     if (prefix_parser == NULL) {
-        error(parser, "Expected expression");
+        error_prev(parser, "Expected expression");
         return NULL;
     }
     Expr* left = prefix_parser(parser);
@@ -109,6 +109,7 @@ void init_parser(Parser* parser, const char* source) {
     parser->current.type = -1;
     parser->prev.type = -1;
     init_lexer(&parser->lexer, source);
+    parser->panic_mode = false;
     parser->has_error = false;
 }
 
@@ -121,6 +122,10 @@ static void error_prev(Parser* parser, const char* message) {
 }
 
 static void error_at(Parser* parser, Token* token, const char* message) {
+    if (parser->panic_mode) {
+        return;
+    }
+    parser->panic_mode = true;
     fprintf(stderr, "[Line %d] Error", token->line);
     switch(token->type) {
     case TOKEN_ERROR: break;
@@ -132,10 +137,10 @@ static void error_at(Parser* parser, Token* token, const char* message) {
     }
     fprintf(stderr, ": %s\n", message);
     parser->has_error = true;
-    panic(parser);
 }
 
-static void panic(Parser* parser) {
+static void syncronize(Parser* parser) {
+    parser->panic_mode = false;
     while(parser->current.type != TOKEN_SEMICOLON && parser->current.type != TOKEN_END) {
         advance(parser);
     }
@@ -186,6 +191,9 @@ static Stmt* global(Parser* parser) {
     while (parser->current.type != TOKEN_END) {
         Stmt* stmt = statement(parser);
         list_stmt_add(list, stmt);
+        if (parser->panic_mode) {
+            syncronize(parser);
+        }
     }
     return CREATE_LIST_STMT(list);
 }

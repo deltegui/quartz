@@ -10,6 +10,7 @@ typedef struct {
     Lexer lexer;
     Token current;
     Token prev;
+    bool panic_mode;
     bool has_error;
 } Parser;
 

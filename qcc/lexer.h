@@ -18,16 +18,27 @@ typedef enum {
     TOKEN_RIGHT_PAREN,
     TOKEN_DOT,
     TOKEN_BANG,
+    TOKEN_EQUAL,
+    TOKEN_LOWER,
+    TOKEN_GREATER,
+    TOKEN_SEMICOLON,
 
     // Two character tokens
     TOKEN_AND,
     TOKEN_OR,
+    TOKEN_EQUAL_EQUAL,
+    TOKEN_BANG_EQUAL,
+    TOKEN_LOWER_EQUAL,
+    TOKEN_GREATER_EQUAL,
 
     // Multi-character tokens
-    TOKEN_INTEGER,
-    TOKEN_FLOAT,
+    TOKEN_VAR,
+    TOKEN_NUMBER,
     TOKEN_TRUE,
-    TOKEN_FALSE
+    TOKEN_FALSE,
+    TOKEN_NIL,
+    TOKEN_STRING,
+    TOKEN_IDENTIFIER,
 } TokenType;
 
 typedef struct {
@@ -40,7 +51,7 @@ typedef struct {
 typedef struct {
     const char* start;
     const char* current;
-    int line;
+    uint32_t line;
 } Lexer;
 
 // Initialize a exiting lexer using

@@ -28,15 +28,20 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
+static ParseRule* get_rule(TokenType type);
+static Expr* parse_precendence(Parser* parser, Precedence precedence);
+
 static void error(Parser* parser, const char* message);
 static void error_next(Parser* parser, const char* message);
 static void error_at(Parser* parser, Token* token, const char* message);
+static void panic(Parser* parser);
 
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenType expected, const char* msg);
 
-static ParseRule* get_rule(TokenType type);
-static Expr* parse_precendence(Parser* parser, Precedence precedence);
+static Stmt* global(Parser* parser);
+static Stmt* statement(Parser* parser);
+static Stmt* stmt_expr(Parser* parser);
 
 static Expr* expression(Parser* parser);
 static Expr* grouping(Parser* parser);
@@ -46,25 +51,36 @@ static Expr* unary(Parser* parser);
 static Expr* binary(Parser* parser, Expr* left);
 
 ParseRule rules[] = {
-    [TOKEN_END]         = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_ERROR]       = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_ERROR]         = {NULL,        NULL,   PREC_NONE},
 
-    [TOKEN_PLUS]        = {NULL,        binary, PREC_TERM},
-    [TOKEN_MINUS]       = {NULL,        binary, PREC_TERM},
-    [TOKEN_STAR]        = {NULL,        binary, PREC_FACTOR},
-    [TOKEN_SLASH]       = {NULL,        binary, PREC_FACTOR},
-    [TOKEN_LEFT_PAREN]  = {grouping,    NULL,   PREC_NONE},
-    [TOKEN_RIGHT_PAREN] = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_DOT]         = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_BANG]        = {unary,       NULL,   PREC_UNARY},
+    [TOKEN_PLUS]          = {unary,       binary, PREC_TERM},
+    [TOKEN_MINUS]         = {unary,       binary, PREC_TERM},
+    [TOKEN_STAR]          = {NULL,        binary, PREC_FACTOR},
+    [TOKEN_SLASH]         = {NULL,        binary, PREC_FACTOR},
+    [TOKEN_PERCENT]       = {NULL,        binary, PREC_FACTOR},
+    [TOKEN_LEFT_PAREN]    = {grouping,    NULL,   PREC_NONE},
+    [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_DOT]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_BANG]          = {unary,       NULL,   PREC_UNARY},
+    [TOKEN_EQUAL]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_LOWER]         = {NULL,        binary, PREC_COMPARISON},
+    [TOKEN_GREATER]       = {NULL,        binary, PREC_COMPARISON},
 
-    [TOKEN_AND]         = {NULL,        binary, PREC_AND},
-    [TOKEN_OR]          = {NULL,        binary, PREC_OR},
+    [TOKEN_AND]           = {NULL,        binary, PREC_AND},
+    [TOKEN_OR]            = {NULL,        binary, PREC_OR},
+    [TOKEN_EQUAL_EQUAL]   = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
+    [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
 
-    [TOKEN_INTEGER]     = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_FLOAT]       = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_TRUE]        = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_FALSE]       = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_VAR]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_NUMBER]        = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_TRUE]          = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_IDENTIFIER]    = {NULL,        NULL,   PREC_NONE},
 };
 
 static ParseRule* get_rule(TokenType type) {
@@ -80,14 +96,18 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     }
     Expr* left = prefix_parser(parser);
     while (precedence <= get_rule(parser->next.type)->precedence) {
-        // Left can be NULL if there was an error.
-        // @warning this short-circuit parser execution. This must be avoided.
-        // @todo subsitute this with panic mode when statements are introduced.
+        // @todo these NULL checks are for errors while parsing expr. Are necessary?
         if (left == NULL) {
+            error(parser, "Unknown prefix");
             break;
         }
         advance(parser);
         SuffixParse infix_parser = get_rule(parser->current.type)->infix;
+        // @todo take a look to previous todo
+        if (infix_parser == NULL) {
+            error_next(parser, "Unknown infix operator");
+            break;
+        }
         left = infix_parser(parser, left);
     }
     return left;
@@ -120,6 +140,13 @@ static void error_at(Parser* parser, Token* token, const char* message) {
     }
     fprintf(stderr, ": %s\n", message);
     parser->has_error = true;
+    panic(parser);
+}
+
+static void panic(Parser* parser) {
+    while(parser->next.type != TOKEN_SEMICOLON && parser->next.type != TOKEN_END) {
+        advance(parser);
+    }
 }
 
 static void advance(Parser* parser) {
@@ -139,7 +166,7 @@ static bool consume(Parser* parser, TokenType expected, const char* message) {
     return true;
 }
 
-Expr* parse(Parser* parser) {
+Stmt* parse(Parser* parser) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: Parser start\n");
 #endif
@@ -152,11 +179,36 @@ Expr* parse(Parser* parser) {
     if (parser->next.type == TOKEN_END) {
         return NULL;
     }
-    Expr* ast = expression(parser);
-    #ifdef PARSER_DEBUG
+    Stmt* ast = global(parser);
+#ifdef PARSER_DEBUG
     ast_print(ast);
-    #endif
+#endif
     return ast;
+}
+
+static Stmt* global(Parser* parser) {
+    ListStmt* list = create_list_stmt();
+    while (parser->next.type != TOKEN_END) {
+        Stmt* stmt = statement(parser);
+        list_stmt_add(list, stmt);
+    }
+    return CREATE_LIST_STMT(list);
+}
+
+static Stmt* statement(Parser* parser) {
+    switch (parser->current.type) {
+    default:
+        return stmt_expr(parser);
+    }
+}
+
+static Stmt* stmt_expr(Parser* parser) {
+    Expr* expr = expression(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expected statement to end with ';'");
+    ExprStmt expr_stmt = (ExprStmt){
+        .inner = expr,
+    };
+    return CREATE_EXPR_STMT(expr_stmt);
 }
 
 static Expr* expression(Parser* parser) {
@@ -174,8 +226,15 @@ static Expr* binary(Parser* parser, Expr* left) {
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_SLASH:
+    case TOKEN_PERCENT:
     case TOKEN_AND:
     case TOKEN_OR:
+    case TOKEN_EQUAL_EQUAL:
+    case TOKEN_BANG_EQUAL:
+    case TOKEN_LOWER:
+    case TOKEN_LOWER_EQUAL:
+    case TOKEN_GREATER:
+    case TOKEN_GREATER_EQUAL:
         break;
     default:
         error_next(parser, "Expected arithmetic operation");
@@ -192,7 +251,6 @@ static Expr* binary(Parser* parser, Expr* left) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: end BINARY expression\n");
 #endif
-
     return CREATE_BINARY_EXPR(binary);
 }
 

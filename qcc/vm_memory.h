@@ -4,6 +4,7 @@
 #include "common.h"
 
 void* qvm_realloc(void* ptr, size_t old_size, size_t size);
+void free_objects();
 
 #define ALLOC(type, count) (type*) qvm_realloc(NULL, 0, sizeof(type) * count)
 

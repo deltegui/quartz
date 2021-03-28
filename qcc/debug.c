@@ -1,13 +1,6 @@
 #include <stdarg.h>
 #include "debug.h"
-
-static void value_print(Value val) {
-    switch (val.type) {
-    case VALUE_INTEGER: printf("%d", AS_INTEGER(val)); break;
-    case VALUE_FLOAT: printf("%f", AS_FLOAT(val)); break;
-    case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
-    }
-}
+#include "expr.h"
 
 void valuearray_print(ValueArray* values) {
     printf("--------[ VALUE ARRAY ]--------\n\n");
@@ -26,11 +19,21 @@ static const char* OpCodeStrings[] = {
     "OP_SUB",
     "OP_MUL",
     "OP_DIV",
+    "OP_MOD",
+    "OP_NEGATE",
     "OP_NOT",
     "OP_AND",
     "OP_OR",
+    "OP_EQUAL",
+    "OP_GREATER",
+    "OP_LOWER",
+    "OP_TRUE",
+    "OP_FALSE",
+    "OP_NIL",
+    "OP_NOP",
+    "OP_RETURN",
+    "OP_POP",
     "OP_CONSTANT",
-    "OP_RETURN"
 };
 
 void opcode_print(uint8_t op) {
@@ -39,12 +42,12 @@ void opcode_print(uint8_t op) {
 }
 
 void stack_print(Value* stack_top, Value* stack) {
-    Value* current = (stack_top - 1);
-    while (current >= stack) {
+    Value* current = stack;
+    while (current < stack_top) {
         printf("[ ");
         value_print(*current);
         printf(" ] ");
-        current = current - 1;
+        current = current + 1;
     }
 }
 
@@ -73,10 +76,20 @@ void chunk_print(Chunk* chunk) {
         case OP_SUB:
         case OP_MUL:
         case OP_DIV:
+        case OP_MOD:
+        case OP_NEGATE:
         case OP_RETURN:
         case OP_NOT:
+        case OP_NOP:
         case OP_AND:
-        case OP_OR: {
+        case OP_OR:
+        case OP_TRUE:
+        case OP_FALSE:
+        case OP_NIL:
+        case OP_EQUAL:
+        case OP_LOWER:
+        case OP_POP:
+        case OP_GREATER: {
             chunk_opcode_print(chunk, i++);
             break;
         }
@@ -95,23 +108,32 @@ void chunk_print(Chunk* chunk) {
 
 static const char* token_type_print(TokenType type) {
     switch (type) {
-    case TOKEN_END: return "End";
-    case TOKEN_ERROR: return "Error";
-    case TOKEN_PLUS: return "Plus";
-    case TOKEN_MINUS: return "Minus";
-    case TOKEN_STAR: return "Star";
-    case TOKEN_SLASH: return "Slash";
-    case TOKEN_PERCENT: return "Percent";
-    case TOKEN_LEFT_PAREN: return "LeftParen";
-    case TOKEN_RIGHT_PAREN: return "RightParen";
-    case TOKEN_DOT: return "Dot";
-    case TOKEN_BANG: return "Bang";
-    case TOKEN_AND: return "And";
-    case TOKEN_OR: return "Or";
-    case TOKEN_INTEGER: return "Integer";
-    case TOKEN_FLOAT: return "Float";
-    case TOKEN_TRUE: return "True";
-    case TOKEN_FALSE: return "False";
+    case TOKEN_END: return "TokenEnd";
+    case TOKEN_ERROR: return "TokenError";
+    case TOKEN_PLUS: return "TokenPlus";
+    case TOKEN_MINUS: return "TokenMinus";
+    case TOKEN_STAR: return "TokenStar";
+    case TOKEN_SLASH: return "TokenSlash";
+    case TOKEN_PERCENT: return "TokenPercent";
+    case TOKEN_LEFT_PAREN: return "TokenLeftParen";
+    case TOKEN_RIGHT_PAREN: return "TokenRightParen";
+    case TOKEN_DOT: return "TokenDot";
+    case TOKEN_BANG: return "TokenBang";
+    case TOKEN_AND: return "TokenAnd";
+    case TOKEN_OR: return "TokenOr";
+    case TOKEN_VAR: return "TokenVar";
+    case TOKEN_NUMBER: return "TokenNumber";
+    case TOKEN_TRUE: return "TokenTrue";
+    case TOKEN_FALSE: return "TokenFalse";
+    case TOKEN_STRING: return "TokenString";
+    case TOKEN_NIL: return "TokenNil";
+    case TOKEN_EQUAL_EQUAL: return "TokenEqualEqual";
+    case TOKEN_BANG_EQUAL: return "TokenBangEqual";
+    case TOKEN_LOWER: return "TokenLower";
+    case TOKEN_GREATER: return "TokenGreater";
+    case TOKEN_LOWER_EQUAL: return "TokenLowerEqual";
+    case TOKEN_GREATER_EQUAL: return "TokenGreaterEqual";
+    case TOKEN_IDENTIFIER: return "TokenIdentifier";
     default: return "Unknown";
     }
 }
@@ -128,24 +150,34 @@ void token_print(Token token) {
 
 static void print_offset();
 static void pretty_print(const char *msg, ...);
+
 static void print_binary(void* ctx, BinaryExpr* binary);
 static void print_unary(void* ctx, UnaryExpr* unary);
 static void print_literal(void* ctx, LiteralExpr *literal);
 
-ExprVisitor printer_visitor = (ExprVisitor){
+ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
     .visit_binary = print_binary,
     .visit_unary = print_unary,
 };
 
-#define ACCEPT(expr) expr_dispatch(&printer_visitor, NULL, expr)
+static void print_expr(void* ctx, ExprStmt* expr);
+static void print_var(void* ctx, VarStmt* var);
+
+StmtVisitor printer_stmt_visitor = (StmtVisitor){
+    .visit_expr = print_expr,
+    .visit_var = print_var,
+};
+
+#define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
+#define ACCEPT_EXPR(expr) expr_dispatch(&printer_expr_visitor, NULL, expr)
 
 int offset = 0;
 
 #define OFFSET(...) do { offset++; __VA_ARGS__ offset--; } while(false)
 
-void ast_print(Expr* root) {
-    ACCEPT(root);
+void ast_print(Stmt* root) {
+    ACCEPT_STMT(root);
 }
 
 static void print_offset() {
@@ -160,12 +192,24 @@ static void pretty_print(const char *msg, ...) {
     printf("%s", msg);
 }
 
+static void print_expr(void* ctx, ExprStmt* expr) {
+    pretty_print("Expr Stmt: [\n");
+    OFFSET({
+        ACCEPT_EXPR(expr->inner);
+    });
+    pretty_print("]\n");
+}
+
+static void print_var(void* ctx, VarStmt* var) {
+    // @todo implement
+}
+
 static void print_binary(void* ctx, BinaryExpr* binary) {
     pretty_print("Bianary: [\n");
     OFFSET({
         pretty_print("Left:\n");
         OFFSET({
-            ACCEPT(binary->left);
+            ACCEPT_EXPR(binary->left);
         });
 
         pretty_print("Operator: ");
@@ -173,7 +217,7 @@ static void print_binary(void* ctx, BinaryExpr* binary) {
 
         pretty_print("Right: \n");
         OFFSET({
-            ACCEPT(binary->right);
+            ACCEPT_EXPR(binary->right);
         });
     });
     pretty_print("]\n");
@@ -195,10 +239,8 @@ static void print_unary(void* ctx, UnaryExpr* unary) {
         token_print(unary->op);
         pretty_print("Expr: \n");
         OFFSET({
-            ACCEPT(unary->expr);
+            ACCEPT_EXPR(unary->expr);
         });
     });
     pretty_print("]\n");
 }
-
-

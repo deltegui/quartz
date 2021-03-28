@@ -60,9 +60,9 @@ static void should_scan_numbers() {
     assert_types(
         "1 +    3.2",
         3,
-        TOKEN_INTEGER,
+        TOKEN_NUMBER,
         TOKEN_PLUS,
-        TOKEN_FLOAT
+        TOKEN_NUMBER
     );
 }
 
@@ -83,13 +83,16 @@ static void should_scan_arithmetic_operators() {
 
 static void should_scan_boolean_operators() {
     assert_types(
-        "  !   && ! || &&",
-        5,
+        "  !   && ! || &&   ==   !=   =",
+        8,
         TOKEN_BANG,
         TOKEN_AND,
         TOKEN_BANG,
         TOKEN_OR,
-        TOKEN_AND
+        TOKEN_AND,
+        TOKEN_EQUAL_EQUAL,
+        TOKEN_BANG_EQUAL,
+        TOKEN_EQUAL
     );
 }
 
@@ -114,7 +117,7 @@ static void should_scan_reserved_words() {
 
 static void should_scan_reserved_words_correctly() {
     assert_tokens(
-        "  true\n  (false)",
+        "  true\n  (false) \r\n nil",
         4,
         (Token){
             .length = 4,
@@ -139,6 +142,12 @@ static void should_scan_reserved_words_correctly() {
             .line = 1,
             .start = ")",
             .type = TOKEN_RIGHT_PAREN
+        },
+        (Token){
+            .length = 3,
+            .line = 1,
+            .start = "nil",
+            .type = TOKEN_NIL
         }
     );
 }
@@ -151,13 +160,13 @@ static void should_create_number_tokens_correctly() {
             .length = 7,
             .line = 1,
             .start = "13.2323",
-            .type = TOKEN_FLOAT
+            .type = TOKEN_NUMBER
         },
         (Token){
             .length = 4,
             .line = 1,
             .start = "9043",
-            .type = TOKEN_INTEGER
+            .type = TOKEN_NUMBER
         }
     );
 }
@@ -168,10 +177,89 @@ static void should_fail_if_float_is_malformed() {
         1,
         TOKEN_ERROR
     );
+    // @todo this should work, but it doesnt.
+    /*
+    assert_types(
+        "  5.5.5   ",
+        1,
+        TOKEN_ERROR
+    );
+    */
+}
+
+static void should_create_string_tokens_correctly() {
+    assert_tokens(
+        "\"\"    'Hola' \n    \"Hola Mundo!! ñ\"  ",
+        3,
+        (Token){
+            .length = 0,
+            .line = 1,
+            .start = "",
+            .type = TOKEN_STRING
+        },
+        (Token){
+            .length = 4,
+            .line = 1,
+            .start = "Hola",
+            .type = TOKEN_STRING
+        },
+        (Token){
+            .length = 15,
+            .line = 2,
+            .start = "Hola Mundo!! ñ",
+            .type = TOKEN_STRING
+        }
+    );
+}
+
+static void should_fail_if_string_is_malformed() {
+    assert_types(
+        "    ' este string no se acaba  ",
+        1,
+        TOKEN_ERROR
+    );
+}
+
+static void should_scan_global_declarations() {
+    assert_tokens(
+        "   var demo = 12;     ",
+        5,
+        (Token){
+            .length = 3,
+            .line = 1,
+            .start = "var",
+            .type = TOKEN_VAR
+        },
+        (Token){
+            .length = 4,
+            .line = 1,
+            .start = "demo",
+            .type = TOKEN_IDENTIFIER
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = "=",
+            .type = TOKEN_EQUAL
+        },
+        (Token){
+            .length = 2,
+            .line = 1,
+            .start = "12",
+            .type = TOKEN_NUMBER
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = ";",
+            .type = TOKEN_SEMICOLON
+        }
+    );
 }
 
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_scan_global_declarations),
         cmocka_unit_test(should_scan_empty_text),
         cmocka_unit_test(should_omit_spaces),
         cmocka_unit_test(should_scan_arithmetic_operators),
@@ -179,7 +267,9 @@ int main(void) {
         cmocka_unit_test(should_fail_if_float_is_malformed),
         cmocka_unit_test(should_scan_numbers),
         cmocka_unit_test(should_scan_reserved_words),
-        cmocka_unit_test(should_scan_boolean_operators)
+        cmocka_unit_test(should_scan_boolean_operators),
+        cmocka_unit_test(should_create_string_tokens_correctly),
+        cmocka_unit_test(should_fail_if_string_is_malformed)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

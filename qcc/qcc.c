@@ -1,4 +1,5 @@
-﻿#include "common.h"
+﻿#include <string.h>
+#include "common.h"
 #include "sysexits.h"
 #include "chunk.h"
 #include "compiler.h"
@@ -46,12 +47,18 @@ int compile_file(const char* file) {
     }
     Chunk chunk;
     init_chunk(&chunk);
-    if (compile(source, &chunk)) {
-        vm_execute(&chunk);
+    init_qvm();
+    if (compile(source, &chunk) == COMPILATION_OK) {
+        qvm_execute(&chunk);
     }
+    free_qvm();
     free_chunk(&chunk);
     free((char*) source);
     return 0;
+}
+
+static inline bool strempty(const char* str) {
+    return strlen(str) == 0 || ( strlen(str) == 1 && str[0] == '\n' );
 }
 
 void repl() {
@@ -59,16 +66,20 @@ void repl() {
     char input_buffer[BUFFER_SIZE];
     Chunk chunk;
     for (;;) {
-        init_chunk(&chunk);
         printf("<qz> ");
         if (!fgets(input_buffer, BUFFER_SIZE, stdin)) {
             fprintf(stderr, "Error while reading from stdin!\n");
-            free_chunk(&chunk);
             exit(EX_IOERR);
         }
-        if (compile(input_buffer, &chunk)) {
-            vm_execute(&chunk);
+        if (strempty(input_buffer)) {
+            continue;
         }
+        init_chunk(&chunk);
+        init_qvm();
+        if (compile(input_buffer, &chunk) == COMPILATION_OK) {
+            qvm_execute(&chunk);
+        }
+        free_qvm();
         free_chunk(&chunk);
     }
 #undef BUFFER_SIZE

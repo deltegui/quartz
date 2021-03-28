@@ -4,16 +4,17 @@
 #include "chunk.h"
 #include "parser.h"
 #include "expr.h"
+#include "stmt.h"
 
-typedef struct {
-    Parser parser;
-    Chunk* chunk;
-    bool has_error;
-} Compiler;
+typedef enum {
+    COMPILATION_ERROR,
+    PARSING_ERROR,
+    TYPE_ERROR,
+    COMPILATION_OK,
+} CompilationResult;
 
 // Compile a source a let the result into a already created
-// chunk. compile can return true or false. true means it was
-// able to compile the source. false means there was an error.
-bool compile(const char* source, Chunk* output_chunk);
+// chunk. While compiling, errors may occur.
+CompilationResult compile(const char* source, Chunk* output_chunk);
 
 #endif

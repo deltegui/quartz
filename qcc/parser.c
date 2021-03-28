@@ -79,6 +79,7 @@ ParseRule rules[] = {
     [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_IDENTIFIER]    = {NULL,        NULL,   PREC_NONE},
 };
 
 static ParseRule* get_rule(TokenType type) {

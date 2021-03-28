@@ -74,6 +74,7 @@ ParseRule rules[] = {
     [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
 
+    [TOKEN_VAR]           = {NULL,        NULL,   PREC_NONE},
     [TOKEN_NUMBER]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_TRUE]          = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},

@@ -121,6 +121,7 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_BANG: return "TokenBang";
     case TOKEN_AND: return "TokenAnd";
     case TOKEN_OR: return "TokenOr";
+    case TOKEN_VAR: return "TokenVar";
     case TOKEN_NUMBER: return "TokenNumber";
     case TOKEN_TRUE: return "TokenTrue";
     case TOKEN_FALSE: return "TokenFalse";

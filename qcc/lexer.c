@@ -180,10 +180,10 @@ static Token scan_string(Lexer* lexer) {
     advance(lexer); // Consume first quote
     lexer->start = lexer->current; // Omit first quote
     while (!is_string_quote(lexer) && !is_at_end(lexer)) {
-        advance(lexer);
         if (match(lexer, '\n')) {
             lexer->line++;
         }
+        advance(lexer);
     }
     if (!is_string_quote(lexer)) {
         return create_error(lexer, "Malformed string: expected string to end with '\"'");
@@ -226,6 +226,11 @@ static Token scan_identifier(Lexer* lexer) {
     case 'v': {
         if (match_subtoken(lexer, "ar", 1, 3)) {
             return create_token(lexer, TOKEN_VAR);
+        }
+    }
+    case 'p': {
+        if (match_subtoken(lexer, "rint", 1, 5)) {
+            return create_token(lexer, TOKEN_PRINT);
         }
     }
     }

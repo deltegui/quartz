@@ -32,7 +32,7 @@ static ParseRule* get_rule(TokenType type);
 static Expr* parse_precendence(Parser* parser, Precedence precedence);
 
 static void error(Parser* parser, const char* message);
-static void error_next(Parser* parser, const char* message);
+static void error_prev(Parser* parser, const char* message);
 static void error_at(Parser* parser, Token* token, const char* message);
 static void panic(Parser* parser);
 
@@ -41,6 +41,7 @@ static bool consume(Parser* parser, TokenType expected, const char* msg);
 
 static Stmt* global(Parser* parser);
 static Stmt* statement(Parser* parser);
+static Stmt* print(Parser* parser);
 static Stmt* stmt_expr(Parser* parser);
 
 static Expr* expression(Parser* parser);
@@ -80,6 +81,7 @@ ParseRule rules[] = {
     [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_PRINT]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_IDENTIFIER]    = {NULL,        NULL,   PREC_NONE},
 };
 
@@ -89,25 +91,15 @@ static ParseRule* get_rule(TokenType type) {
 
 static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     advance(parser);
-    PrefixParse prefix_parser = get_rule(parser->current.type)->prefix;
+    PrefixParse prefix_parser = get_rule(parser->prev.type)->prefix;
     if (prefix_parser == NULL) {
         error(parser, "Expected expression");
         return NULL;
     }
     Expr* left = prefix_parser(parser);
-    while (precedence <= get_rule(parser->next.type)->precedence) {
-        // @todo these NULL checks are for errors while parsing expr. Are necessary?
-        if (left == NULL) {
-            error(parser, "Unknown prefix");
-            break;
-        }
+    while (precedence <= get_rule(parser->current.type)->precedence) {
         advance(parser);
-        SuffixParse infix_parser = get_rule(parser->current.type)->infix;
-        // @todo take a look to previous todo
-        if (infix_parser == NULL) {
-            error_next(parser, "Unknown infix operator");
-            break;
-        }
+        SuffixParse infix_parser = get_rule(parser->prev.type)->infix;
         left = infix_parser(parser, left);
     }
     return left;
@@ -115,7 +107,7 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
 
 void init_parser(Parser* parser, const char* source) {
     parser->current.type = -1;
-    parser->next. type = -1;
+    parser->prev.type = -1;
     init_lexer(&parser->lexer, source);
     parser->has_error = false;
 }
@@ -124,8 +116,8 @@ static void error(Parser* parser, const char* message) {
     error_at(parser, &parser->current, message);
 }
 
-static void error_next(Parser* parser, const char* message) {
-    error_at(parser, &parser->next, message);
+static void error_prev(Parser* parser, const char* message) {
+    error_at(parser, &parser->prev, message);
 }
 
 static void error_at(Parser* parser, Token* token, const char* message) {
@@ -144,8 +136,11 @@ static void error_at(Parser* parser, Token* token, const char* message) {
 }
 
 static void panic(Parser* parser) {
-    while(parser->next.type != TOKEN_SEMICOLON && parser->next.type != TOKEN_END) {
+    while(parser->current.type != TOKEN_SEMICOLON && parser->current.type != TOKEN_END) {
         advance(parser);
+    }
+    if (parser->current.type == TOKEN_SEMICOLON) {
+        advance(parser); // consume semicolon
     }
 }
 
@@ -153,16 +148,16 @@ static void advance(Parser* parser) {
     if (parser->current.type == TOKEN_END) {
         return;
     }
-    parser->current = parser->next;
-    parser->next = next_token(&parser->lexer);
+    parser->prev = parser->current;
+    parser->current = next_token(&parser->lexer);
 }
 
 static bool consume(Parser* parser, TokenType expected, const char* message) {
-    advance(parser);
     if (parser->current.type != expected) {
         error(parser, message);
         return false;
     }
+    advance(parser);
     return true;
 }
 
@@ -172,11 +167,11 @@ Stmt* parse(Parser* parser) {
 #endif
 
     advance(parser);
-    if (parser->next.type == TOKEN_ERROR) {
+    if (parser->current.type == TOKEN_ERROR) {
         parser->has_error = true; // propagate lexer error to the consumer.
         return NULL;
     }
-    if (parser->next.type == TOKEN_END) {
+    if (parser->current.type == TOKEN_END) {
         return NULL;
     }
     Stmt* ast = global(parser);
@@ -188,7 +183,7 @@ Stmt* parse(Parser* parser) {
 
 static Stmt* global(Parser* parser) {
     ListStmt* list = create_list_stmt();
-    while (parser->next.type != TOKEN_END) {
+    while (parser->current.type != TOKEN_END) {
         Stmt* stmt = statement(parser);
         list_stmt_add(list, stmt);
     }
@@ -197,9 +192,21 @@ static Stmt* global(Parser* parser) {
 
 static Stmt* statement(Parser* parser) {
     switch (parser->current.type) {
+    case TOKEN_PRINT:
+        return print(parser);
     default:
         return stmt_expr(parser);
     }
+}
+
+static Stmt* print(Parser* parser) {
+    advance(parser); // consume print
+    Expr* expr = expression(parser);
+    PrintStmt print_stmt = (PrintStmt){
+        .inner = expr,
+    };
+    consume(parser, TOKEN_SEMICOLON, "Expected print to end with ';'");
+    return CREATE_PRINT_STMT(print_stmt);
 }
 
 static Stmt* stmt_expr(Parser* parser) {
@@ -220,7 +227,7 @@ static Expr* binary(Parser* parser, Expr* left) {
     printf("[PARSER DEBUG]: BINARY Expression\n");
 #endif
 
-    Token op = parser->current;
+    Token op = parser->prev;
     switch (op.type) {
     case TOKEN_PLUS:
     case TOKEN_MINUS:
@@ -237,7 +244,7 @@ static Expr* binary(Parser* parser, Expr* left) {
     case TOKEN_GREATER_EQUAL:
         break;
     default:
-        error_next(parser, "Expected arithmetic operation");
+        error_prev(parser, "Expected arithmetic operation");
         return NULL;
     }
     ParseRule* rule = get_rule(op.type);
@@ -277,7 +284,7 @@ static Expr* primary(Parser* parser) {
 #endif
 
     LiteralExpr literal = (LiteralExpr){
-        .literal = parser->current,
+        .literal = parser->prev,
     };
     Expr* expr = CREATE_LITERAL_EXPR(literal);
 
@@ -294,7 +301,7 @@ static Expr* unary(Parser* parser) {
     printf("[PARSER DEBUG]: UNARY Expression\n");
 #endif
 
-    Token op = parser->current;
+    Token op = parser->prev;
     ParseRule* rule = get_rule(op.type);
     Expr* inner = parse_precendence(parser, (Precedence)(rule->precedence + 1));
     UnaryExpr unary = (UnaryExpr){

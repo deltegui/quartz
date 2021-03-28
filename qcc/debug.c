@@ -31,6 +31,7 @@ static const char* OpCodeStrings[] = {
     "OP_FALSE",
     "OP_NIL",
     "OP_NOP",
+    "OP_PRINT",
     "OP_RETURN",
     "OP_POP",
     "OP_CONSTANT",
@@ -89,6 +90,7 @@ void chunk_print(Chunk* chunk) {
         case OP_EQUAL:
         case OP_LOWER:
         case OP_POP:
+        case OP_PRINT:
         case OP_GREATER: {
             chunk_opcode_print(chunk, i++);
             break;
@@ -134,6 +136,7 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_LOWER_EQUAL: return "TokenLowerEqual";
     case TOKEN_GREATER_EQUAL: return "TokenGreaterEqual";
     case TOKEN_IDENTIFIER: return "TokenIdentifier";
+    case TOKEN_PRINT: return "TokenPrint";
     default: return "Unknown";
     }
 }
@@ -163,10 +166,12 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
 
 static void print_expr(void* ctx, ExprStmt* expr);
 static void print_var(void* ctx, VarStmt* var);
+static void print_print(void* ctx, PrintStmt* var);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
     .visit_var = print_var,
+    .visit_print = print_print,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -192,6 +197,14 @@ static void pretty_print(const char *msg, ...) {
     printf("%s", msg);
 }
 
+static void print_print(void* ctx, PrintStmt* print) {
+    pretty_print("Print: [\n");
+    OFFSET({
+        ACCEPT_EXPR(print->inner);
+    });
+    pretty_print("]\n");
+}
+
 static void print_expr(void* ctx, ExprStmt* expr) {
     pretty_print("Expr Stmt: [\n");
     OFFSET({
@@ -205,7 +218,7 @@ static void print_var(void* ctx, VarStmt* var) {
 }
 
 static void print_binary(void* ctx, BinaryExpr* binary) {
-    pretty_print("Bianary: [\n");
+    pretty_print("Binary: [\n");
     OFFSET({
         pretty_print("Left:\n");
         OFFSET({

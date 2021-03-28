@@ -9,7 +9,7 @@
 typedef struct {
     Lexer lexer;
     Token current;
-    Token next;
+    Token prev;
     bool has_error;
 } Parser;
 

@@ -36,6 +36,10 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_list_stmt_equals(first->list, second->list);
         break;
     }
+    case PRINT_STMT: {
+        assert_expr_equals(first->print.inner, second->print.inner);
+        break;
+    }
     }
 }
 

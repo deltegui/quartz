@@ -30,10 +30,12 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
 
 static void compile_expr(void* ctx, ExprStmt* expr);
 static void compile_var(void* ctx, VarStmt* var);
+static void compile_print(void* ctx, PrintStmt* print);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
     .visit_var = compile_var,
+    .visit_print = compile_print,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -83,6 +85,12 @@ static void emit(Compiler* compiler, uint8_t bytecode) {
 static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second) {
     chunk_write(compiler->chunk, first, compiler->last_line);
     chunk_write(compiler->chunk, second, compiler->last_line);
+}
+
+static void compile_print(void* ctx, PrintStmt* print) {
+    Compiler* compiler = (Compiler*)ctx;
+    ACCEPT_EXPR(compiler, print->inner);
+    emit(compiler, OP_PRINT);
 }
 
 static void compile_expr(void* ctx, ExprStmt* expr) {

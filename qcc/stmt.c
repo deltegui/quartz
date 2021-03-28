@@ -39,6 +39,9 @@ Stmt* create_stmt(StmtType type, void* stmt_node) {
         stmt->type = LIST_STMT;
         stmt->list = (ListStmt*)stmt_node;
         break;
+    case PRINT_STMT:
+        stmt->type = PRINT_STMT;
+        stmt->print = *(PrintStmt*)stmt_node;
     }
     return stmt;
 }
@@ -65,6 +68,9 @@ void free_stmt(Stmt* stmt) {
         free_list_stmt(stmt->list);
         free(stmt->list);
         break;
+    case PRINT_STMT:
+        free_expr(stmt->print.inner);
+        break;
     }
     free(stmt);
 }
@@ -84,6 +90,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case EXPR_STMT: DISPATCH(visit_expr, expr); break;
     case VAR_STMT: DISPATCH(visit_var, var); break;
     case LIST_STMT: visit_list_stmt(visitor, ctx, stmt->list); break;
+    case PRINT_STMT: DISPATCH(visit_print, print); break;
     }
 #undef DISPATCH
 }

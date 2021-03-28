@@ -146,6 +146,10 @@ void qvm_execute(Chunk* chunk) {
             stack_push(val);
             break;
         }
+        case OP_PRINT:
+            value_print(stack_pop());
+            printf("\n");
+            break;
         case OP_POP:
             stack_pop();
             break;

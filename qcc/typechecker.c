@@ -31,10 +31,12 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
 
 static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
+static void typecheck_print(void* ctx, PrintStmt* print);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
     .visit_var = typecheck_var,
+    .visit_print = typecheck_print,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -66,6 +68,10 @@ bool typecheck(Stmt* ast) {
     checker.has_error = false;
     ACCEPT_STMT(&checker, ast);
     return !checker.has_error;
+}
+
+static void typecheck_print(void* ctx, PrintStmt* print) {
+    ACCEPT_EXPR(ctx, print->inner);
 }
 
 static void typecheck_expr(void* ctx, ExprStmt* expr) {

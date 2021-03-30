@@ -137,6 +137,7 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_GREATER_EQUAL: return "TokenGreaterEqual";
     case TOKEN_IDENTIFIER: return "TokenIdentifier";
     case TOKEN_PRINT: return "TokenPrint";
+    case TOKEN_SEMICOLON: return "TokenSemicolon";
     default: return "Unknown";
     }
 }

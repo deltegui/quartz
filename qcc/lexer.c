@@ -24,6 +24,7 @@ static Token scan_number(Lexer* lexer);
 static Token scan_string(Lexer* lexer);
 static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len);
 static Token scan_identifier(Lexer* lexer);
+static inline Token scan_token(Lexer* lexer);
 Token next_token(Lexer* lexer);
 
 #define CONSUME_UNTIL(lexer, character)\
@@ -205,8 +206,9 @@ static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len
 }
 
 static Token scan_identifier(Lexer* lexer) {
-    while (is_numeric(lexer) || is_alpha(lexer))
+    while (is_numeric(lexer) || is_alpha(lexer)) {
         advance(lexer);
+    }
     switch (*lexer->start) {
     case 't': {
         if (match_subtoken(lexer, "rue", 1, 4)) {
@@ -237,20 +239,7 @@ static Token scan_identifier(Lexer* lexer) {
     return create_token(lexer, TOKEN_IDENTIFIER);
 }
 
-Token next_token(Lexer* lexer) {
-    if (!skip_whitespaces(lexer)) {
-        return create_token(lexer, TOKEN_ERROR);
-    }
-    if (is_at_end(lexer)) {
-        return create_token(lexer, TOKEN_END);
-    }
-    lexer->start = lexer->current;
-    if (is_numeric(lexer)) {
-        return scan_number(lexer);
-    }
-    if (is_string_quote(lexer)) {
-        return scan_string(lexer);
-    }
+static inline Token scan_token(Lexer* lexer) {
     switch (*lexer->current++) {
     case '+': return create_token(lexer, TOKEN_PLUS);
     case '-': return create_token(lexer, TOKEN_MINUS);
@@ -299,4 +288,21 @@ Token next_token(Lexer* lexer) {
     }
     default: return scan_identifier(lexer);
     }
+}
+
+Token next_token(Lexer* lexer) {
+    if (!skip_whitespaces(lexer)) {
+        return create_token(lexer, TOKEN_ERROR);
+    }
+    if (is_at_end(lexer)) {
+        return create_token(lexer, TOKEN_END);
+    }
+    lexer->start = lexer->current;
+    if (is_numeric(lexer)) {
+        return scan_number(lexer);
+    }
+    if (is_string_quote(lexer)) {
+        return scan_string(lexer);
+    }
+    return scan_token(lexer);
 }

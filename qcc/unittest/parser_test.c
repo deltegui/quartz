@@ -28,7 +28,7 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case VAR_STMT: {
-        // @todo implement
+        // TODO implement
         fail();
         break;
     }

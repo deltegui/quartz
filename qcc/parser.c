@@ -48,7 +48,6 @@ static Expr* expression(Parser* parser);
 static Expr* grouping(Parser* parser);
 static Expr* primary(Parser* parser);
 static Expr* unary(Parser* parser);
-
 static Expr* binary(Parser* parser, Expr* left);
 
 ParseRule rules[] = {
@@ -98,8 +97,14 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     }
     Expr* left = prefix_parser(parser);
     while (precedence <= get_rule(parser->current.type)->precedence) {
+        if (left == NULL) {
+            break;
+        }
         advance(parser);
         SuffixParse infix_parser = get_rule(parser->prev.type)->infix;
+        if (infix_parser == NULL) {
+            break;
+        }
         left = infix_parser(parser, left);
     }
     return left;

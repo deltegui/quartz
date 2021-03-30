@@ -12,6 +12,7 @@ static void assert_expr_equals(Expr* first, Expr* second);
 static void compare_asts(Stmt* first, Stmt* second);
 static void assert_ast(const char* source, Stmt* expected_ast);
 static void assert_expr_ast(const char* source, Expr* expected);
+static void should_parse_global_variables();
 
 static inline void assert_has_errors(const char* source) {
     Parser parser;
@@ -28,8 +29,8 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case VAR_STMT: {
-        // TODO implement
-        fail();
+        assert_true(first->var.identifier.type == second->var.identifier.type);
+        assert_expr_equals(first->var.definition, second->var.definition);
         break;
     }
     case LIST_STMT: {
@@ -85,14 +86,18 @@ static void assert_ast(const char* source, Stmt* expected_ast) {
     compare_asts(result, expected_ast);
 }
 
+static void assert_stmt_ast(const char* source, Stmt* expected) {
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, expected);
+    assert_ast(source, CREATE_LIST_STMT(list));
+    free(list);
+}
+
 static void assert_expr_ast(const char* source, Expr* expected) {
     ExprStmt expr_stmt = (ExprStmt){
         .inner = expected,
     };
-    ListStmt* list = create_list_stmt();
-    list_stmt_add(list, CREATE_EXPR_STMT(expr_stmt));
-    assert_ast(source, CREATE_LIST_STMT(list));
-    free(list);
+    assert_stmt_ast(source, CREATE_EXPR_STMT(expr_stmt));
 }
 
 LiteralExpr true_ = (LiteralExpr){
@@ -180,6 +185,13 @@ Token equal_equal = (Token){
     .line = 1,
     .start = "==",
     .type = TOKEN_EQUAL_EQUAL
+};
+
+Token a_token = (Token){
+    .length = 1,
+    .line = 1,
+    .start = "a",
+    .type = TOKEN_IDENTIFIER
 };
 
 Token example_str = (Token){
@@ -281,6 +293,17 @@ static void should_parse_reserved_words_as_literals() {
     assert_expr_ast(
         "     nil;        ",
         CREATE_LITERAL_EXPR(nil)
+    );
+}
+
+static void should_parse_global_variables() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(two)
+    };
+    assert_ast(
+        " var a = 2; ",
+        CREATE_VAR_STMT(var)
     );
 }
 

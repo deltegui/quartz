@@ -1,2 +1,10 @@
+print -1;
 print 1+-1;
+
+/**
+This works like python but unlike Java.
+The parser thinks that these + signs are
+unary and affects the last one.
+*/
 print 1++1;
+print 1++++++++++++1;

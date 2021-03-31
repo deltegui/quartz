@@ -86,9 +86,9 @@ void qvm_execute(Chunk* chunk) {
             break;
         }
         case OP_NEGATE: {
-            Value val = *qvm.stack_top;
+            Value val = *(qvm.stack_top - 1);
             double d = AS_NUMBER(val);
-            *qvm.stack_top = NUMBER_VALUE(d * -1);
+            *(qvm.stack_top - 1) = NUMBER_VALUE(d * -1);
             break;
         }
         case OP_AND: {

@@ -7,7 +7,7 @@ typedef enum {
     EXPR_UNARY,
     EXPR_BINARY,
     EXPR_LITERAL,
-} ExprType;
+} ExprKind;
 
 struct _Expr;
 
@@ -27,7 +27,7 @@ typedef struct {
 } UnaryExpr;
 
 typedef struct _Expr {
-    ExprType type;
+    ExprKind kind;
     union {
         BinaryExpr binary;
         LiteralExpr literal;
@@ -49,7 +49,7 @@ typedef struct {
 #define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)
 #define CREATE_UNARY_EXPR(unary) create_expr(EXPR_UNARY, &unary)
 
-Expr* create_expr(ExprType type, void* expr_node);
+Expr* create_expr(ExprKind type, void* expr_node);
 void free_expr(Expr* expr);
 void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr);
 

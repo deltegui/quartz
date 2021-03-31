@@ -40,10 +40,10 @@ typedef enum {
     TOKEN_STRING,
     TOKEN_PRINT,
     TOKEN_IDENTIFIER,
-} TokenType;
+} TokenKind;
 
 typedef struct {
-    TokenType type;
+    TokenKind kind;
     const char* start;
     uint8_t length;
     uint32_t line;

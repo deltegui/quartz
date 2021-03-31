@@ -12,7 +12,7 @@ static bool match_next(Lexer* lexer, char next);
 static void advance(Lexer* lexer);
 static bool consume(Lexer* lexer, char expected);
 
-static Token create_token(Lexer* lexer, TokenType type);
+static Token create_token(Lexer* lexer, TokenKind kind);
 static Token create_error(Lexer* lexer, const char* message);
 
 static bool skip_whitespaces(Lexer* lexer);
@@ -74,12 +74,12 @@ static bool consume(Lexer* lexer, char expected) {
     return false;
 }
 
-static Token create_token(Lexer* lexer, TokenType type) {
+static Token create_token(Lexer* lexer, TokenKind kind) {
     Token token;
     token.length = (int) (lexer->current - lexer->start);
     token.line = lexer->line;
     token.start = lexer->start;
-    token.type = type;
+    token.kind = kind;
 #ifdef LEXER_DEBUG
     printf("[LEXER DEBUG]: Readed ");
     token_print(token);

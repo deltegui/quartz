@@ -5,7 +5,7 @@
 #include "vm_memory.h"
 
 void value_print(Value val) {
-    switch (val.type) {
+    switch (val.kind) {
     case VALUE_NUMBER: printf("%f", AS_NUMBER(val)); break;
     case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
     case VALUE_NIL: printf("nil"); break;
@@ -14,7 +14,7 @@ void value_print(Value val) {
 }
 
 bool value_equals(Value first, Value second) {
-    switch (first.type) {
+    switch (first.kind) {
     case VALUE_NUMBER: {
         if (!IS_NUMBER(second)) {
             return false;

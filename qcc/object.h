@@ -5,10 +5,10 @@
 
 typedef enum {
     STRING_OBJ,
-} ObjType;
+} ObjKind;
 
 typedef struct Obj {
-    ObjType obj_type;
+    ObjKind kind;
     struct Obj* next;
 } Obj;
 
@@ -22,7 +22,7 @@ typedef struct {
     char cstr[]; // @todo would be better to call this just 'chars'?
 } ObjString;
 
-#define IS_STRING(obj) (obj->obj_type == STRING_OBJ)
+#define IS_STRING(obj) (obj->kind == STRING_OBJ)
 
 #define AS_STRING_OBJ(obj) ((ObjString*) obj)
 #define AS_CSTRING(obj) ( ((ObjString*) obj)->cstr )

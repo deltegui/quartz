@@ -28,7 +28,7 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
-static ParseRule* get_rule(TokenType type);
+static ParseRule* get_rule(TokenKind kind);
 static Expr* parse_precendence(Parser* parser, Precedence precedence);
 
 static void error(Parser* parser, const char* message);
@@ -37,9 +37,10 @@ static void error_at(Parser* parser, Token* token, const char* message);
 static void syncronize(Parser* parser);
 
 static void advance(Parser* parser);
-static bool consume(Parser* parser, TokenType expected, const char* msg);
+static bool consume(Parser* parser, TokenKind expected, const char* msg);
 
-static Stmt* global(Parser* parser);
+static Stmt* declaration(Parser* parser);
+static Stmt* global_variable(Parser* parser);
 static Stmt* statement(Parser* parser);
 static Stmt* print(Parser* parser);
 static Stmt* stmt_expr(Parser* parser);
@@ -84,24 +85,24 @@ ParseRule rules[] = {
     [TOKEN_IDENTIFIER]    = {NULL,        NULL,   PREC_NONE},
 };
 
-static ParseRule* get_rule(TokenType type) {
-    return &rules[type];
+static ParseRule* get_rule(TokenKind kind) {
+    return &rules[kind];
 }
 
 static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     advance(parser);
-    PrefixParse prefix_parser = get_rule(parser->prev.type)->prefix;
+    PrefixParse prefix_parser = get_rule(parser->prev.kind)->prefix;
     if (prefix_parser == NULL) {
         error_prev(parser, "Expected expression");
         return NULL;
     }
     Expr* left = prefix_parser(parser);
-    while (precedence <= get_rule(parser->current.type)->precedence) {
+    while (precedence <= get_rule(parser->current.kind)->precedence) {
         if (left == NULL) {
             break;
         }
         advance(parser);
-        SuffixParse infix_parser = get_rule(parser->prev.type)->infix;
+        SuffixParse infix_parser = get_rule(parser->prev.kind)->infix;
         if (infix_parser == NULL) {
             break;
         }
@@ -111,8 +112,8 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
 }
 
 void init_parser(Parser* parser, const char* source) {
-    parser->current.type = -1;
-    parser->prev.type = -1;
+    parser->current.kind = -1;
+    parser->prev.kind = -1;
     init_lexer(&parser->lexer, source);
     parser->panic_mode = false;
     parser->has_error = false;
@@ -132,7 +133,7 @@ static void error_at(Parser* parser, Token* token, const char* message) {
     }
     parser->panic_mode = true;
     fprintf(stderr, "[Line %d] Error", token->line);
-    switch(token->type) {
+    switch(token->kind) {
     case TOKEN_ERROR: break;
     case TOKEN_END:
         fprintf(stderr, " at end");
@@ -146,24 +147,24 @@ static void error_at(Parser* parser, Token* token, const char* message) {
 
 static void syncronize(Parser* parser) {
     parser->panic_mode = false;
-    while(parser->current.type != TOKEN_SEMICOLON && parser->current.type != TOKEN_END) {
+    while(parser->current.kind != TOKEN_SEMICOLON && parser->current.kind != TOKEN_END) {
         advance(parser);
     }
-    if (parser->current.type == TOKEN_SEMICOLON) {
+    if (parser->current.kind == TOKEN_SEMICOLON) {
         advance(parser); // consume semicolon
     }
 }
 
 static void advance(Parser* parser) {
-    if (parser->current.type == TOKEN_END) {
+    if (parser->current.kind == TOKEN_END) {
         return;
     }
     parser->prev = parser->current;
     parser->current = next_token(&parser->lexer);
 }
 
-static bool consume(Parser* parser, TokenType expected, const char* message) {
-    if (parser->current.type != expected) {
+static bool consume(Parser* parser, TokenKind expected, const char* message) {
+    if (parser->current.kind != expected) {
         error(parser, message);
         return false;
     }
@@ -177,23 +178,23 @@ Stmt* parse(Parser* parser) {
 #endif
 
     advance(parser);
-    if (parser->current.type == TOKEN_ERROR) {
+    if (parser->current.kind == TOKEN_ERROR) {
         parser->has_error = true; // propagate lexer error to the consumer.
         return NULL;
     }
-    if (parser->current.type == TOKEN_END) {
+    if (parser->current.kind == TOKEN_END) {
         return NULL;
     }
-    Stmt* ast = global(parser);
+    Stmt* ast = declaration(parser);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
     return ast;
 }
 
-static Stmt* global(Parser* parser) {
+static Stmt* declaration(Parser* parser) {
     ListStmt* list = create_list_stmt();
-    while (parser->current.type != TOKEN_END) {
+    while (parser->current.kind != TOKEN_END) {
         Stmt* stmt = statement(parser);
         list_stmt_add(list, stmt);
         if (parser->panic_mode) {
@@ -204,12 +205,28 @@ static Stmt* global(Parser* parser) {
 }
 
 static Stmt* statement(Parser* parser) {
-    switch (parser->current.type) {
+    switch (parser->current.kind) {
+    case TOKEN_VAR:
+        return global_variable(parser);
     case TOKEN_PRINT:
         return print(parser);
     default:
         return stmt_expr(parser);
     }
+}
+
+static Stmt* global_variable(Parser* parser) {
+    advance(parser); // consume var
+    VarStmt var;
+    var.identifier = parser->current;
+    advance(parser); // consume identifier
+    var.definition = NULL;
+    if (parser->current.kind == TOKEN_EQUAL) {
+        advance(parser); // consume =
+        var.definition = expression(parser);
+    }
+    consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
+    return CREATE_VAR_STMT(var);
 }
 
 static Stmt* print(Parser* parser) {
@@ -241,7 +258,7 @@ static Expr* binary(Parser* parser, Expr* left) {
 #endif
 
     Token op = parser->prev;
-    switch (op.type) {
+    switch (op.kind) {
     case TOKEN_PLUS:
     case TOKEN_MINUS:
     case TOKEN_STAR:
@@ -260,7 +277,7 @@ static Expr* binary(Parser* parser, Expr* left) {
         error_prev(parser, "Expected arithmetic operation");
         return NULL;
     }
-    ParseRule* rule = get_rule(op.type);
+    ParseRule* rule = get_rule(op.kind);
     Expr* right = parse_precendence(parser, (Precedence)(rule->precedence + 1));
     BinaryExpr binary = (BinaryExpr){
         .left = left,
@@ -315,7 +332,7 @@ static Expr* unary(Parser* parser) {
 #endif
 
     Token op = parser->prev;
-    ParseRule* rule = get_rule(op.type);
+    ParseRule* rule = get_rule(op.kind);
     Expr* inner = parse_precendence(parser, (Precedence)(rule->precedence + 1));
     UnaryExpr unary = (UnaryExpr){
         .op = op,

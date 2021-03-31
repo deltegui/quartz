@@ -1,18 +1,18 @@
 #include "expr.h"
 
-Expr* create_expr(ExprType type, void* expr_node) {
+Expr* create_expr(ExprKind kind, void* expr_node) {
     Expr* expr = (Expr*) malloc(sizeof(Expr));
-    switch(type) {
+    switch(kind) {
     case EXPR_BINARY:
-        expr->type = EXPR_BINARY;
+        expr->kind = EXPR_BINARY;
         expr->binary = *(BinaryExpr*)expr_node;
         break;
     case EXPR_LITERAL:
-        expr->type = EXPR_LITERAL;
+        expr->kind = EXPR_LITERAL;
         expr->literal = *(LiteralExpr*)expr_node;
         break;
     case EXPR_UNARY:
-        expr->type = EXPR_UNARY;
+        expr->kind = EXPR_UNARY;
         expr->unary = *(UnaryExpr*)expr_node;
         break;
     }
@@ -28,7 +28,7 @@ void free_expr(Expr* expr) {
     if (expr == NULL) {
         return;
     }
-    switch(expr->type) {
+    switch(expr->kind) {
     case EXPR_BINARY:
         free_expr(expr->binary.left);
         free_expr(expr->binary.right);
@@ -55,7 +55,7 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
         return;
     }
 #define DISPATCH(fn_visitor, node_type) visitor->fn_visitor(ctx, &expr->node_type)
-    switch (expr->type) {
+    switch (expr->kind) {
     case EXPR_LITERAL: DISPATCH(visit_literal, literal); break;
     case EXPR_BINARY: DISPATCH(visit_binary, binary); break;
     case EXPR_UNARY: DISPATCH(visit_unary, unary); break;

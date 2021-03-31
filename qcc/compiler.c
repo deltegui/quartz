@@ -100,7 +100,7 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
 }
 
 static void compile_var(void* ctx, VarStmt* var) {
-    //@todo implement
+    // TODO implement this
 }
 
 // @todo Maybe can this function be rewrited in a way that express the difference
@@ -109,7 +109,7 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
     Compiler* compiler = (Compiler*) ctx;
     compiler->last_line = literal->literal.line;
     Value value;
-    switch (literal->literal.type) {
+    switch (literal->literal.kind) {
     // We start with reserved words that have its own opcode.
     case TOKEN_TRUE: {
         emit(compiler, OP_TRUE);
@@ -153,7 +153,7 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
 #define EMIT(byte) emit(compiler, byte)
 #define EMIT_BYTES(first, second) emit_bytes(compiler, first, second)
 
-    switch(binary->op.type) {
+    switch(binary->op.kind) {
     case TOKEN_PLUS: EMIT(OP_ADD); break;
     case TOKEN_MINUS: EMIT(OP_SUB); break;
     case TOKEN_STAR: EMIT(OP_MUL); break;
@@ -181,7 +181,7 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
     compiler->last_line = unary->op.line;
 
     OpCode op;
-    switch(unary->op.type) {
+    switch(unary->op.kind) {
     case TOKEN_BANG:
         op = OP_NOT;
         break;

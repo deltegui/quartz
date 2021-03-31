@@ -4,15 +4,15 @@
 #include "vm.h"
 #include "table.h"
 
-static Obj* alloc_obj(size_t size, ObjType type);
+static Obj* alloc_obj(size_t size, ObjKind kind);
 static uint32_t hash_string(const char* chars, int length);
 
-#define ALLOC_OBJ(type, obj_type) (type*) alloc_obj(sizeof(type), obj_type)
+#define ALLOC_OBJ(type, kind) (type*) alloc_obj(sizeof(type), kind)
 #define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, STRING_OBJ)
 
-static Obj* alloc_obj(size_t size, ObjType type) {
+static Obj* alloc_obj(size_t size, ObjKind kind) {
     Obj* obj = (Obj*) qvm_realloc(NULL, 0, size);
-    obj->obj_type = type;
+    obj->kind = kind;
     obj->next = qvm.objects;
     qvm.objects = obj;
     return obj;
@@ -56,7 +56,7 @@ ObjString* concat_string(ObjString* first, ObjString* second) {
 }
 
 void print_object(Obj* obj) {
-    switch (obj->obj_type) {
+    switch (obj->kind) {
     case STRING_OBJ: {
         printf("'%s'", AS_CSTRING(obj));
         break;

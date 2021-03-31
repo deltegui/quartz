@@ -108,8 +108,8 @@ void chunk_print(Chunk* chunk) {
     }
 }
 
-static const char* token_type_print(TokenType type) {
-    switch (type) {
+static const char* token_type_print(TokenKind kind) {
+    switch (kind) {
     case TOKEN_END: return "TokenEnd";
     case TOKEN_ERROR: return "TokenError";
     case TOKEN_PLUS: return "TokenPlus";
@@ -120,6 +120,7 @@ static const char* token_type_print(TokenType type) {
     case TOKEN_LEFT_PAREN: return "TokenLeftParen";
     case TOKEN_RIGHT_PAREN: return "TokenRightParen";
     case TOKEN_DOT: return "TokenDot";
+    case TOKEN_EQUAL: return "TokenEqual";
     case TOKEN_BANG: return "TokenBang";
     case TOKEN_AND: return "TokenAnd";
     case TOKEN_OR: return "TokenOr";
@@ -145,7 +146,7 @@ static const char* token_type_print(TokenType type) {
 void token_print(Token token) {
     printf(
         "Token{ Type: '%s', Line: '%d', Value: '%.*s', Length: '%d' }\n",
-        token_type_print(token.type),
+        token_type_print(token.kind),
         token.line,
         token.length,
         token.start,
@@ -215,7 +216,16 @@ static void print_expr(void* ctx, ExprStmt* expr) {
 }
 
 static void print_var(void* ctx, VarStmt* var) {
-    // @todo implement
+    pretty_print("Var Stmt: [\n");
+    OFFSET({
+        pretty_print("Identifier: ");
+        printf("%.*s\n", var->identifier.length, var->identifier.start);
+        pretty_print("Definition: \n");
+        OFFSET({
+            ACCEPT_EXPR(var->definition);
+        });
+    });
+    pretty_print("]\n");
 }
 
 static void print_binary(void* ctx, BinaryExpr* binary) {

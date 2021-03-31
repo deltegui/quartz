@@ -3,14 +3,6 @@
 #include "lexer.h"
 #include "expr.h"
 
-typedef enum {
-    NUMBER_TYPE,
-    BOOL_TYPE,
-    NIL_TYPE,
-    STRING_TYPE,
-    UNKNOWN_TYPE,
-} Type;
-
 typedef struct {
     Type last_type;
     bool has_error;
@@ -85,7 +77,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    switch (literal->literal.type) {
+    switch (literal->literal.kind) {
     case TOKEN_NUMBER: {
         checker->last_type = NUMBER_TYPE;
         return;
@@ -125,7 +117,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     print_type(right_type);\
     printf("'\n")
 
-    switch (binary->op.type) {
+    switch (binary->op.kind) {
     case TOKEN_PLUS: {
         if (left_type == STRING_TYPE && right_type == STRING_TYPE) {
             checker->last_type = STRING_TYPE;
@@ -185,7 +177,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     print_type(inner_type);\
     printf("'\n")
 
-    switch (unary->op.type) {
+    switch (unary->op.kind) {
     case TOKEN_BANG: {
         if (inner_type == BOOL_TYPE) {
             checker->last_type = BOOL_TYPE;

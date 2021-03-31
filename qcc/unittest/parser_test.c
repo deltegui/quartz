@@ -11,6 +11,7 @@ static void assert_list_stmt_equals(ListStmt* first, ListStmt* second);
 static void assert_expr_equals(Expr* first, Expr* second);
 static void compare_asts(Stmt* first, Stmt* second);
 static void assert_ast(const char* source, Stmt* expected_ast);
+static void assert_stmt_ast(const char* source, Stmt* expected);
 static void assert_expr_ast(const char* source, Expr* expected);
 static void should_parse_global_variables();
 
@@ -22,14 +23,14 @@ static inline void assert_has_errors(const char* source) {
 }
 
 static void assert_stmt_equals(Stmt* first, Stmt* second) {
-    assert_true(first->type == second->type);
-    switch (first->type) {
+    assert_true(first->kind == second->kind);
+    switch (first->kind) {
     case EXPR_STMT: {
         assert_expr_equals(first->expr.inner, second->expr.inner);
         break;
     }
     case VAR_STMT: {
-        assert_true(first->var.identifier.type == second->var.identifier.type);
+        assert_true(first->var.identifier.kind == second->var.identifier.kind);
         assert_expr_equals(first->var.definition, second->var.definition);
         break;
     }
@@ -53,23 +54,23 @@ static void assert_list_stmt_equals(ListStmt* first, ListStmt* second) {
 }
 
 static void assert_expr_equals(Expr* first, Expr* second) {
-    assert_true(first->type == second->type);
-    switch (first->type) {
+    assert_true(first->kind == second->kind);
+    switch (first->kind) {
     case EXPR_BINARY: {
         assert_expr_equals(first->binary.left, second->binary.left);
-        assert_true(first->binary.op.type == second->binary.op.type);
+        assert_true(first->binary.op.kind == second->binary.op.kind);
         assert_expr_equals(first->binary.right, second->binary.right);
         break;
     }
     case EXPR_LITERAL: {
-        assert_true(first->literal.literal.type == second->literal.literal.type);
+        assert_true(first->literal.literal.kind == second->literal.literal.kind);
         char actual[first->literal.literal.length + 1];
         sprintf(actual, "%.*s", first->literal.literal.length, first->literal.literal.start);
         assert_string_equal(actual, second->literal.literal.start);
         break;
     }
     case EXPR_UNARY: {
-        assert_true(first->unary.op.type == second->unary.op.type);
+        assert_true(first->unary.op.kind == second->unary.op.kind);
         break;
     }
     }
@@ -105,7 +106,7 @@ LiteralExpr true_ = (LiteralExpr){
         .length = 4,
         .line = 1,
         .start = "true",
-        .type = TOKEN_TRUE
+        .kind = TOKEN_TRUE
     },
 };
 
@@ -114,7 +115,7 @@ LiteralExpr false_ = (LiteralExpr){
         .length = 5,
         .line = 1,
         .start = "false",
-        .type = TOKEN_FALSE
+        .kind = TOKEN_FALSE
     },
 };
 
@@ -123,7 +124,7 @@ LiteralExpr nil = (LiteralExpr){
         .length = 3,
         .line = 1,
         .start = "nil",
-        .type = TOKEN_NIL
+        .kind = TOKEN_NIL
     },
 };
 
@@ -132,7 +133,7 @@ LiteralExpr two = (LiteralExpr){
         .length = 1,
         .line = 1,
         .start = "2",
-        .type = TOKEN_NUMBER
+        .kind = TOKEN_NUMBER
     },
 };
 
@@ -141,7 +142,7 @@ LiteralExpr five = (LiteralExpr){
         .length = 1,
         .line = 1,
         .start = "5",
-        .type = TOKEN_NUMBER
+        .kind = TOKEN_NUMBER
     },
 };
 
@@ -149,56 +150,56 @@ Token sub_token = (Token){
     .length = 1,
     .line = 1,
     .start = "-",
-    .type = TOKEN_MINUS
+    .kind = TOKEN_MINUS
 };
 
 Token sum_token = (Token){
     .length = 1,
     .line = 1,
     .start = "+",
-    .type = TOKEN_PLUS
+    .kind = TOKEN_PLUS
 };
 
 Token div_token = (Token){
     .length = 1,
     .line = 1,
     .start = "/",
-    .type = TOKEN_SLASH
+    .kind = TOKEN_SLASH
 };
 
 Token star_token = (Token){
     .length = 1,
     .line = 1,
     .start = "*",
-    .type = TOKEN_STAR
+    .kind = TOKEN_STAR
 };
 
 Token bang_equal = (Token){
     .length = 2,
     .line = 1,
     .start = "!=",
-    .type = TOKEN_BANG_EQUAL
+    .kind = TOKEN_BANG_EQUAL
 };
 
 Token equal_equal = (Token){
     .length = 2,
     .line = 1,
     .start = "==",
-    .type = TOKEN_EQUAL_EQUAL
+    .kind = TOKEN_EQUAL_EQUAL
 };
 
 Token a_token = (Token){
     .length = 1,
     .line = 1,
     .start = "a",
-    .type = TOKEN_IDENTIFIER
+    .kind = TOKEN_IDENTIFIER
 };
 
 Token example_str = (Token){
     .length = 12,
     .line = 1,
     .start = "Hello world!",
-    .type = TOKEN_STRING,
+    .kind = TOKEN_STRING,
 };
 
 static void should_parse_additions() {
@@ -301,7 +302,7 @@ static void should_parse_global_variables() {
         .identifier = a_token,
         .definition = CREATE_LITERAL_EXPR(two)
     };
-    assert_ast(
+    assert_stmt_ast(
         " var a = 2; ",
         CREATE_VAR_STMT(var)
     );

@@ -24,23 +24,23 @@ void list_stmt_add(ListStmt* list, Stmt* stmt) {
 #undef GROWTH_FACTOR
 }
 
-Stmt* create_stmt(StmtType type, void* stmt_node) {
+Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     Stmt* stmt = (Stmt*) malloc(sizeof(Stmt));
-    switch(type) {
+    switch(kind) {
     case EXPR_STMT:
-        stmt->type = EXPR_STMT;
+        stmt->kind = EXPR_STMT;
         stmt->expr = *(ExprStmt*)stmt_node;
         break;
     case VAR_STMT:
-        stmt->type = VAR_STMT;
+        stmt->kind = VAR_STMT;
         stmt->var = *(VarStmt*)stmt_node;
         break;
     case LIST_STMT:
-        stmt->type = LIST_STMT;
+        stmt->kind = LIST_STMT;
         stmt->list = (ListStmt*)stmt_node;
         break;
     case PRINT_STMT:
-        stmt->type = PRINT_STMT;
+        stmt->kind = PRINT_STMT;
         stmt->print = *(PrintStmt*)stmt_node;
     }
     return stmt;
@@ -57,7 +57,7 @@ void free_stmt(Stmt* stmt) {
     if (stmt == NULL) {
         return;
     }
-    switch(stmt->type) {
+    switch(stmt->kind) {
     case EXPR_STMT:
         free_expr(stmt->expr.inner);
         break;
@@ -86,7 +86,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
         return;
     }
 #define DISPATCH(fn_visitor, node_type) visitor->fn_visitor(ctx, &stmt->node_type)
-    switch (stmt->type) {
+    switch (stmt->kind) {
     case EXPR_STMT: DISPATCH(visit_expr, expr); break;
     case VAR_STMT: DISPATCH(visit_var, var); break;
     case LIST_STMT: visit_list_stmt(visitor, ctx, stmt->list); break;

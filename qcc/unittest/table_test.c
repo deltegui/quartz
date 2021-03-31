@@ -117,8 +117,8 @@ static int finish_test_case() {
     clock_gettime(CLOCK_MONOTONIC_RAW, &time_start);\
     __VA_ARGS__\
     clock_gettime(CLOCK_MONOTONIC_RAW, &time_end);\
-    int64_t delta_us = (time_end.tv_sec - time_start.tv_sec) * 1000000 + (time_end.tv_nsec - time_start.tv_nsec) / 1000;\
-    printf("Elapsed time: %lu us\n", delta_us);\
+    uint64_t delta_us = (time_end.tv_sec - time_start.tv_sec) * 1000000 + (time_end.tv_nsec - time_start.tv_nsec) / 1000;\
+    printf("Elapsed time: %llu us\n", delta_us);\
 } while(false)
 
 #define TABLE_BENCHMARK(amount_of_words, ...) do {\

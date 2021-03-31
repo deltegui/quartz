@@ -44,14 +44,8 @@ typedef struct {
     ValueArray constants;
 } Chunk;
 
-// Initializes an exiting chunk.
 void init_chunk(Chunk* chunk);
-
-// Frees an existing chunk.
 void free_chunk(Chunk* chunk);
-
-// Writes a bytecode to a chunk. It will store
-// the original line
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
 
 #endif

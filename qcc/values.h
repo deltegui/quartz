@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "object.h"
+#include "typechecker.h"
 
 typedef enum {
     VALUE_NUMBER,
@@ -12,7 +13,8 @@ typedef enum {
 } ValueType;
 
 typedef struct {
-    ValueType type;
+    Type type;
+    ValueType kind;
     union {
         double number;
         bool boolean;
@@ -23,15 +25,15 @@ typedef struct {
 void value_print(Value val);
 bool value_equals(Value first, Value second);
 
-#define NUMBER_VALUE(i) ((Value){ VALUE_NUMBER, { .number = i } })
-#define BOOL_VALUE(b) ((Value){ VALUE_BOOL, { .boolean = b } })
-#define NIL_VALUE() ((Value){ VALUE_NIL, { .object = NULL } })
-#define OBJ_VALUE(obj) ((Value){ VALUE_OBJ, { .object = (Obj*) obj } })
+#define NUMBER_VALUE(i) ((Value){ NUMBER_TYPE, VALUE_NUMBER, { .number = i } })
+#define BOOL_VALUE(b) ((Value){ BOOL_TYPE, VALUE_BOOL, { .boolean = b } })
+#define NIL_VALUE() ((Value){ NIL_TYPE, VALUE_NIL, { .object = NULL } })
+#define OBJ_VALUE(obj) ((Value){ UNKNOWN_TYPE, VALUE_OBJ, { .object = (Obj*) obj } })
 
-#define IS_NUMBER(val) (val.type == VALUE_NUMBER)
-#define IS_BOOL(val) (val.type == VALUE_BOOL)
-#define IS_NIL(val) (val.type == VALUE_NIL)
-#define IS_OBJ(val) (val.type == VALUE_OBJ)
+#define IS_NUMBER(val) (val.kind == VALUE_NUMBER)
+#define IS_BOOL(val) (val.kind == VALUE_BOOL)
+#define IS_NIL(val) (val.kind == VALUE_NIL)
+#define IS_OBJ(val) (val.kind == VALUE_OBJ)
 
 #define AS_NUMBER(val) val.as.number
 #define AS_BOOL(val) val.as.boolean

@@ -90,8 +90,9 @@ static void assert_ast(const char* source, Stmt* expected_ast) {
 static void assert_stmt_ast(const char* source, Stmt* expected) {
     ListStmt* list = create_list_stmt();
     list_stmt_add(list, expected);
-    assert_ast(source, CREATE_LIST_STMT(list));
-    free_stmt(list);
+    Stmt* stmt = CREATE_LIST_STMT(list);
+    assert_ast(source, stmt);
+    free_stmt(stmt);
 }
 
 static void assert_expr_ast(const char* source, Expr* expected) {

@@ -39,11 +39,14 @@ static void syncronize(Parser* parser);
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenKind expected, const char* msg);
 
+static Stmt* main_block(Parser* parser);
+
 static Stmt* declaration(Parser* parser);
-static Stmt* global_variable(Parser* parser);
+static Stmt* variable_decl(Parser* parser);
+
 static Stmt* statement(Parser* parser);
-static Stmt* print(Parser* parser);
-static Stmt* stmt_expr(Parser* parser);
+static Stmt* print_stmt(Parser* parser);
+static Stmt* expr_stmt(Parser* parser);
 
 static Expr* expression(Parser* parser);
 static Expr* grouping(Parser* parser);
@@ -179,23 +182,23 @@ Stmt* parse(Parser* parser) {
 
     advance(parser);
     if (parser->current.kind == TOKEN_ERROR) {
-        parser->has_error = true; // propagate lexer error to the consumer.
+        parser->has_error = true;
         return NULL;
     }
     if (parser->current.kind == TOKEN_END) {
         return NULL;
     }
-    Stmt* ast = declaration(parser);
+    Stmt* ast = main_block(parser);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
     return ast;
 }
 
-static Stmt* declaration(Parser* parser) {
+static Stmt* main_block(Parser* parser) {
     ListStmt* list = create_list_stmt();
     while (parser->current.kind != TOKEN_END) {
-        Stmt* stmt = statement(parser);
+        Stmt* stmt = declaration(parser);
         list_stmt_add(list, stmt);
         if (parser->panic_mode) {
             syncronize(parser);
@@ -204,18 +207,25 @@ static Stmt* declaration(Parser* parser) {
     return CREATE_LIST_STMT(list);
 }
 
-static Stmt* statement(Parser* parser) {
+static Stmt* declaration(Parser* parser) {
     switch (parser->current.kind) {
     case TOKEN_VAR:
-        return global_variable(parser);
-    case TOKEN_PRINT:
-        return print(parser);
+        return variable_decl(parser);
     default:
-        return stmt_expr(parser);
+        return statement(parser);
     }
 }
 
-static Stmt* global_variable(Parser* parser) {
+static Stmt* statement(Parser* parser) {
+    switch (parser->current.kind) {
+    case TOKEN_PRINT:
+        return print_stmt(parser);
+    default:
+        return expr_stmt(parser);
+    }
+}
+
+static Stmt* variable_decl(Parser* parser) {
     advance(parser); // consume var
     VarStmt var;
     var.identifier = parser->current;
@@ -229,7 +239,7 @@ static Stmt* global_variable(Parser* parser) {
     return CREATE_VAR_STMT(var);
 }
 
-static Stmt* print(Parser* parser) {
+static Stmt* print_stmt(Parser* parser) {
     advance(parser); // consume print
     Expr* expr = expression(parser);
     PrintStmt print_stmt = (PrintStmt){
@@ -239,7 +249,7 @@ static Stmt* print(Parser* parser) {
     return CREATE_PRINT_STMT(print_stmt);
 }
 
-static Stmt* stmt_expr(Parser* parser) {
+static Stmt* expr_stmt(Parser* parser) {
     Expr* expr = expression(parser);
     consume(parser, TOKEN_SEMICOLON, "Expected statement to end with ';'");
     ExprStmt expr_stmt = (ExprStmt){

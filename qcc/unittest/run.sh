@@ -5,7 +5,7 @@ if [ "$1" = "--help" ]; then
     exit 0
 fi
 
-CC="clang"
+CC="clang -g"
 LIBS=-lcmocka
 BIN="./a.out"
 AND_EXEC="&& $BIN"
@@ -35,4 +35,7 @@ sh -c "$CC $MACROS ./compiler_test.c $SOURCES $LIBS $AND_EXEC"
 echo "\n\n-------- [TABLE TESTS] --------"
 sh -c "$CC $MACROS ./table_test.c $SOURCES $LIBS $AND_EXEC"
 
-rm $BIN
+echo "\n\n-------- [SYMBOL TESTS] --------"
+sh -c "$CC $MACROS ./symbol_test.c $SOURCES $LIBS $AND_EXEC"
+
+#rm $BIN

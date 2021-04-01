@@ -5,7 +5,6 @@
 #include "table.h"
 
 static Obj* alloc_obj(size_t size, ObjKind kind);
-static uint32_t hash_string(const char* chars, int length);
 
 #define ALLOC_OBJ(type, kind) (type*) alloc_obj(sizeof(type), kind)
 #define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, STRING_OBJ)
@@ -21,13 +20,13 @@ static Obj* alloc_obj(size_t size, ObjKind kind) {
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
     ObjString* obj_str = ALLOC_STR(length + 1);
     obj_str->length = length;
-    memcpy((char*)obj_str->cstr, chars, length);
-    obj_str->cstr[length] = '\0';
+    memcpy((char*)obj_str->chars, chars, length);
+    obj_str->chars[length] = '\0';
     obj_str->hash = hash;
     return obj_str;
 }
 
-static uint32_t hash_string(const char* chars, int length) {
+uint32_t hash_string(const char* chars, int length) {
     uint32_t hash = 2166136261u;
     for (int i = 0; i < length; i++) {
         hash ^= chars[i];
@@ -50,8 +49,8 @@ ObjString* copy_string(const char* chars, int length) {
 ObjString* concat_string(ObjString* first, ObjString* second) {
     int concat_length = first->length + second->length;
     char buffer[concat_length];
-    memcpy(buffer, first->cstr, first->length);
-    memcpy(((char*)buffer) + first->length, second->cstr, second->length);
+    memcpy(buffer, first->chars, first->length);
+    memcpy(((char*)buffer) + first->length, second->chars, second->length);
     return copy_string(buffer, concat_length);
 }
 

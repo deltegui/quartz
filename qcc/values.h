@@ -10,11 +10,11 @@ typedef enum {
     VALUE_BOOL,
     VALUE_NIL,
     VALUE_OBJ,
-} ValueType;
+} ValueKind;
 
 typedef struct {
     Type type;
-    ValueType kind;
+    ValueKind kind;
     union {
         double number;
         bool boolean;

@@ -1,4 +1,6 @@
 print -1;
+
+// This thing also works in Java.
 print 1+-1;
 
 /**

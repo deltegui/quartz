@@ -148,7 +148,7 @@ ObjString* table_find_string(Table* table, const char* chars, int length, uint32
             if (
                 length == current->length &&
                 hash == current->hash &&
-                memcmp(current->cstr, chars, length) == 0
+                memcmp(current->chars, chars, length) == 0
             ) {
                 return current;
             }

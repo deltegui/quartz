@@ -252,7 +252,6 @@ static Stmt* variable_decl(Parser* parser) {
 }
 
 static void register_symbol(Parser* parser) {
-    // TODO refactor this shit.
     Symbol var_symbol = (Symbol){
         .name = create_symbol_name(parser->current.start, parser->current.length),
         .declaration_line = parser->current.line,
@@ -261,7 +260,6 @@ static void register_symbol(Parser* parser) {
     Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
     if (exsting && exsting->declaration_line < var_symbol.declaration_line) {
         error(parser, "Variable already declared in line %d", exsting->declaration_line);
-        free_symbol_name(&var_symbol.name);
         return;
     }
     CSYMBOL_INSERT(var_symbol);

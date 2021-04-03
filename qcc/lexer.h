@@ -22,6 +22,7 @@ typedef enum {
     TOKEN_LOWER,
     TOKEN_GREATER,
     TOKEN_SEMICOLON,
+    TOKEN_COLON,
 
     // Two character tokens
     TOKEN_AND,
@@ -40,6 +41,11 @@ typedef enum {
     TOKEN_STRING,
     TOKEN_PRINT,
     TOKEN_IDENTIFIER,
+
+    TOKEN_NUMBER_TYPE,
+    TOKEN_STRING_TYPE,
+    TOKEN_BOOL_TYPE,
+    TOKEN_NIL_TYPE
 } TokenKind;
 
 typedef struct {

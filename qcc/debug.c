@@ -157,6 +157,11 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_IDENTIFIER: return "TokenIdentifier";
     case TOKEN_PRINT: return "TokenPrint";
     case TOKEN_SEMICOLON: return "TokenSemicolon";
+    case TOKEN_COLON: return "TokenColon";
+    case TOKEN_NUMBER_TYPE: return "TokenNumberType";
+    case TOKEN_STRING_TYPE: return "TokenStringType";
+    case TOKEN_BOOL_TYPE: return "TokenBoolType";
+    case TOKEN_NIL_TYPE: return "TokenNilType";
     default: return "Unknown";
     }
 }

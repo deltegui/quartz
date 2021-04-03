@@ -235,6 +235,24 @@ static Token scan_identifier(Lexer* lexer) {
             return create_token(lexer, TOKEN_PRINT);
         }
     }
+    case 'N': {
+        if (match_subtoken(lexer, "umber", 1, 6)) {
+            return create_token(lexer, TOKEN_NUMBER_TYPE);
+        }
+        if (match_subtoken(lexer, "il", 1, 3)) {
+            return create_token(lexer, TOKEN_NIL_TYPE);
+        }
+    }
+    case 'S': {
+        if (match_subtoken(lexer, "tring", 1, 6)) {
+            return create_token(lexer, TOKEN_STRING_TYPE);
+        }
+    }
+    case 'B': {
+        if (match_subtoken(lexer, "ool", 1, 4)) {
+            return create_token(lexer, TOKEN_BOOL_TYPE);
+        }
+    }
     }
     return create_token(lexer, TOKEN_IDENTIFIER);
 }
@@ -250,6 +268,7 @@ static inline Token scan_token(Lexer* lexer) {
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '.': return create_token(lexer, TOKEN_DOT);
     case ';': return create_token(lexer, TOKEN_SEMICOLON);
+    case ':': return create_token(lexer, TOKEN_COLON);
     case '<': {
         if (consume(lexer, '=')) {
             return create_token(lexer, TOKEN_LOWER_EQUAL);

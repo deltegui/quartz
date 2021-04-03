@@ -10,7 +10,6 @@ typedef struct {
 } SymbolName;
 
 SymbolName create_symbol_name(const char* str, int length);
-void free_symbol_name(SymbolName* name);
 
 typedef struct {
     SymbolName name;

@@ -257,8 +257,70 @@ static void should_scan_global_declarations() {
     );
 }
 
+static void should_scan_global_declarations_with_types() {
+    assert_tokens(
+        "   var demo: Number = 6;     ",
+        7,
+        (Token){
+            .length = 3,
+            .line = 1,
+            .start = "var",
+            .kind = TOKEN_VAR
+        },
+        (Token){
+            .length = 4,
+            .line = 1,
+            .start = "demo",
+            .kind = TOKEN_IDENTIFIER
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = ":",
+            .kind = TOKEN_COLON
+        },
+        (Token){
+            .length = 6,
+            .line = 1,
+            .start = "Number",
+            .kind = TOKEN_NUMBER_TYPE
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = "=",
+            .kind = TOKEN_EQUAL
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = "6",
+            .kind = TOKEN_NUMBER
+        },
+        (Token){
+            .length = 1,
+            .line = 1,
+            .start = ";",
+            .kind = TOKEN_SEMICOLON
+        }
+    );
+}
+
+static void should_tokenize_type_names() {
+    assert_types(
+        "  Number String   Bool Nil ",
+        4,
+        TOKEN_NUMBER_TYPE,
+        TOKEN_STRING_TYPE,
+        TOKEN_BOOL_TYPE,
+        TOKEN_NIL_TYPE
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_tokenize_type_names),
+        cmocka_unit_test(should_scan_global_declarations_with_types),
         cmocka_unit_test(should_scan_global_declarations),
         cmocka_unit_test(should_scan_empty_text),
         cmocka_unit_test(should_omit_spaces),

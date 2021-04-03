@@ -23,16 +23,16 @@ typedef struct {
     Type type;
 } symbol_t;
 
-static void assert_key(Key* first, Key* second) {
+static void assert_key(SymbolName* first, SymbolName* second) {
     assert_int_equal(memcmp(first->str, second->str, first->length), 0);
     assert_int_equal(first->length, second->length);
     assert_int_equal(first->hash, second->hash);
 }
 
-static void assert_entry(Entry* first, Entry* second) {
+static void assert_entry(Symbol* first, Symbol* second) {
     assert_non_null(first);
     assert_non_null(second);
-    assert_key(&first->key, &second->key);
+    assert_key(&first->name, &second->name);
     assert_int_equal(first->declaration_line, second->declaration_line);
     assert_int_equal(first->type, second->type);
 }
@@ -152,14 +152,14 @@ symbol_t sym[] = {
 
 static void should_insert_symbols() {
     TABLE({
-        Entry entry = (Entry){
-            .key = create_symbol_key("hello", 5),
+        Symbol entry = (Symbol){
+            .name = create_symbol_name("hello", 5),
             .declaration_line = 1,
             .type = STRING_TYPE
         };
         symbol_insert(&table, entry);
-        Key key = create_symbol_key("hello", 5);
-        Entry* stored = symbol_lookup(&table, &key);
+        SymbolName key = create_symbol_name("hello", 5);
+        Symbol* stored = symbol_lookup(&table, &key);
         assert_entry(&entry, stored);
     });
 }
@@ -168,8 +168,8 @@ static void should_insert_sixteen_elements() {
     TABLE({
         for (int i = 0; i < SYM_LENGTH; i++) {
             symbol_t* symbol = &sym[i];
-            Entry entry = (Entry){
-                .key = create_symbol_key(symbol->str, symbol->length),
+            Symbol entry = (Symbol){
+                .name = create_symbol_name(symbol->str, symbol->length),
                 .declaration_line = symbol->declaration_line,
                 .type = symbol->type,
             };
@@ -177,13 +177,13 @@ static void should_insert_sixteen_elements() {
         }
         for (int i = 0; i < SYM_LENGTH; i++) {
             symbol_t* symbol = &sym[i];
-            Key key = create_symbol_key(symbol->str, symbol->length);
-            Entry expected = (Entry){
-                .key = key,
+            SymbolName key = create_symbol_name(symbol->str, symbol->length);
+            Symbol expected = (Symbol){
+                .name = key,
                 .declaration_line = symbol->declaration_line,
                 .type = symbol->type,
             };
-            Entry* actual = symbol_lookup(&table, &key);
+            Symbol* actual = symbol_lookup(&table, &key);
             assert_entry(&expected, actual);
         }
     });
@@ -191,13 +191,13 @@ static void should_insert_sixteen_elements() {
 
 static void should_return_null_if_symbol_does_not_exist() {
     TABLE({
-        Key alberto = create_symbol_key("alberto", 7);
-        Entry* entry = symbol_lookup(&table, &alberto);
+        SymbolName alberto = create_symbol_name("alberto", 7);
+        Symbol* entry = symbol_lookup(&table, &alberto);
         assert_null(entry);
 
-        Key manolo = create_symbol_key("manolo", 6);
-        Entry manolo_entry = (Entry){
-            .key = manolo,
+        SymbolName manolo = create_symbol_name("manolo", 6);
+        Symbol manolo_entry = (Symbol){
+            .name = manolo,
             .declaration_line = 1,
             .type = UNKNOWN_TYPE,
         };

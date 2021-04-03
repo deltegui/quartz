@@ -18,11 +18,6 @@ void init_symbol_table(SymbolTable* table) {
 }
 
 void free_symbol_table(SymbolTable* table) {
-    for (int i = 0; i < table->capacity; i++) {
-        if (! IS_EMPTY(&table->entries[i])) {
-            free_symbol_name(&table->entries[i].name);
-        }
-    }
     free(table->entries);
     init_symbol_table(table);
 }
@@ -30,19 +25,12 @@ void free_symbol_table(SymbolTable* table) {
 SymbolName create_symbol_name(const char* str, int length) {
     assert(length != 0);
     assert(str != NULL);
-    char* owned = (char*) malloc(length + 1);
-    memcpy(owned, str, length);
-    owned[length] = '\0';
     SymbolName name = (SymbolName){
-        .str = owned,
+        .str = str,
         .length = length,
         .hash = hash_string(str, length),
     };
     return name;
-}
-
-void free_symbol_name(SymbolName* name) {
-    free((char*) name->str);
 }
 
 Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {

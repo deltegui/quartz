@@ -3,6 +3,7 @@
 #include "common.h"
 #include "lexer.h"
 #include "expr.h"
+#include "symbol.h"
 
 typedef struct {
     Type last_type;
@@ -10,7 +11,6 @@ typedef struct {
 } Typechecker;
 
 static void error(Typechecker* checker, const char* msg, Token* token);
-static void print_type(Type type);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_binary(void* ctx, BinaryExpr* binary);
@@ -46,16 +46,6 @@ static void error(Typechecker* checker, const char* msg, Token* token) {
     checker->last_type = UNKNOWN_TYPE;
 }
 
-static void print_type(Type type) {
-    switch (type) {
-    case NUMBER_TYPE: printf("Number"); return;
-    case BOOL_TYPE: printf("Bool"); return;
-    case STRING_TYPE: printf("String"); return;
-    case NIL_TYPE: printf("Nil"); return;
-    case UNKNOWN_TYPE: printf("Unknown"); return;
-    }
-}
-
 bool typecheck(Stmt* ast) {
     Typechecker checker;
     checker.has_error = false;
@@ -72,7 +62,27 @@ static void typecheck_expr(void* ctx, ExprStmt* expr) {
 }
 
 static void typecheck_var(void* ctx, VarStmt* var) {
-    // @todo implement this.
+    Typechecker* checker = (Typechecker*) ctx;
+
+    SymbolName var_name = create_symbol_name(var->identifier.start, var->identifier.length);
+    Symbol* symbol = CSYMBOL_LOOKUP(&var_name); // It's garanteed this pointer is not NULL
+    if (var->definition == NULL) {
+        if (symbol->type == UNKNOWN_TYPE) {
+            error(checker, "Variables without declaration cannot be untyped. The variable type cannot be inferred", &var->identifier);
+            printf("\n");
+        }
+        return;
+    }
+    ACCEPT_EXPR(ctx, var->definition);
+    if (symbol->type == checker->last_type) {
+        return;
+    }
+    if (symbol->type == UNKNOWN_TYPE) {
+        symbol->type = checker->last_type;
+        return;
+    }
+    error(checker, "Variable type does not match with asignment type", &var->identifier);
+    printf("\n");
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
@@ -113,9 +123,9 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
 
 #define ERROR(msg) error(checker, msg, &binary->op);\
     printf(" for types: '");\
-    print_type(left_type);\
+    type_print(left_type);\
     printf("' and '");\
-    print_type(right_type);\
+    type_print(right_type);\
     printf("'\n")
 
     switch (binary->op.kind) {
@@ -175,7 +185,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 
 #define ERROR(msg) error(checker, msg, &unary->op);\
     printf(" for type: '");\
-    print_type(inner_type);\
+    type_print(inner_type);\
     printf("'\n")
 
     switch (unary->op.kind) {

@@ -42,6 +42,9 @@ Key create_symbol_key(const char* str, int length) {
 }
 
 Entry* symbol_lookup(SymbolTable* table, Key* key) {
+    if (table->capacity == 0) {
+        return NULL;
+    }
     Entry* entry = find(table, key);
     if (IS_EMPTY(entry)) {
         return NULL;

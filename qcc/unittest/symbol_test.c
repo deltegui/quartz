@@ -8,6 +8,11 @@
     SymbolTable table;\
     init_symbol_table(&table);\
     __VA_ARGS__\
+    printf(\
+        "SymbolTable size: %d, capacity: %d, load factor: %f\n",\
+        table.size,\
+        table.capacity,\
+        (double)table.size / (double)table.capacity);\
     free_symbol_table(&table);\
 } while (false)
 
@@ -184,8 +189,27 @@ static void should_insert_sixteen_elements() {
     });
 }
 
+static void should_return_null_if_symbol_does_not_exist() {
+    TABLE({
+        Key alberto = create_symbol_key("alberto", 7);
+        Entry* entry = symbol_lookup(&table, &alberto);
+        assert_null(entry);
+
+        Key manolo = create_symbol_key("manolo", 6);
+        Entry manolo_entry = (Entry){
+            .key = manolo,
+            .declaration_line = 1,
+            .type = UNKNOWN_TYPE,
+        };
+        symbol_insert(&table, manolo_entry);
+        entry = symbol_lookup(&table, &alberto);
+        assert_null(entry);
+    });
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
         cmocka_unit_test(should_insert_symbols),
         cmocka_unit_test(should_insert_sixteen_elements)
     };

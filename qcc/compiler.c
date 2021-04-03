@@ -1,6 +1,7 @@
 #include "compiler.h"
 #include "typechecker.h"
 #include "values.h"
+#include "symbol.h" // to initialize and free
 
 #ifdef COMPILER_DEBUG
 #include "debug.h"
@@ -56,22 +57,27 @@ void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
 CompilationResult compile(const char* source, Chunk* output_chunk) {
     Compiler compiler;
     init_compiler(&compiler, source, output_chunk);
+    INIT_CSYMBOL_TABLE();
     Stmt* ast = parse(&compiler.parser);
     if (compiler.parser.has_error) {
+        FREE_CSYMBOL_TABLE();
         free_stmt(ast); // Although parser had errors, the ast exists.
         return PARSING_ERROR;
     }
     if (!typecheck(ast)) {
+        FREE_CSYMBOL_TABLE();
         free_stmt(ast);
         return TYPE_ERROR;
     }
     ACCEPT_STMT(&compiler, ast);
     emit(&compiler, OP_RETURN);
 #ifdef COMPILER_DEBUG
+    CSYMBOL_TABLE_PRINT();
     valuearray_print(&compiler.chunk->constants);
     chunk_print(compiler.chunk);
 #endif
     free_stmt(ast);
+    FREE_CSYMBOL_TABLE();
     if (compiler.has_error) {
         return COMPILATION_ERROR;
     }

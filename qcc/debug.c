@@ -2,6 +2,24 @@
 #include "debug.h"
 #include "expr.h"
 
+void symbol_table_print(SymbolTable* table) {
+    printf("--------[ SYMBOL TABLE ]--------\n\n");
+    printf("| Name\t| Line\n");
+    printf("|-------|------------\n");
+    for (int i = 0; i < table->capacity; i++) {
+        Symbol* current = &table->entries[i];
+        if (current->name.length == 0) {
+            continue;
+        }
+        printf(
+            "| %.*s\t| %d\n",
+            current->name.length,
+            current->name.str,
+            current->declaration_line);
+    }
+    printf("\n\n");
+}
+
 void valuearray_print(ValueArray* values) {
     printf("--------[ VALUE ARRAY ]--------\n\n");
     printf("| Index\t| Value\n");

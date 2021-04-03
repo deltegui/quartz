@@ -1,5 +1,7 @@
-#include "common.h"
 #include "parser.h"
+#include <stdarg.h>
+#include "common.h"
+#include "symbol.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -31,9 +33,9 @@ typedef struct {
 static ParseRule* get_rule(TokenKind kind);
 static Expr* parse_precendence(Parser* parser, Precedence precedence);
 
-static void error(Parser* parser, const char* message);
-static void error_prev(Parser* parser, const char* message);
-static void error_at(Parser* parser, Token* token, const char* message);
+static void error(Parser* parser, const char* message, ...);
+static void error_prev(Parser* parser, const char* message, ...);
+static void error_at(Parser* parser, Token* token, const char* message, va_list params);
 static void syncronize(Parser* parser);
 
 static void advance(Parser* parser);
@@ -43,6 +45,7 @@ static Stmt* main_block(Parser* parser);
 
 static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
+static void register_symbol(Parser* parser);
 
 static Stmt* statement(Parser* parser);
 static Stmt* print_stmt(Parser* parser);
@@ -122,15 +125,21 @@ void init_parser(Parser* parser, const char* source) {
     parser->has_error = false;
 }
 
-static void error(Parser* parser, const char* message) {
-    error_at(parser, &parser->current, message);
+static void error(Parser* parser, const char* message, ...) {
+    va_list params;
+    va_start(params, message);
+    error_at(parser, &parser->current, message, params);
+    va_end(params);
 }
 
-static void error_prev(Parser* parser, const char* message) {
-    error_at(parser, &parser->prev, message);
+static void error_prev(Parser* parser, const char* message, ...) {
+    va_list params;
+    va_start(params, message);
+    error_at(parser, &parser->prev, message, params);
+    va_end(params);
 }
 
-static void error_at(Parser* parser, Token* token, const char* message) {
+static void error_at(Parser* parser, Token* token, const char* format, va_list params) {
     if (parser->panic_mode) {
         return;
     }
@@ -144,7 +153,9 @@ static void error_at(Parser* parser, Token* token, const char* message) {
     default:
         fprintf(stderr, " at '%.*s'", token->length, token->start);
     }
-    fprintf(stderr, ": %s\n", message);
+    fprintf(stderr, ": ");
+    vfprintf(stderr, format, params);
+    fprintf(stderr, "\n");
     parser->has_error = true;
 }
 
@@ -229,6 +240,7 @@ static Stmt* variable_decl(Parser* parser) {
     advance(parser); // consume var
     VarStmt var;
     var.identifier = parser->current;
+    register_symbol(parser);
     advance(parser); // consume identifier
     var.definition = NULL;
     if (parser->current.kind == TOKEN_EQUAL) {
@@ -237,6 +249,22 @@ static Stmt* variable_decl(Parser* parser) {
     }
     consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
     return CREATE_VAR_STMT(var);
+}
+
+static void register_symbol(Parser* parser) {
+    // TODO refactor this shit.
+    Symbol var_symbol = (Symbol){
+        .name = create_symbol_name(parser->current.start, parser->current.length),
+        .declaration_line = parser->current.line,
+        .type = UNKNOWN_TYPE, // TODO change this.
+    };
+    Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
+    if (exsting && exsting->declaration_line < var_symbol.declaration_line) {
+        error(parser, "Variable already declared in line %d", exsting->declaration_line);
+        free_symbol_name(&var_symbol.name);
+        return;
+    }
+    CSYMBOL_INSERT(var_symbol);
 }
 
 static Stmt* print_stmt(Parser* parser) {

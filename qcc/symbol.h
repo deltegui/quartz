@@ -7,24 +7,33 @@ typedef struct {
     const char* str;
     int length;
     uint32_t hash;
-} Key;
+} SymbolName;
+
+SymbolName create_symbol_name(const char* str, int length);
+void free_symbol_name(SymbolName* name);
 
 typedef struct {
-    Key key;
+    SymbolName name;
     int declaration_line;
     Type type;
-} Entry;
+} Symbol;
 
 typedef struct {
-    Entry* entries;
+    Symbol* entries;
     int size;
     int capacity;
 } SymbolTable;
 
-Key create_symbol_key(const char* str, int length);
+SymbolTable symbol_table;
+
+#define INIT_CSYMBOL_TABLE() init_symbol_table(&symbol_table)
+#define FREE_CSYMBOL_TABLE() free_symbol_table(&symbol_table)
+#define CSYMBOL_LOOKUP(name) symbol_lookup(&symbol_table, name)
+#define CSYMBOL_INSERT(symbol) symbol_insert(&symbol_table, symbol)
+
 void init_symbol_table(SymbolTable* table);
 void free_symbol_table(SymbolTable* table);
-Entry* symbol_lookup(SymbolTable* table, Key* key);
-void symbol_insert(SymbolTable* table, Entry entry);
+Symbol* symbol_lookup(SymbolTable* table, SymbolName* name);
+void symbol_insert(SymbolTable* table, Symbol entry);
 
 #endif

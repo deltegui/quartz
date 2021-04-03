@@ -1,4 +1,5 @@
 #include "typechecker.h"
+#include "type.h"
 #include "common.h"
 #include "lexer.h"
 #include "expr.h"

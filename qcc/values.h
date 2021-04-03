@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "object.h"
-#include "typechecker.h"
+#include "type.h"
 
 typedef enum {
     VALUE_NUMBER,

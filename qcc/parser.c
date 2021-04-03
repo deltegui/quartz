@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include "common.h"
 #include "symbol.h"
+#include "type.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -45,7 +46,7 @@ static Stmt* main_block(Parser* parser);
 
 static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
-static void register_symbol(Parser* parser);
+static void register_symbol(Parser* parser, Token* tkn_symbol, Type type);
 
 static Stmt* statement(Parser* parser);
 static Stmt* print_stmt(Parser* parser);
@@ -240,22 +241,35 @@ static Stmt* variable_decl(Parser* parser) {
     advance(parser); // consume var
     VarStmt var;
     var.identifier = parser->current;
-    register_symbol(parser);
     advance(parser); // consume identifier
+
+    Type var_type = UNKNOWN_TYPE;
+    if (parser->current.kind == TOKEN_COLON) {
+        advance(parser); // consume :
+        var_type = type_from_token_kind(parser->current.kind);
+        if (var_type == UNKNOWN_TYPE) {
+            error(parser, "Unkown type in variable declaration");
+        }
+        advance(parser); // consume type
+    }
+
+    register_symbol(parser, &var.identifier, var_type);
+
     var.definition = NULL;
     if (parser->current.kind == TOKEN_EQUAL) {
         advance(parser); // consume =
         var.definition = expression(parser);
     }
+
     consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
     return CREATE_VAR_STMT(var);
 }
 
-static void register_symbol(Parser* parser) {
+static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
     Symbol var_symbol = (Symbol){
-        .name = create_symbol_name(parser->current.start, parser->current.length),
-        .declaration_line = parser->current.line,
-        .type = UNKNOWN_TYPE, // TODO change this.
+        .name = create_symbol_name(tkn_symbol->start, tkn_symbol->length),
+        .declaration_line = tkn_symbol->line,
+        .type = type,
     };
     Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
     if (exsting && exsting->declaration_line < var_symbol.declaration_line) {

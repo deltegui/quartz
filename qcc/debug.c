@@ -1,21 +1,24 @@
-#include <stdarg.h>
 #include "debug.h"
+#include <stdarg.h>
 #include "expr.h"
+#include "type.h"
 
 void symbol_table_print(SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
-    printf("| Name\t| Line\n");
-    printf("|-------|------------\n");
+    printf("| Name\t| Line\t| Type\n");
+    printf("|-------|-------|------------\n");
     for (int i = 0; i < table->capacity; i++) {
         Symbol* current = &table->entries[i];
         if (current->name.length == 0) {
             continue;
         }
         printf(
-            "| %.*s\t| %d\n",
+            "| %.*s\t| %d\t| ",
             current->name.length,
             current->name.str,
             current->declaration_line);
+        type_print(current->type);
+        printf("\n");
     }
     printf("\n\n");
 }

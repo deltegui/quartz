@@ -1,7 +1,7 @@
 #ifndef QUARTZ_SYMBOL_H
 #define QUARTZ_SYMBOL_H
 
-#include "typechecker.h"
+#include "type.h"
 
 typedef struct {
     const char* str;

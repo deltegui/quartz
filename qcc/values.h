@@ -24,6 +24,7 @@ typedef struct {
 
 void value_print(Value val);
 bool value_equals(Value first, Value second);
+Value value_default(Type type);
 
 #define NUMBER_VALUE(i) ((Value){ NUMBER_TYPE, VALUE_NUMBER, { .number = i } })
 #define BOOL_VALUE(b) ((Value){ BOOL_TYPE, VALUE_BOOL, { .boolean = b } })
@@ -47,6 +48,6 @@ typedef struct {
 
 void init_valuearray(ValueArray* values);
 void free_valuearray(ValueArray* values);
-uint8_t valuearray_write(ValueArray* values, Value value);
+int valuearray_write(ValueArray* values, Value value);
 
 #endif

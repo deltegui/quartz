@@ -42,3 +42,7 @@ void chunk_write(Chunk* chunk, uint8_t bytecode, int line) {
     chunk->lines[chunk->size] = line;
     chunk->size++;
 }
+
+int chunk_add_constant(Chunk* chunk, Value value) {
+    return valuearray_write(&chunk->constants, value);
+}

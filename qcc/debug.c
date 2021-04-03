@@ -56,6 +56,9 @@ static const char* OpCodeStrings[] = {
     "OP_RETURN",
     "OP_POP",
     "OP_CONSTANT",
+    "OP_DEFINE_GLOBAL",
+	"OP_GET_GLOBAL",
+	"OP_SET_GLOBAL",
 };
 
 void opcode_print(uint8_t op) {
@@ -116,6 +119,9 @@ void chunk_print(Chunk* chunk) {
             chunk_opcode_print(chunk, i++);
             break;
         }
+        case OP_GET_GLOBAL:
+        case OP_SET_GLOBAL:
+        case OP_DEFINE_GLOBAL:
         case OP_CONSTANT: {
             chunk_opcode_print(chunk, i++);
             Value val = chunk->constants.values[chunk->code[i]];

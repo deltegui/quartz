@@ -15,6 +15,7 @@ typedef struct {
     SymbolName name;
     int declaration_line;
     Type type;
+    uint8_t constant_index;
 } Symbol;
 
 typedef struct {

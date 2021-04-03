@@ -11,12 +11,14 @@ QVM qvm;
 
 void init_qvm() {
     init_table(&qvm.strings);
+    init_table(&qvm.globals);
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
 }
 
 void free_qvm() {
     free_table(&qvm.strings);
+    free_table(&qvm.globals);
     free_objects();
 }
 
@@ -56,6 +58,8 @@ void qvm_execute(Chunk* chunk) {
     uint8_t* pc = chunk->code;
 
 #define READ_BYTE() *(pc++)
+#define READ_CONSTANT() chunk->constants.values[READ_BYTE()]
+#define READ_STRING() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT()))
 
     for (;;) {
 #ifdef VM_DEBUG
@@ -141,9 +145,24 @@ void qvm_execute(Chunk* chunk) {
             break;
         }
         case OP_CONSTANT: {
-            uint8_t index = READ_BYTE();
-            Value val = chunk->constants.values[index];
+            Value val = READ_CONSTANT();
             stack_push(val);
+            break;
+        }
+        case OP_DEFINE_GLOBAL: {
+            ObjString* identifier = READ_STRING();
+            table_set(&qvm.globals, identifier, stack_peek(0));
+            stack_pop(); // ensure GC
+            break;
+        }
+        case OP_SET_GLOBAL: {
+            ObjString* identifier = READ_STRING();
+            table_set(&qvm.globals, identifier, stack_peek(0));
+            break;
+        }
+        case OP_GET_GLOBAL: {
+            ObjString* identifier = READ_STRING();
+            stack_push(table_find(&qvm.globals, identifier));
             break;
         }
         case OP_PRINT:

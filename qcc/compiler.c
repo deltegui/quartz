@@ -19,6 +19,9 @@ static void emit(Compiler* compiler, uint8_t bytecode);
 static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second);
 static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
 
+static uint8_t make_constant(Compiler* compiler, Value value);
+static uint8_t identifier_constant(Compiler* compiler, Token* identifier);
+
 static void compile_literal(void* ctx, LiteralExpr* literal);
 static void compile_binary(void* ctx, BinaryExpr* binary);
 static void compile_unary(void* ctx, UnaryExpr* unary);
@@ -93,6 +96,19 @@ static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second) {
     chunk_write(compiler->chunk, second, compiler->last_line);
 }
 
+static uint8_t make_constant(Compiler* compiler, Value value) {
+    int constant_index = chunk_add_constant(compiler->chunk, value);
+    if (constant_index > UINT8_COUNT) {
+        error(compiler, "Too many constants for chunk!");
+        return 0;
+    }
+    return (uint8_t)constant_index;
+}
+
+static uint8_t identifier_constant(Compiler* compiler, Token* identifier) {
+    return make_constant(compiler, OBJ_VALUE(copy_string(identifier->start, identifier->length)));
+}
+
 static void compile_print(void* ctx, PrintStmt* print) {
     Compiler* compiler = (Compiler*)ctx;
     ACCEPT_EXPR(compiler, print->inner);
@@ -106,10 +122,23 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
 }
 
 static void compile_var(void* ctx, VarStmt* var) {
-    // TODO implement this
+    Compiler* compiler = (Compiler*) ctx;
+    uint8_t global = identifier_constant(compiler, &var->identifier);
+
+    SymbolName name = create_symbol_name(var->identifier.start, var->identifier.length);
+    Symbol* symbol = CSYMBOL_LOOKUP(&name);
+    symbol->constant_index = global;
+
+    if (var->definition == NULL) {
+        uint8_t default_value = make_constant(compiler, value_default(symbol->type));
+        emit_bytes(compiler, OP_CONSTANT, default_value);
+    } else {
+        ACCEPT_EXPR(compiler, var->definition);
+    }
+    emit_bytes(compiler, OP_DEFINE_GLOBAL, global);
 }
 
-// @todo Maybe can this function be rewrited in a way that express the difference
+// TODO Maybe can this function be rewrited in a way that express the difference
 // between reserved words and real literals
 static void compile_literal(void* ctx, LiteralExpr* literal) {
     Compiler* compiler = (Compiler*) ctx;
@@ -145,7 +174,7 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         return;
     }
     emit(compiler, OP_CONSTANT);
-    uint8_t value_pos = valuearray_write(&compiler->chunk->constants, value);
+    uint8_t value_pos = make_constant(compiler, value);
     emit(compiler, value_pos);
 }
 

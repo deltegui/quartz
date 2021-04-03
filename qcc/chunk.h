@@ -34,6 +34,9 @@ typedef enum {
 
     // Declarations
     OP_CONSTANT,
+    OP_DEFINE_GLOBAL,
+	OP_GET_GLOBAL,
+	OP_SET_GLOBAL,
 } OpCode;
 
 typedef struct {
@@ -47,5 +50,6 @@ typedef struct {
 void init_chunk(Chunk* chunk);
 void free_chunk(Chunk* chunk);
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
+int chunk_add_constant(Chunk* chunk, Value value);
 
 #endif

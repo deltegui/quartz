@@ -270,10 +270,11 @@ static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
         .name = create_symbol_name(tkn_symbol->start, tkn_symbol->length),
         .declaration_line = tkn_symbol->line,
         .type = type,
+        .constant_index = -1,
     };
     Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
     if (exsting && exsting->declaration_line < var_symbol.declaration_line) {
-        error(parser, "Variable already declared in line %d", exsting->declaration_line);
+        error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
         return;
     }
     CSYMBOL_INSERT(var_symbol);

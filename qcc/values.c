@@ -13,6 +13,18 @@ void value_print(Value val) {
     }
 }
 
+Value value_default(Type type) {
+    assert(type != UNKNOWN_TYPE);
+    switch (type) {
+    case NUMBER_TYPE: return NUMBER_VALUE(0);
+    case BOOL_TYPE: return BOOL_VALUE(false);
+    case STRING_TYPE: return OBJ_VALUE(copy_string("", 0));
+    case NIL_TYPE:
+    default:
+        return NIL_VALUE();
+    }
+}
+
 bool value_equals(Value first, Value second) {
     switch (first.kind) {
     case VALUE_NUMBER: {
@@ -53,7 +65,7 @@ void free_valuearray(ValueArray* arr) {
     arr->capacity = 0;
 }
 
-uint8_t valuearray_write(ValueArray* arr, Value value) {
+int valuearray_write(ValueArray* arr, Value value) {
     if (arr->capacity <= arr->size + 1) {
         size_t old = arr->capacity;
         arr->capacity = GROW_CAPACITY(arr->capacity);

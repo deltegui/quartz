@@ -1,3 +1,5 @@
-var a = 5;
-var b = 6;
-var a = 0;
+var a: String = "5";
+var b: Number = 6;
+var c: Bool = false;
+
+print (3+3)*6/3;

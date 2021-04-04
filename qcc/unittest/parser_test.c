@@ -69,6 +69,12 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         assert_string_equal(actual, second->literal.literal.start);
         break;
     }
+    case EXPR_IDENTIFIER: {
+        char actual[first->identifier.name.length + 1];
+        sprintf(actual, "%.*s", first->identifier.name.length, first->identifier.name.start);
+        assert_string_equal(actual, second->identifier.name.start);
+        break;
+    }
     case EXPR_UNARY: {
         assert_true(first->unary.op.kind == second->unary.op.kind);
         break;
@@ -101,6 +107,15 @@ static void assert_expr_ast(const char* source, Expr* expected) {
     };
     assert_stmt_ast(source, CREATE_EXPR_STMT(expr_stmt));
 }
+
+IdentifierExpr a_identifier = (IdentifierExpr){
+    .name = (Token){
+        .length = 1,
+        .line = 1,
+        .start = "a",
+        .kind = TOKEN_IDENTIFIER
+    },
+};
 
 LiteralExpr true_ = (LiteralExpr){
     .literal = (Token){
@@ -309,8 +324,28 @@ static void should_parse_global_variables() {
     );
 }
 
+static void should_use_of_globals() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    ExprStmt expr = (ExprStmt){
+        .inner = CREATE_INDENTIFIER_EXPR(a_identifier)
+    };
+
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, CREATE_VAR_STMT(var));
+    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+
+    Stmt* stmt = CREATE_LIST_STMT(list);
+    assert_ast(" var a = 5; a ; ", stmt);
+    free_stmt(stmt);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_use_of_globals),
+        cmocka_unit_test(should_parse_global_variables),
         cmocka_unit_test(should_parse_additions),
         cmocka_unit_test(should_parse_precedence),
         cmocka_unit_test(should_parse_grouping),

@@ -13,6 +13,7 @@ typedef struct {
 static void error(Typechecker* checker, const char* msg, Token* token);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
+static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
 static void typecheck_binary(void* ctx, BinaryExpr* binary);
 static void typecheck_unary(void* ctx, UnaryExpr* unary);
 
@@ -20,6 +21,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
     .visit_binary = typecheck_binary,
     .visit_unary = typecheck_unary,
+    .visit_identifier = typecheck_identifier,
 };
 
 static void typecheck_expr(void* ctx, ExprStmt* expr);
@@ -65,7 +67,8 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     Typechecker* checker = (Typechecker*) ctx;
 
     SymbolName var_name = create_symbol_name(var->identifier.start, var->identifier.length);
-    Symbol* symbol = CSYMBOL_LOOKUP(&var_name); // It's garanteed this pointer is not NULL
+    Symbol* symbol = CSYMBOL_LOOKUP(&var_name);
+    assert(symbol != NULL);
     if (var->definition == NULL) {
         if (symbol->type == UNKNOWN_TYPE) {
             error(checker, "Variables without declaration cannot be untyped. The variable type cannot be inferred", &var->identifier);
@@ -83,6 +86,15 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     }
     error(checker, "Variable type does not match with asignment type", &var->identifier);
     printf("\n");
+}
+
+static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    SymbolName var_name = create_symbol_name(identifier->name.start, identifier->name.length);
+    Symbol* symbol = CSYMBOL_LOOKUP(&var_name);
+    assert(symbol != NULL);
+    checker->last_type = symbol->type;
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

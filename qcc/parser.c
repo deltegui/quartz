@@ -55,6 +55,7 @@ static Stmt* expr_stmt(Parser* parser);
 static Expr* expression(Parser* parser);
 static Expr* grouping(Parser* parser);
 static Expr* primary(Parser* parser);
+static Expr* identifier(Parser* parser);
 static Expr* unary(Parser* parser);
 static Expr* binary(Parser* parser, Expr* left);
 
@@ -89,7 +90,7 @@ ParseRule rules[] = {
     [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_PRINT]         = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_IDENTIFIER]    = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_IDENTIFIER]    = {identifier,  NULL,   PREC_NONE},
 };
 
 static ParseRule* get_rule(TokenKind kind) {
@@ -270,7 +271,7 @@ static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
         .name = create_symbol_name(tkn_symbol->start, tkn_symbol->length),
         .declaration_line = tkn_symbol->line,
         .type = type,
-        .constant_index = -1,
+        .constant_index = UINT8_MAX,
     };
     Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
     if (exsting && exsting->declaration_line < var_symbol.declaration_line) {
@@ -371,7 +372,7 @@ static Expr* primary(Parser* parser) {
 
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: PRIMARY value ");
-    token_print(parser->current);
+    token_print(literal.literal);
     printf("[PARSER DEBUG]: end PRIMARY Expression\n");
 #endif
     return expr;
@@ -393,8 +394,37 @@ static Expr* unary(Parser* parser) {
 
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: UNARY operator: ");
-    token_print(parser->current);
+    token_print(op);
     printf("[PARSER DEBUG]: end UNARY Expression\n");
+#endif
+    return expr;
+}
+
+static Expr* identifier(Parser* parser) {
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: IDENTIFIER Expression\n");
+#endif
+
+    Token identifier = parser->prev;
+    SymbolName symbol_name = create_symbol_name(identifier.start, identifier.length);
+    Symbol* existing = CSYMBOL_LOOKUP(&symbol_name);
+    if (!existing) {
+        error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
+        return NULL;
+    }
+    if (existing->declaration_line > identifier.line) {
+        error_prev(parser, "Use of variable '%.*s' before declaration", identifier.length, identifier.start);
+        return NULL;
+    }
+    IdentifierExpr node = (IdentifierExpr){
+        .name = identifier,
+    };
+    Expr* expr = CREATE_INDENTIFIER_EXPR(node);
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: NAME value ");
+    token_print(identifier);
+    printf("[PARSER DEBUG]: end PRIMARY Expression\n");
 #endif
     return expr;
 }

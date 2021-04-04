@@ -70,6 +70,9 @@ static void grow_symbol_table(SymbolTable* table) {
     }
 
     for (int i = 0; i < old_capacity; i++) {
+        if (IS_EMPTY(&old_entries[i])) {
+            continue;
+        }
         Symbol* symbol = find(table, &old_entries[i].name);
         *symbol = old_entries[i];
     }

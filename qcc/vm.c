@@ -34,13 +34,6 @@ static inline Value stack_peek(uint8_t distance) {
     return *(qvm.stack_top - distance - 1);
 }
 
-static inline uint16_t read_long(uint8_t** pc) {
-    uint8_t high = *((*pc)++);
-    uint8_t low = *((*pc)++);
-    uint16_t num = high << 0x8;
-    return num + low;
-}
-
 #define NUM_BINARY_OP(op)\
     double b = AS_NUMBER(stack_pop());\
     double a = AS_NUMBER(stack_pop());\
@@ -56,6 +49,23 @@ static inline uint16_t read_long(uint8_t** pc) {
     ObjString* a = AS_STRING_OBJ(AS_OBJ(stack_pop()));\
     ObjString* concat = concat_string(a, b);\
     stack_push(OBJ_VALUE(concat))
+
+#define CONSTANT_OP(read)\
+    Value val = read();\
+    stack_push(val)
+
+#define DEFINE_GLOBAL_OP(str_read)\
+    ObjString* identifier = str_read();\
+    table_set(&qvm.globals, identifier, stack_peek(0));\
+    stack_pop()
+
+#define SET_GLOBAL_OP(str_read)\
+    ObjString* identifier = str_read();\
+    table_set(&qvm.globals, identifier, stack_peek(0))
+
+#define GET_GLOBAL_OP(str_read)\
+    ObjString* identifier = str_read();\
+    stack_push(table_find(&qvm.globals, identifier))
 
 void qvm_execute(Chunk* chunk) {
 #ifdef VM_DEBUG
@@ -153,45 +163,35 @@ void qvm_execute(Chunk* chunk) {
             break;
         }
         case OP_CONSTANT: {
-            Value val = READ_CONSTANT();
-            stack_push(val);
+            CONSTANT_OP(READ_CONSTANT);
             break;
         }
         case OP_CONSTANT_LONG: {
-            Value val = READ_CONSTANT_LONG();
-            stack_push(val);
+            CONSTANT_OP(READ_CONSTANT_LONG);
             break;
         }
         case OP_DEFINE_GLOBAL: {
-            ObjString* identifier = READ_STRING();
-            table_set(&qvm.globals, identifier, stack_peek(0));
-            stack_pop(); // ensure GC
+            DEFINE_GLOBAL_OP(READ_STRING);
             break;
         }
         case OP_DEFINE_GLOBAL_LONG: {
-            ObjString* identifier = READ_STRING_LONG();
-            table_set(&qvm.globals, identifier, stack_peek(0));
-            stack_pop(); // ensure GC
+            DEFINE_GLOBAL_OP(READ_STRING_LONG);
             break;
         }
         case OP_SET_GLOBAL: {
-            ObjString* identifier = READ_STRING();
-            table_set(&qvm.globals, identifier, stack_peek(0));
+            SET_GLOBAL_OP(READ_STRING);
             break;
         }
         case OP_SET_GLOBAL_LONG: {
-            ObjString* identifier = READ_STRING_LONG();
-            table_set(&qvm.globals, identifier, stack_peek(0));
+            SET_GLOBAL_OP(READ_STRING_LONG);
             break;
         }
         case OP_GET_GLOBAL: {
-            ObjString* identifier = READ_STRING();
-            stack_push(table_find(&qvm.globals, identifier));
+            GET_GLOBAL_OP(READ_STRING);
             break;
         }
         case OP_GET_GLOBAL_LONG: {
-            ObjString* identifier = READ_STRING_LONG();
-            stack_push(table_find(&qvm.globals, identifier));
+            GET_GLOBAL_OP(READ_STRING_LONG);
             break;
         }
         case OP_PRINT:

@@ -83,7 +83,9 @@ CompilationResult compile(const char* source, Chunk* output_chunk) {
 #ifdef COMPILER_DEBUG
     CSYMBOL_TABLE_PRINT();
     valuearray_print(&compiler.chunk->constants);
-    chunk_print(compiler.chunk);
+    if (!compiler.has_error) {
+        chunk_print(compiler.chunk);
+    }
 #endif
     free_stmt(ast);
     FREE_CSYMBOL_TABLE();

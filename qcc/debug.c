@@ -80,6 +80,12 @@ void stack_print(Value* stack_top, Value* stack) {
     }
 }
 
+static void chunk_format_print(Chunk* chunk, int i, const char* format, ...);
+static void chunk_value_print(Chunk* chunk, int index);
+static int chunk_opcode_print(Chunk* chunk, int i);
+static int chunk_short_print(Chunk* chunk, int i);
+static int chunk_long_print(Chunk* chunk, int i);
+
 static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
     printf("[%02d;%02d]\t", i, chunk->lines[i]);
     va_list params;
@@ -88,19 +94,35 @@ static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
     va_end(params);
 }
 
-static void chunk_opcode_print(Chunk* chunk, int i) {
+static void chunk_value_print(Chunk* chunk, int index) {
+    Value val = chunk->constants.values[index];
+    value_print(val);
+    printf("\n");
+}
+
+static int chunk_opcode_print(Chunk* chunk, int i) {
     chunk_format_print(chunk, i, "%s\n", OpCodeStrings[chunk->code[i]]);
+    return ++i;
+}
+
+static int chunk_short_print(Chunk* chunk, int i) {
+    i = chunk_opcode_print(chunk, i);
+    chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
+    chunk_value_print(chunk, chunk->code[i]);
+    return ++i;
+}
+
+static int chunk_long_print(Chunk* chunk, int i) {
+    i = chunk_opcode_print(chunk, i);
+    uint8_t* pc = &chunk->code[i];
+    uint16_t num = read_long(&pc);
+    i++;
+    chunk_format_print(chunk, i, "%04x\t", num);
+    chunk_value_print(chunk, num);
+    return ++i;
 }
 
 void chunk_print(Chunk* chunk) {
-#define PRINT_VALUE(index) do {\
-    Value val = chunk->constants.values[index];\
-    chunk_format_print(chunk, i, "%04x\t", chunk->code[index]);\
-    value_print(val);\
-    printf("\n");\
-    i++;\
-} while (false)
-
     printf("--------[ CHUNK DUMP ]--------\n\n");
     for (int i = 0; i < chunk->size; i++) {
         printf("[%d] %04x\n", i, chunk->code[i]);
@@ -128,41 +150,25 @@ void chunk_print(Chunk* chunk) {
         case OP_POP:
         case OP_PRINT:
         case OP_GREATER: {
-            chunk_opcode_print(chunk, i++);
+            i = chunk_opcode_print(chunk, i);
             break;
         }
         case OP_GET_GLOBAL:
         case OP_SET_GLOBAL:
         case OP_DEFINE_GLOBAL:
         case OP_CONSTANT: {
-            chunk_opcode_print(chunk, i++);
-            Value val = chunk->constants.values[chunk->code[i]];
-            chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
-            value_print(val);
-            printf("\n");
-            i++;
+            i = chunk_short_print(chunk, i);
             break;
         }
         case OP_GET_GLOBAL_LONG:
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:
         case OP_CONSTANT_LONG: {
-            chunk_opcode_print(chunk, i++);
-            uint8_t high = chunk->code[i++];
-            uint8_t low = chunk->code[i];
-            uint16_t num = high << 0x8;
-            num = num + low;
-            chunk_format_print(chunk, i, "%04x\t", num);
-            Value val = chunk->constants.values[num];
-            value_print(val);
-            printf("\n");
-            i++;
+            i = chunk_long_print(chunk, i);
             break;
         }
         }
     }
-
-    #undef PRINT_VALUE
 }
 
 static const char* token_type_print(TokenKind kind) {

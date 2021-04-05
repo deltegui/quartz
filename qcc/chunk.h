@@ -56,4 +56,6 @@ void free_chunk(Chunk* chunk);
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
 int chunk_add_constant(Chunk* chunk, Value value);
 
+uint16_t read_long(uint8_t** pc);
+
 #endif

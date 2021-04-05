@@ -34,6 +34,13 @@ static inline Value stack_peek(uint8_t distance) {
     return *(qvm.stack_top - distance - 1);
 }
 
+static inline uint16_t read_long(uint8_t** pc) {
+    uint8_t high = *((*pc)++);
+    uint8_t low = *((*pc)++);
+    uint16_t num = high << 0x8;
+    return num + low;
+}
+
 #define NUM_BINARY_OP(op)\
     double b = AS_NUMBER(stack_pop());\
     double a = AS_NUMBER(stack_pop());\
@@ -60,6 +67,8 @@ void qvm_execute(Chunk* chunk) {
 #define READ_BYTE() *(pc++)
 #define READ_CONSTANT() chunk->constants.values[READ_BYTE()]
 #define READ_STRING() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT()))
+#define READ_CONSTANT_LONG() chunk->constants.values[read_long(&pc)]
+#define READ_STRING_LONG() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT_LONG()))
 
     for (;;) {
 #ifdef VM_DEBUG
@@ -148,8 +157,19 @@ void qvm_execute(Chunk* chunk) {
             stack_push(val);
             break;
         }
+        case OP_CONSTANT_LONG: {
+            Value val = READ_CONSTANT_LONG();
+            stack_push(val);
+            break;
+        }
         case OP_DEFINE_GLOBAL: {
             ObjString* identifier = READ_STRING();
+            table_set(&qvm.globals, identifier, stack_peek(0));
+            stack_pop(); // ensure GC
+            break;
+        }
+        case OP_DEFINE_GLOBAL_LONG: {
+            ObjString* identifier = READ_STRING_LONG();
             table_set(&qvm.globals, identifier, stack_peek(0));
             stack_pop(); // ensure GC
             break;
@@ -159,8 +179,18 @@ void qvm_execute(Chunk* chunk) {
             table_set(&qvm.globals, identifier, stack_peek(0));
             break;
         }
+        case OP_SET_GLOBAL_LONG: {
+            ObjString* identifier = READ_STRING_LONG();
+            table_set(&qvm.globals, identifier, stack_peek(0));
+            break;
+        }
         case OP_GET_GLOBAL: {
             ObjString* identifier = READ_STRING();
+            stack_push(table_find(&qvm.globals, identifier));
+            break;
+        }
+        case OP_GET_GLOBAL_LONG: {
+            ObjString* identifier = READ_STRING_LONG();
             stack_push(table_find(&qvm.globals, identifier));
             break;
         }

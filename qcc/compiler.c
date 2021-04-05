@@ -16,11 +16,13 @@ typedef struct {
 
 static void error(Compiler* compiler, const char* message);
 static void emit(Compiler* compiler, uint8_t bytecode);
-static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second);
+static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param);
+static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param);
+static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
 static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
 
-static uint8_t make_constant(Compiler* compiler, Value value);
-static uint8_t identifier_constant(Compiler* compiler, Token* identifier);
+static uint16_t make_constant(Compiler* compiler, Value value);
+static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -95,21 +97,37 @@ static void emit(Compiler* compiler, uint8_t bytecode) {
     chunk_write(compiler->chunk, bytecode, compiler->last_line);
 }
 
-static void emit_bytes(Compiler* compiler, uint8_t first, uint8_t second) {
-    chunk_write(compiler->chunk, first, compiler->last_line);
-    chunk_write(compiler->chunk, second, compiler->last_line);
+static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param) {
+    emit(compiler, bytecode);
+    emit(compiler, param);
 }
 
-static uint8_t make_constant(Compiler* compiler, Value value) {
+static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param) {
+    uint8_t high = param >> 0x8;
+    uint8_t low = param & 0x00FF;
+    emit(compiler, bytecode);
+    emit(compiler, high);
+    emit(compiler, low);
+}
+
+static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  uint16_t param) {
+    if (param > UINT8_MAX) {
+        emit_long(compiler, op_long, param);
+    } else {
+        emit_short(compiler, op_short, param);
+    }
+}
+
+static uint16_t make_constant(Compiler* compiler, Value value) {
     int constant_index = chunk_add_constant(compiler->chunk, value);
-    if (constant_index > UINT8_COUNT) {
+    if (constant_index > UINT16_COUNT) {
         error(compiler, "Too many constants for chunk!");
         return 0;
     }
-    return (uint8_t)constant_index;
+    return (uint16_t)constant_index;
 }
 
-static uint8_t identifier_constant(Compiler* compiler, Token* identifier) {
+static uint16_t identifier_constant(Compiler* compiler, Token* identifier) {
     return make_constant(compiler, OBJ_VALUE(copy_string(identifier->start, identifier->length)));
 }
 
@@ -127,36 +145,36 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
 
 static void compile_var(void* ctx, VarStmt* var) {
     Compiler* compiler = (Compiler*) ctx;
-    uint8_t global = identifier_constant(compiler, &var->identifier);
+    uint16_t global = identifier_constant(compiler, &var->identifier);
 
     Symbol* symbol = CSYMBOL_LOOKUP_STR(var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     symbol->constant_index = global;
 
     if (var->definition == NULL) {
-        uint8_t default_value = make_constant(compiler, value_default(symbol->type));
-        emit_bytes(compiler, OP_CONSTANT, default_value);
+        uint16_t default_value = make_constant(compiler, value_default(symbol->type));
+        emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
     } else {
         ACCEPT_EXPR(compiler, var->definition);
     }
-    emit_bytes(compiler, OP_DEFINE_GLOBAL, global);
+    emit_param(compiler, OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG, global);
 }
 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
     Symbol* symbol = CSYMBOL_LOOKUP_STR(identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
-    assert(symbol->constant_index != UINT8_MAX);
-    emit_bytes(compiler, OP_GET_GLOBAL, symbol->constant_index);
+    assert(symbol->constant_index != UINT16_MAX);
+    emit_param(compiler, OP_GET_GLOBAL, OP_GET_GLOBAL_LONG, symbol->constant_index);
 }
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
     Symbol* symbol = CSYMBOL_LOOKUP_STR(assignment->name.start, assignment->name.length);
     assert(symbol != NULL);
-    assert(symbol->constant_index != UINT8_MAX);
+    assert(symbol->constant_index != UINT16_MAX);
     ACCEPT_EXPR(compiler, assignment->value);
-    emit_bytes(compiler, OP_SET_GLOBAL, symbol->constant_index);
+    emit_short(compiler, OP_SET_GLOBAL, symbol->constant_index);
 }
 
 static void compile_literal(void* ctx, LiteralExpr* literal) {
@@ -191,9 +209,8 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         error(compiler, "Unkown literal expression");
         return;
     }
-    emit(compiler, OP_CONSTANT);
-    uint8_t value_pos = make_constant(compiler, value);
-    emit(compiler, value_pos);
+    uint16_t value_pos = make_constant(compiler, value);
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, value_pos);
 }
 
 static void compile_binary(void* ctx, BinaryExpr* binary) {
@@ -204,7 +221,7 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
     ACCEPT_EXPR(compiler, binary->right);
 
 #define EMIT(byte) emit(compiler, byte)
-#define EMIT_BYTES(first, second) emit_bytes(compiler, first, second)
+#define EMIT_SHORT(first, second) emit_short(compiler, first, second)
 
     switch(binary->op.kind) {
     case TOKEN_PLUS: EMIT(OP_ADD); break;
@@ -215,11 +232,11 @@ static void compile_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_OR: EMIT(OP_OR); break;
     case TOKEN_PERCENT: EMIT(OP_MOD); break;
     case TOKEN_EQUAL_EQUAL: EMIT(OP_EQUAL); break;
-    case TOKEN_BANG_EQUAL: EMIT_BYTES(OP_EQUAL, OP_NOT); break;
+    case TOKEN_BANG_EQUAL: EMIT_SHORT(OP_EQUAL, OP_NOT); break;
     case TOKEN_LOWER: EMIT(OP_LOWER); break;
-    case TOKEN_LOWER_EQUAL: EMIT_BYTES(OP_GREATER, OP_NOT); break;
+    case TOKEN_LOWER_EQUAL: EMIT_SHORT(OP_GREATER, OP_NOT); break;
     case TOKEN_GREATER: EMIT(OP_GREATER); break;
-    case TOKEN_GREATER_EQUAL: EMIT_BYTES(OP_LOWER, OP_NOT); break;
+    case TOKEN_GREATER_EQUAL: EMIT_SHORT(OP_LOWER, OP_NOT); break;
     default:
         error(compiler, "Unkown binary operator in expression");
         return;

@@ -298,7 +298,7 @@ static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
         .name = create_symbol_name(tkn_symbol->start, tkn_symbol->length),
         .declaration_line = tkn_symbol->line,
         .type = type,
-        .constant_index = UINT8_MAX,
+        .constant_index = UINT16_MAX,
     };
     Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
     if (exsting) {

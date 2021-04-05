@@ -43,7 +43,7 @@ if($ARGV[0]) {
 	print "Loaded tests:\n";
 	print map { "$_ => $tests{$_}\n" } keys %tests;
 	print "\n";
-	print "Loaded programs\n";
+	print "Loaded programs:\n";
 	print map { "$_ => $prog{$_}\n" } keys %prog;
 	print "======================\n\n";
 }

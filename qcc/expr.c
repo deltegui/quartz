@@ -18,6 +18,11 @@ Expr* create_expr(ExprKind kind, void* expr_node) {
     case EXPR_IDENTIFIER:
         expr->kind = EXPR_IDENTIFIER;
         expr->identifier = *(IdentifierExpr*)expr_node;
+        break;
+    case EXPR_ASSIGNMENT:
+        expr->kind = EXPR_ASSIGNMENT;
+        expr->assignment = *(AssignmentExpr*)expr_node;
+        break;
     }
     return expr;
 }
@@ -40,8 +45,12 @@ void free_expr(Expr* expr) {
     case EXPR_LITERAL:
         // There is nothing to free
         break;
+    case EXPR_ASSIGNMENT:
+        free_expr(expr->assignment.value);
+        break;
     case EXPR_UNARY:
         free_expr(expr->unary.expr);
+        break;
     }
     free(expr);
 }
@@ -64,6 +73,7 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     case EXPR_BINARY: DISPATCH(visit_binary, binary); break;
     case EXPR_UNARY: DISPATCH(visit_unary, unary); break;
     case EXPR_IDENTIFIER: DISPATCH(visit_identifier, identifier); break;
+    case EXPR_ASSIGNMENT: DISPATCH(visit_assignment, assignment); break;
     }
 #undef DISPATCH
 }

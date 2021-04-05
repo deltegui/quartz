@@ -1,3 +1,6 @@
-var hola = 10 * 3;
+var hola: Number = 10 * 3;
 
-print hola + true;
+print hola;
+
+hola = 23.34;
+print hola;

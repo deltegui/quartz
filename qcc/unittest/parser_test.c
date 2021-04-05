@@ -53,6 +53,12 @@ static void assert_list_stmt_equals(ListStmt* first, ListStmt* second) {
     }
 }
 
+static void assert_token_str_equal(Token first, Token second) {
+    char actual[first.length + 1];
+    sprintf(actual, "%.*s", first.length, first.start);
+    assert_string_equal(actual, second.start);
+}
+
 static void assert_expr_equals(Expr* first, Expr* second) {
     assert_true(first->kind == second->kind);
     switch (first->kind) {
@@ -64,15 +70,16 @@ static void assert_expr_equals(Expr* first, Expr* second) {
     }
     case EXPR_LITERAL: {
         assert_true(first->literal.literal.kind == second->literal.literal.kind);
-        char actual[first->literal.literal.length + 1];
-        sprintf(actual, "%.*s", first->literal.literal.length, first->literal.literal.start);
-        assert_string_equal(actual, second->literal.literal.start);
+        assert_token_str_equal(first->literal.literal, second->literal.literal);
         break;
     }
     case EXPR_IDENTIFIER: {
-        char actual[first->identifier.name.length + 1];
-        sprintf(actual, "%.*s", first->identifier.name.length, first->identifier.name.start);
-        assert_string_equal(actual, second->identifier.name.start);
+        assert_token_str_equal(first->identifier.name, second->identifier.name);
+        break;
+    }
+    case EXPR_ASSIGNMENT: {
+        assert_expr_equals(first->assignment.value, second->assignment.value);
+        assert_token_str_equal(first->assignment.name, second->assignment.name);
         break;
     }
     case EXPR_UNARY: {
@@ -107,15 +114,6 @@ static void assert_expr_ast(const char* source, Expr* expected) {
     };
     assert_stmt_ast(source, CREATE_EXPR_STMT(expr_stmt));
 }
-
-IdentifierExpr a_identifier = (IdentifierExpr){
-    .name = (Token){
-        .length = 1,
-        .line = 1,
-        .start = "a",
-        .kind = TOKEN_IDENTIFIER
-    },
-};
 
 LiteralExpr true_ = (LiteralExpr){
     .literal = (Token){
@@ -216,6 +214,15 @@ Token example_str = (Token){
     .line = 1,
     .start = "Hello world!",
     .kind = TOKEN_STRING,
+};
+
+IdentifierExpr a_identifier = (IdentifierExpr){
+    .name = (Token){
+        .length = 1,
+        .line = 1,
+        .start = "a",
+        .kind = TOKEN_IDENTIFIER
+    },
 };
 
 static void should_parse_additions() {
@@ -342,8 +349,31 @@ static void should_use_of_globals() {
     free_stmt(stmt);
 }
 
+static void should_assign_vars() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    AssignmentExpr assigment = (AssignmentExpr){
+        .name = a_token,
+        .value = CREATE_LITERAL_EXPR(two),
+    };
+    ExprStmt expr = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(assigment),
+    };
+
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, CREATE_VAR_STMT(var));
+    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+
+    Stmt* stmt = CREATE_LIST_STMT(list);
+    assert_ast(" var a = 5; a = 2; ", stmt);
+    free_stmt(stmt);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_assign_vars),
         cmocka_unit_test(should_use_of_globals),
         cmocka_unit_test(should_parse_global_variables),
         cmocka_unit_test(should_parse_additions),

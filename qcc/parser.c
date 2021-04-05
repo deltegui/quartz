@@ -22,8 +22,8 @@ typedef enum {
     PREC_PRIMARY
 } Precedence;
 
-typedef Expr* (*PrefixParse)(Parser* parser);
-typedef Expr* (*SuffixParse)(Parser* parser, Expr* left);
+typedef Expr* (*PrefixParse)(Parser* parser, bool can_assign);
+typedef Expr* (*SuffixParse)(Parser* parser, bool can_assign, Expr* left);
 
 typedef struct {
     PrefixParse prefix;
@@ -53,11 +53,11 @@ static Stmt* print_stmt(Parser* parser);
 static Stmt* expr_stmt(Parser* parser);
 
 static Expr* expression(Parser* parser);
-static Expr* grouping(Parser* parser);
-static Expr* primary(Parser* parser);
-static Expr* identifier(Parser* parser);
-static Expr* unary(Parser* parser);
-static Expr* binary(Parser* parser, Expr* left);
+static Expr* grouping(Parser* parser, bool can_assign);
+static Expr* primary(Parser* parser, bool can_assign);
+static Expr* identifier(Parser* parser, bool can_assign);
+static Expr* unary(Parser* parser, bool can_assign);
+static Expr* binary(Parser* parser, bool can_assign, Expr* left);
 
 ParseRule rules[] = {
     [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
@@ -104,7 +104,8 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
         error_prev(parser, "Expected expression");
         return NULL;
     }
-    Expr* left = prefix_parser(parser);
+    bool can_assign = precedence <= PREC_ASSIGNMENT;
+    Expr* left = prefix_parser(parser, can_assign);
     while (precedence <= get_rule(parser->current.kind)->precedence) {
         if (left == NULL) {
             break;
@@ -114,7 +115,7 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
         if (infix_parser == NULL) {
             break;
         }
-        left = infix_parser(parser, left);
+        left = infix_parser(parser, can_assign, left);
     }
     return left;
 }
@@ -304,7 +305,7 @@ static Expr* expression(Parser* parser) {
     return parse_precendence(parser, PREC_ASSIGNMENT);
 }
 
-static Expr* binary(Parser* parser, Expr* left) {
+static Expr* binary(Parser* parser, bool can_assign, Expr* left) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: BINARY Expression\n");
 #endif
@@ -343,7 +344,7 @@ static Expr* binary(Parser* parser, Expr* left) {
     return CREATE_BINARY_EXPR(binary);
 }
 
-static Expr* grouping(Parser* parser) {
+static Expr* grouping(Parser* parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: GROUP Expression\n");
 #endif
@@ -360,7 +361,7 @@ static Expr* grouping(Parser* parser) {
     return inner;
 }
 
-static Expr* primary(Parser* parser) {
+static Expr* primary(Parser* parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: PRIMARY Expression\n");
 #endif
@@ -378,7 +379,7 @@ static Expr* primary(Parser* parser) {
     return expr;
 }
 
-static Expr* unary(Parser* parser) {
+static Expr* unary(Parser* parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: UNARY Expression\n");
 #endif
@@ -400,7 +401,7 @@ static Expr* unary(Parser* parser) {
     return expr;
 }
 
-static Expr* identifier(Parser* parser) {
+static Expr* identifier(Parser* parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: IDENTIFIER Expression\n");
 #endif
@@ -416,10 +417,22 @@ static Expr* identifier(Parser* parser) {
         error_prev(parser, "Use of variable '%.*s' before declaration", identifier.length, identifier.start);
         return NULL;
     }
-    IdentifierExpr node = (IdentifierExpr){
-        .name = identifier,
-    };
-    Expr* expr = CREATE_INDENTIFIER_EXPR(node);
+
+    Expr* expr = NULL;
+    if (can_assign && parser->current.kind == TOKEN_EQUAL) {
+        advance(parser); //consume =
+        Expr* value = parse_precendence(parser, PREC_ASSIGNMENT);
+        AssignmentExpr node = (AssignmentExpr){
+            .name = identifier,
+            .value = value,
+        };
+        expr = CREATE_ASSIGNMENT_EXPR(node);
+    } else {
+        IdentifierExpr node = (IdentifierExpr){
+            .name = identifier,
+        };
+        expr = CREATE_INDENTIFIER_EXPR(node);
+    }
 
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: NAME value ");

@@ -6,7 +6,7 @@
 
 void value_print(Value val) {
     switch (val.kind) {
-    case VALUE_NUMBER: printf("%f", AS_NUMBER(val)); break;
+    case VALUE_NUMBER: printf("%g", AS_NUMBER(val)); break;
     case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
     case VALUE_NIL: printf("nil"); break;
     case VALUE_OBJ: print_object(AS_OBJ(val)); break;

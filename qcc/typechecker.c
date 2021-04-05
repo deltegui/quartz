@@ -16,12 +16,14 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
 static void typecheck_binary(void* ctx, BinaryExpr* binary);
 static void typecheck_unary(void* ctx, UnaryExpr* unary);
+static void typecheck_assignment(void* ctx, AssignmentExpr* assignment);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
     .visit_binary = typecheck_binary,
     .visit_unary = typecheck_unary,
     .visit_identifier = typecheck_identifier,
+    .visit_assignment = typecheck_assignment,
 };
 
 static void typecheck_expr(void* ctx, ExprStmt* expr);
@@ -94,6 +96,23 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
     SymbolName var_name = create_symbol_name(identifier->name.start, identifier->name.length);
     Symbol* symbol = CSYMBOL_LOOKUP(&var_name);
     assert(symbol != NULL);
+    checker->last_type = symbol->type;
+}
+
+static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    SymbolName var_name = create_symbol_name(assignment->name.start, assignment->name.length);
+    Symbol* symbol = CSYMBOL_LOOKUP(&var_name);
+    assert(symbol != NULL);
+
+    ACCEPT_EXPR(checker, assignment->value);
+
+    if (symbol->type != checker->last_type) {
+        error(checker, "Variable type does not match with asignment type", &assignment->name);
+        printf("\n");
+        return;
+    }
     checker->last_type = symbol->type;
 }
 

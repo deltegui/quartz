@@ -22,6 +22,7 @@ static void init_compiler(Compiler* compiler, const char* source, Chunk* output)
 static uint8_t make_constant(Compiler* compiler, Value value);
 static uint8_t identifier_constant(Compiler* compiler, Token* identifier);
 
+static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
 static void compile_literal(void* ctx, LiteralExpr* literal);
 static void compile_binary(void* ctx, BinaryExpr* binary);
@@ -32,6 +33,7 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_binary = compile_binary,
     .visit_unary = compile_unary,
     .visit_identifier = compile_identifier,
+    .visit_assignment = compile_assignment,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -146,6 +148,15 @@ static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Symbol* symbol = CSYMBOL_LOOKUP(&name);
     assert(symbol->constant_index != UINT8_MAX);
     emit_bytes(compiler, OP_GET_GLOBAL, symbol->constant_index);
+}
+
+static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
+    Compiler* compiler = (Compiler*) ctx;
+    SymbolName name = create_symbol_name(assignment->name.start, assignment->name.length);
+    Symbol* symbol = CSYMBOL_LOOKUP(&name);
+    assert(symbol->constant_index != UINT8_MAX);
+    ACCEPT_EXPR(compiler, assignment->value);
+    emit_bytes(compiler, OP_SET_GLOBAL, symbol->constant_index);
 }
 
 // TODO Maybe can this function be rewrited in a way that express the difference

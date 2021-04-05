@@ -190,14 +190,16 @@ static void pretty_print(const char *msg, ...);
 
 static void print_binary(void* ctx, BinaryExpr* binary);
 static void print_unary(void* ctx, UnaryExpr* unary);
-static void print_literal(void* ctx, LiteralExpr *literal);
-static void print_identifier(void* ctx, IdentifierExpr *identifier);
+static void print_literal(void* ctx, LiteralExpr* literal);
+static void print_identifier(void* ctx, IdentifierExpr* identifier);
+static void print_assignment(void* ctx, AssignmentExpr* assignment);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
     .visit_binary = print_binary,
     .visit_unary = print_unary,
     .visit_identifier = print_identifier,
+    .visit_assignment = print_assignment,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
@@ -295,6 +297,19 @@ static void print_identifier(void* ctx, IdentifierExpr *identifier) {
     OFFSET({
         pretty_print("Value: ");
         token_print(identifier->name);
+    });
+    pretty_print("]\n");
+}
+
+static void print_assignment(void* ctx, AssignmentExpr* assignment) {
+    pretty_print("Assignment Expr: [\n");
+    OFFSET({
+        pretty_print("Variable: ");
+        token_print(assignment->name);
+        pretty_print("Value:\n");
+        OFFSET({
+            ACCEPT_EXPR(assignment->value);
+        });
     });
     pretty_print("]\n");
 }

@@ -1,73 +1,144 @@
 #include "typechecker.h"
+#include <stdarg.h>
+#include "type.h"
 #include "common.h"
 #include "lexer.h"
-
-typedef enum {
-    INT_TYPE,
-    FLOAT_TYPE,
-    BOOL_TYPE,
-
-    UNKNOWN_TYPE,
-} Type;
+#include "expr.h"
+#include "symbol.h"
 
 typedef struct {
     Type last_type;
     bool has_error;
 } Typechecker;
 
-static bool is_number_type(Type type);
-static void print_type(Type type);
-static void error(Typechecker* checker, const char* msg, Token* token);
+static void error_last_type_match(Typechecker* checker, Token* token, Type first, const char* message);
+static void error(Typechecker* checker, Token* token, const char* message, ...);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
+static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
 static void typecheck_binary(void* ctx, BinaryExpr* binary);
 static void typecheck_unary(void* ctx, UnaryExpr* unary);
+static void typecheck_assignment(void* ctx, AssignmentExpr* assignment);
 
-ExprVisitor typechecker_visitor = (ExprVisitor){
+ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
     .visit_binary = typecheck_binary,
     .visit_unary = typecheck_unary,
+    .visit_identifier = typecheck_identifier,
+    .visit_assignment = typecheck_assignment,
 };
 
-#define ACCEPT(typechecker, expr) expr_dispatch(&typechecker_visitor, typechecker, expr)
+static void typecheck_expr(void* ctx, ExprStmt* expr);
+static void typecheck_var(void* ctx, VarStmt* var);
+static void typecheck_print(void* ctx, PrintStmt* print);
 
-static void print_type(Type type) {
-    switch (type) {
-    case INT_TYPE: printf("Int"); return;
-    case FLOAT_TYPE: printf("Float"); return;
-    case BOOL_TYPE: printf("Bool"); return;
-    case UNKNOWN_TYPE: printf("Unknown"); return;
-    }
+StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
+    .visit_expr = typecheck_expr,
+    .visit_var = typecheck_var,
+    .visit_print = typecheck_print,
+};
+
+#define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
+#define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
+
+static void error_last_type_match(Typechecker* checker, Token* token, Type first, const char* message) {
+    Type last_type = checker->last_type;
+    error(checker, token, "The type '");
+    type_print(first);
+    printf("' does not match with type '");
+    type_print(last_type);
+    printf("' %s\n", message);
 }
 
-static void error(Typechecker* checker, const char* msg, Token* token) {
-    printf(
-        "[Line %d] %s: '%.*s'",
-        token->line,
-        msg,
-        token->length,
-        token->start);
+static void error(Typechecker* checker, Token* token, const char* message, ...) {
     checker->has_error = true;
     checker->last_type = UNKNOWN_TYPE;
+    va_list params;
+    va_start(params, message);
+    printf("[Line %d] Type error: ",token->line);
+    vprintf(message, params);
+    va_end(params);
 }
 
-bool typecheck(Expr* ast) {
+bool typecheck(Stmt* ast) {
     Typechecker checker;
     checker.has_error = false;
-    ACCEPT(&checker, ast);
+    ACCEPT_STMT(&checker, ast);
     return !checker.has_error;
+}
+
+static void typecheck_print(void* ctx, PrintStmt* print) {
+    ACCEPT_EXPR(ctx, print->inner);
+}
+
+static void typecheck_expr(void* ctx, ExprStmt* expr) {
+    ACCEPT_EXPR(ctx, expr->inner);
+}
+
+static void typecheck_var(void* ctx, VarStmt* var) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(var->identifier.start, var->identifier.length);
+    assert(symbol != NULL);
+    if (var->definition == NULL) {
+        if (symbol->type == UNKNOWN_TYPE) {
+            error(
+                checker,
+                &var->identifier,
+                "Variables without definition cannot be untyped. The type of variable '%.*s' cannot be inferred.\n",
+                var->identifier.length,
+                var->identifier.start);
+        }
+        return;
+    }
+    ACCEPT_EXPR(ctx, var->definition);
+    if (symbol->type == checker->last_type) {
+        return;
+    }
+    if (symbol->type == UNKNOWN_TYPE) {
+        symbol->type = checker->last_type;
+        return;
+    }
+    error_last_type_match(
+        checker,
+        &var->identifier,
+        symbol->type,
+        "in variable declaration.");
+}
+
+static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(identifier->name.start, identifier->name.length);
+    assert(symbol != NULL);
+    checker->last_type = symbol->type;
+}
+
+static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(assignment->name.start, assignment->name.length);
+    assert(symbol != NULL);
+
+    ACCEPT_EXPR(checker, assignment->value);
+
+    if (symbol->type != checker->last_type) {
+        error_last_type_match(
+            checker,
+            &assignment->name,
+            symbol->type,
+            "in variable assignment.");
+        return;
+    }
+    checker->last_type = symbol->type;
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    switch (literal->literal.type) {
-    case TOKEN_INTEGER: {
-        checker->last_type = INT_TYPE;
-        return;
-    }
-    case TOKEN_FLOAT: {
-        checker->last_type = FLOAT_TYPE;
+    switch (literal->literal.kind) {
+    case TOKEN_NUMBER: {
+        checker->last_type = NUMBER_TYPE;
         return;
     }
     case TOKEN_TRUE:
@@ -75,48 +146,56 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
         checker->last_type = BOOL_TYPE;
         return;
     }
+    case TOKEN_NIL: {
+        checker->last_type = NIL_TYPE;
+        return;
+    }
+    case TOKEN_STRING: {
+        checker->last_type = STRING_TYPE;
+        return;
+    }
     default: {
-        error(checker, "Unknown type in expression", &literal->literal);
-        printf("\n");
+        error(checker, &literal->literal, "Unknown type in expression");
         return;
     }
     }
 }
 
-static bool is_number_type(Type type) {
-    return type == INT_TYPE || type == FLOAT_TYPE;
-}
-
 static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     Typechecker* checker = (Typechecker*) ctx;
-    ACCEPT(checker, binary->left);
+    ACCEPT_EXPR(checker, binary->left);
     Type left_type = checker->last_type;
-    ACCEPT(checker, binary->right);
+    ACCEPT_EXPR(checker, binary->right);
     Type right_type = checker->last_type;
 
-#define ERROR(msg) error(checker, msg, &binary->op);\
+#define ERROR(msg) error(checker, &binary->op, "%s", msg);\
     printf(" for types: '");\
-    print_type(left_type);\
+    type_print(left_type);\
     printf("' and '");\
-    print_type(right_type);\
+    type_print(right_type);\
     printf("'\n")
 
-    switch (binary->op.type) {
-    case TOKEN_PLUS:
-    case TOKEN_MINUS:
-    case TOKEN_STAR: {
-        if (left_type == INT_TYPE && right_type == INT_TYPE) {
-            checker->last_type = INT_TYPE;
+    switch (binary->op.kind) {
+    case TOKEN_PLUS: {
+        if (left_type == STRING_TYPE && right_type == STRING_TYPE) {
+            checker->last_type = STRING_TYPE;
             return;
         }
-        // continue to TOKEN_SLASH. DO NOT BREAK OR RETURN HERE.
+        // just continue to NUMBER_TYPE
     }
+    case TOKEN_LOWER:
+    case TOKEN_LOWER_EQUAL:
+    case TOKEN_GREATER:
+    case TOKEN_GREATER_EQUAL:
+    case TOKEN_MINUS:
+    case TOKEN_STAR:
+    case TOKEN_PERCENT:
     case TOKEN_SLASH: {
-        if (is_number_type(left_type) && is_number_type(right_type)) {
-            checker->last_type = FLOAT_TYPE;
+        if (left_type == NUMBER_TYPE && right_type == NUMBER_TYPE) {
+            checker->last_type = NUMBER_TYPE;
             return;
         }
-        ERROR("Invalid types for binary operation");
+        ERROR("Invalid types for numeric operation");
         return;
     }
     case TOKEN_AND:
@@ -126,6 +205,15 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
             return;
         }
         ERROR("Invalid types for boolean operation");
+        return;
+    }
+    case TOKEN_EQUAL_EQUAL:
+    case TOKEN_BANG_EQUAL: {
+        if (left_type == right_type) {
+            checker->last_type = BOOL_TYPE;
+            return;
+        }
+        ERROR("Elements with different types arent coparable");
         return;
     }
     default: {
@@ -139,21 +227,30 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
 
 static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     Typechecker* checker = (Typechecker*) ctx;
-    ACCEPT(checker, unary->expr);
+    ACCEPT_EXPR(checker, unary->expr);
     Type inner_type = checker->last_type;
 
-#define ERROR(msg) error(checker, msg, &unary->op);\
+#define ERROR(msg) error(checker, &unary->op, "%s", msg);\
     printf(" for type: '");\
-    print_type(inner_type);\
+    type_print(inner_type);\
     printf("'\n")
 
-    switch (unary->op.type) {
+    switch (unary->op.kind) {
     case TOKEN_BANG: {
         if (inner_type == BOOL_TYPE) {
             checker->last_type = BOOL_TYPE;
             return;
         }
         ERROR("Invalid type for not operation");
+        return;
+    }
+    case TOKEN_PLUS:
+    case TOKEN_MINUS: {
+        if (inner_type == NUMBER_TYPE) {
+            checker->last_type = inner_type;
+            return;
+        }
+        ERROR("Cannot apply plus or minus unary operation");
         return;
     }
     default: {

@@ -1,5 +1,5 @@
-#include "string.h"
 #include "lexer.h"
+#include <string.h>
 
 #ifdef LEXER_DEBUG
 #include "debug.h"
@@ -10,16 +10,21 @@ static char peek(Lexer* lexer);
 static bool match(Lexer* lexer, char c);
 static bool match_next(Lexer* lexer, char next);
 static void advance(Lexer* lexer);
-static bool consume_if(Lexer* lexer, char expected);
+static bool consume(Lexer* lexer, char expected);
 
-static Token create_token(Lexer* lexer, TokenType type);
+static Token create_token(Lexer* lexer, TokenKind kind);
 static Token create_error(Lexer* lexer, const char* message);
 
-static void skip_whitespaces(Lexer* lexer);
+static bool skip_whitespaces(Lexer* lexer);
+static bool consume_multiline_comment(Lexer* lexer);
 static bool is_numeric(Lexer* lexer);
+static bool is_alpha(Lexer* lexer);
+static bool is_string_quote(Lexer* lexer);
 static Token scan_number(Lexer* lexer);
+static Token scan_string(Lexer* lexer);
 static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len);
 static Token scan_identifier(Lexer* lexer);
+static inline Token scan_token(Lexer* lexer);
 Token next_token(Lexer* lexer);
 
 #define CONSUME_UNTIL(lexer, character)\
@@ -61,7 +66,7 @@ static void advance(Lexer* lexer) {
     lexer->current++;
 }
 
-static bool consume_if(Lexer* lexer, char expected) {
+static bool consume(Lexer* lexer, char expected) {
     if (match(lexer, expected)) {
         advance(lexer);
         return true;
@@ -69,12 +74,12 @@ static bool consume_if(Lexer* lexer, char expected) {
     return false;
 }
 
-static Token create_token(Lexer* lexer, TokenType type) {
+static Token create_token(Lexer* lexer, TokenKind kind) {
     Token token;
     token.length = (int) (lexer->current - lexer->start);
     token.line = lexer->line;
     token.start = lexer->start;
-    token.type = type;
+    token.kind = kind;
 #ifdef LEXER_DEBUG
     printf("[LEXER DEBUG]: Readed ");
     token_print(token);
@@ -88,7 +93,8 @@ static Token create_error(Lexer* lexer, const char* message) {
     return create_token(lexer, TOKEN_ERROR);
 }
 
-static void skip_whitespaces(Lexer* lexer) {
+static bool skip_whitespaces(Lexer* lexer) {
+    bool ok = true;
     for (;;) {
         switch (*lexer->current) {
         case '\n':
@@ -101,22 +107,41 @@ static void skip_whitespaces(Lexer* lexer) {
         case '/':
             if (match_next(lexer, '/')) {
                 CONSUME_UNTIL(lexer, '\n');
+            } else if (match_next(lexer, '*')) {
+                ok = ok && consume_multiline_comment(lexer);
             } else {
-                return;
+                return ok;
             }
             break;
         default:
-            return;
+            return ok;
         }
     }
 }
 
+static bool consume_multiline_comment(Lexer* lexer) {
+    int comment_start_line = lexer->line;
+    while (! (match(lexer, '*') && match_next(lexer, '/')) ) {
+        if (is_at_end(lexer)) {
+            fprintf(
+                stderr,
+                "[Line %d] Expected comment that starts in line %d to end with '*/' at end of file.\n",
+                lexer->line,
+                comment_start_line);
+            return false;
+        }
+        if (match(lexer, '\n')) {
+            lexer->line++;
+        }
+        advance(lexer);
+    }
+    consume(lexer, '*');
+    consume(lexer, '/');
+    return true;
+}
+
 static bool is_numeric(Lexer* lexer) {
-#define ASCII_ZERO 48
-#define ASCII_NINE 57
-    return *lexer->current >= ASCII_ZERO && *lexer->current <= ASCII_NINE;
-#undef ASCII_ZERO
-#undef ASCII_NINE
+    return *lexer->current >= '0' && *lexer->current <= '9';
 }
 
 static bool is_alpha(Lexer* lexer) {
@@ -126,21 +151,43 @@ static bool is_alpha(Lexer* lexer) {
         c == '_';
 }
 
+static bool is_string_quote(Lexer* lexer) {
+    char c = *lexer->current;
+    return (c == '\'' || c == '\"');
+}
+
 static Token scan_number(Lexer* lexer) {
     while (is_numeric(lexer)) {
-        lexer->current++;
+        advance(lexer);
     }
     if (!match(lexer, '.')) {
-        return create_token(lexer, TOKEN_INTEGER);
+        return create_token(lexer, TOKEN_NUMBER);
     }
     advance(lexer); // consume dot
     if (!is_numeric(lexer)) {
         return create_error(lexer, "Malformed float: Expected to have numbers after dot");
     }
     while (is_numeric(lexer)) {
-        lexer->current++;
+        advance(lexer);
     }
-    return create_token(lexer, TOKEN_FLOAT);
+    return create_token(lexer, TOKEN_NUMBER);
+}
+
+static Token scan_string(Lexer* lexer) {
+    advance(lexer); // Consume first quote
+    lexer->start = lexer->current; // Omit first quote
+    while (!is_string_quote(lexer) && !is_at_end(lexer)) {
+        if (match(lexer, '\n')) {
+            lexer->line++;
+        }
+        advance(lexer);
+    }
+    if (!is_string_quote(lexer)) {
+        return create_error(lexer, "Malformed string: expected string to end with '\"'");
+    }
+    Token str_token = create_token(lexer, TOKEN_STRING);
+    advance(lexer); //Consume last quote
+    return str_token;
 }
 
 static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len) {
@@ -155,8 +202,9 @@ static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len
 }
 
 static Token scan_identifier(Lexer* lexer) {
-    while (is_numeric(lexer) || is_alpha(lexer))
+    while (is_numeric(lexer) || is_alpha(lexer)) {
         advance(lexer);
+    }
     switch (*lexer->start) {
     case 't': {
         if (match_subtoken(lexer, "rue", 1, 4)) {
@@ -168,19 +216,44 @@ static Token scan_identifier(Lexer* lexer) {
             return create_token(lexer, TOKEN_FALSE);
         }
     }
+    case 'n': {
+        if (match_subtoken(lexer, "il", 1, 3)) {
+            return create_token(lexer, TOKEN_NIL);
+        }
     }
-    return create_error(lexer, "Unkown identifier");
+    case 'v': {
+        if (match_subtoken(lexer, "ar", 1, 3)) {
+            return create_token(lexer, TOKEN_VAR);
+        }
+    }
+    case 'p': {
+        if (match_subtoken(lexer, "rint", 1, 5)) {
+            return create_token(lexer, TOKEN_PRINT);
+        }
+    }
+    case 'N': {
+        if (match_subtoken(lexer, "umber", 1, 6)) {
+            return create_token(lexer, TOKEN_NUMBER_TYPE);
+        }
+        if (match_subtoken(lexer, "il", 1, 3)) {
+            return create_token(lexer, TOKEN_NIL_TYPE);
+        }
+    }
+    case 'S': {
+        if (match_subtoken(lexer, "tring", 1, 6)) {
+            return create_token(lexer, TOKEN_STRING_TYPE);
+        }
+    }
+    case 'B': {
+        if (match_subtoken(lexer, "ool", 1, 4)) {
+            return create_token(lexer, TOKEN_BOOL_TYPE);
+        }
+    }
+    }
+    return create_token(lexer, TOKEN_IDENTIFIER);
 }
 
-Token next_token(Lexer* lexer) {
-    skip_whitespaces(lexer);
-    if (is_at_end(lexer)) {
-        return create_token(lexer, TOKEN_END);
-    }
-    lexer->start = lexer->current;
-    if (is_numeric(lexer)) {
-        return scan_number(lexer);
-    }
+static inline Token scan_token(Lexer* lexer) {
     switch (*lexer->current++) {
     case '+': return create_token(lexer, TOKEN_PLUS);
     case '-': return create_token(lexer, TOKEN_MINUS);
@@ -190,17 +263,61 @@ Token next_token(Lexer* lexer) {
     case '(': return create_token(lexer, TOKEN_LEFT_PAREN);
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '.': return create_token(lexer, TOKEN_DOT);
-    case '!': return create_token(lexer, TOKEN_BANG);
+    case ';': return create_token(lexer, TOKEN_SEMICOLON);
+    case ':': return create_token(lexer, TOKEN_COLON);
+    case '<': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_LOWER_EQUAL);
+        }
+        return create_token(lexer, TOKEN_LOWER);
+    }
+    case '>': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_GREATER_EQUAL);
+        }
+        return create_token(lexer, TOKEN_GREATER);
+    }
     case '&': {
-        if (consume_if(lexer, '&')) {
+        if (consume(lexer, '&')) {
             return create_token(lexer, TOKEN_AND);
         }
+        return create_error(lexer, "Unkown '&' character");
     }
     case '|': {
-        if (consume_if(lexer, '|')) {
+        if (consume(lexer, '|')) {
             return create_token(lexer, TOKEN_OR);
         }
+        return create_error(lexer, "Unkown '|' character");
+    }
+    case '=': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_EQUAL_EQUAL);
+        }
+        return create_token(lexer, TOKEN_EQUAL);
+    }
+    case '!': {
+        if (consume(lexer, '=')) {
+            return create_token(lexer, TOKEN_BANG_EQUAL);
+        }
+        return create_token(lexer, TOKEN_BANG);
     }
     default: return scan_identifier(lexer);
     }
+}
+
+Token next_token(Lexer* lexer) {
+    if (!skip_whitespaces(lexer)) {
+        return create_token(lexer, TOKEN_ERROR);
+    }
+    if (is_at_end(lexer)) {
+        return create_token(lexer, TOKEN_END);
+    }
+    lexer->start = lexer->current;
+    if (is_numeric(lexer)) {
+        return scan_number(lexer);
+    }
+    if (is_string_quote(lexer)) {
+        return scan_string(lexer);
+    }
+    return scan_token(lexer);
 }

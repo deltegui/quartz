@@ -5,15 +5,42 @@
 #include "values.h"
 
 typedef enum {
+    // Number operations
     OP_ADD,
     OP_SUB,
     OP_MUL,
     OP_DIV,
+    OP_MOD,
+    OP_NEGATE,
+
+    // Boolean operations
     OP_NOT,
     OP_AND,
     OP_OR,
-    OP_CONSTANT,
+    OP_EQUAL,
+    OP_GREATER,
+    OP_LOWER,
+
+    // Reserved words and other special operations
+    OP_TRUE,
+    OP_FALSE,
+    OP_NIL,
+    OP_NOP,
+    OP_PRINT,
     OP_RETURN,
+
+    // Stack operations
+    OP_POP,
+
+    // Declarations
+    OP_CONSTANT,
+    OP_CONSTANT_LONG,
+    OP_DEFINE_GLOBAL,
+	OP_GET_GLOBAL,
+	OP_SET_GLOBAL,
+    OP_DEFINE_GLOBAL_LONG,
+	OP_GET_GLOBAL_LONG,
+	OP_SET_GLOBAL_LONG,
 } OpCode;
 
 typedef struct {
@@ -24,14 +51,11 @@ typedef struct {
     ValueArray constants;
 } Chunk;
 
-// Initializes an exiting chunk.
 void init_chunk(Chunk* chunk);
-
-// Frees an existing chunk.
 void free_chunk(Chunk* chunk);
-
-// Writes a bytecode to a chunk. It will store
-// the original line
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
+int chunk_add_constant(Chunk* chunk, Value value);
+
+uint16_t read_long(uint8_t** pc);
 
 #endif

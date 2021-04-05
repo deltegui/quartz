@@ -1,166 +1,214 @@
 #include "vm.h"
 #include "values.h"
+#include "math.h"
+#include "vm_memory.h"
 
 #ifdef VM_DEBUG
 #include "debug.h"
 #endif
 
-#define STACK_MAX 256
+QVM qvm;
 
-Value stack[STACK_MAX];
-Value* stack_top;
+void init_qvm() {
+    init_table(&qvm.strings);
+    init_table(&qvm.globals);
+    qvm.stack_top = qvm.stack;
+    qvm.objects = NULL;
+}
+
+void free_qvm() {
+    free_table(&qvm.strings);
+    free_table(&qvm.globals);
+    free_objects();
+}
 
 static inline void stack_push(Value val) {
-    *(stack_top++) = val;
+    *(qvm.stack_top++) = val;
 }
 
 static inline Value stack_pop() {
-    return *(--stack_top);
+    return *(--qvm.stack_top);
 }
 
-// Well, i know macros should't be used
-// to define large pieces of code, but
-// this is the only way to generate the
-// same code to some binary operations
-// based only the operation itself.
-#define BINARY_OP(op) do {\
-    Value b = stack_pop();\
-    Value a = stack_pop();\
-    if (IS_FLOAT(a) && IS_FLOAT(b)) {\
-        double dB = AS_FLOAT(b);\
-        double dA = AS_FLOAT(a);\
-        stack_push(FLOAT_VALUE(dA op dB));\
-    }\
-    if (IS_INTEGER(a) && IS_INTEGER(b)) {\
-        int iB = AS_INTEGER(b);\
-        int iA = AS_INTEGER(a);\
-        stack_push(INTEGER_VALUE(iA op iB));\
-    }\
-    if (IS_FLOAT(a) && IS_INTEGER(b)) {\
-        int iB = AS_INTEGER(b);\
-        double iA = AS_FLOAT(a);\
-        stack_push(FLOAT_VALUE(iA op iB));\
-    }\
-    if (IS_INTEGER(a) && IS_FLOAT(b)) {\
-        double iB = AS_FLOAT(b);\
-        int iA = AS_INTEGER(a);\
-        stack_push(FLOAT_VALUE(iA op iB));\
-    }\
-} while (false)
-
-static inline void sum_op() {
-    BINARY_OP(+);
+static inline Value stack_peek(uint8_t distance) {
+    return *(qvm.stack_top - distance - 1);
 }
 
-static inline void sub_op() {
-    BINARY_OP(-);
-}
+#define NUM_BINARY_OP(op)\
+    double b = AS_NUMBER(stack_pop());\
+    double a = AS_NUMBER(stack_pop());\
+    stack_push(NUMBER_VALUE(a op b))
 
-static inline void mul_op() {
-    BINARY_OP(*);
-}
+#define BOOL_BINARY_OP(op)\
+    bool b = AS_BOOL(stack_pop());\
+    bool a = AS_BOOL(stack_pop());\
+    stack_push(BOOL_VALUE(a op b))
 
-static inline double to_double(Value value) {
-    if (IS_FLOAT(value)) {
-        return AS_FLOAT(value);
-    }
-    return (double) AS_INTEGER(value);
-}
+#define STRING_CONCAT()\
+    ObjString* b = AS_STRING_OBJ(AS_OBJ(stack_pop()));\
+    ObjString* a = AS_STRING_OBJ(AS_OBJ(stack_pop()));\
+    ObjString* concat = concat_string(a, b);\
+    stack_push(OBJ_VALUE(concat))
 
-// Div operation is special. The two
-// arguments of a div operation must
-// be casted to double and should obtain
-// a double.
-static inline void div_op() {
-    double b = to_double(stack_pop());
-    double a = to_double(stack_pop());
-    stack_push(FLOAT_VALUE(a / b));
-}
+#define CONSTANT_OP(read)\
+    Value val = read();\
+    stack_push(val)
 
-static inline void and_op() {
-    bool b = AS_BOOL(stack_pop());
-    bool a = AS_BOOL(stack_pop());
-    stack_push(BOOL_VALUE(a && b));
-}
+#define DEFINE_GLOBAL_OP(str_read)\
+    ObjString* identifier = str_read();\
+    table_set(&qvm.globals, identifier, stack_peek(0));\
+    stack_pop()
 
-static inline void or_op() {
-    bool b = AS_BOOL(stack_pop());
-    bool a = AS_BOOL(stack_pop());
-    stack_push(BOOL_VALUE(a || b));
-}
+#define SET_GLOBAL_OP(str_read)\
+    ObjString* identifier = str_read();\
+    table_set(&qvm.globals, identifier, stack_peek(0))
 
-static inline void not_op() {
-    bool a = AS_BOOL(stack_pop());
-    stack_push(BOOL_VALUE(!a));
-}
+#define GET_GLOBAL_OP(str_read)\
+    ObjString* identifier = str_read();\
+    stack_push(table_find(&qvm.globals, identifier))
 
-// @todo value print comes from debug.c. Fix this shitty thing.
-static void value_print(Value val) {
-    switch (val.type) {
-    case VALUE_INTEGER: printf("%d", AS_INTEGER(val)); break;
-    case VALUE_FLOAT: printf("%f", AS_FLOAT(val)); break;
-    case VALUE_BOOL: printf("%s", AS_BOOL(val) ? "true" : "false"); break;
-    }
-}
-
-void vm_execute(Chunk* chunk) {
+void qvm_execute(Chunk* chunk) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
 #endif
 
-    stack_top = stack;
     uint8_t* pc = chunk->code;
+
 #define READ_BYTE() *(pc++)
+#define READ_CONSTANT() chunk->constants.values[READ_BYTE()]
+#define READ_STRING() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT()))
+#define READ_CONSTANT_LONG() chunk->constants.values[read_long(&pc)]
+#define READ_STRING_LONG() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT_LONG()))
+
     for (;;) {
 #ifdef VM_DEBUG
         opcode_print(*pc);
 #endif
         switch (READ_BYTE()) {
         case OP_ADD: {
-            sum_op();
+            Value second = stack_peek(0);
+            Value first = stack_peek(1);
+            if (first.type == STRING_TYPE && second.type == STRING_TYPE) {
+                STRING_CONCAT();
+                break;
+            }
+            NUM_BINARY_OP(+);
             break;
         }
         case OP_SUB: {
-            sub_op();
+            NUM_BINARY_OP(-);
             break;
         }
         case OP_MUL: {
-            mul_op();
+            NUM_BINARY_OP(*);
             break;
         }
         case OP_DIV: {
-            div_op();
+            NUM_BINARY_OP(/);
+            break;
+        }
+        case OP_NEGATE: {
+            Value val = *(qvm.stack_top - 1);
+            double d = AS_NUMBER(val);
+            *(qvm.stack_top - 1) = NUMBER_VALUE(d * -1);
             break;
         }
         case OP_AND: {
-            and_op();
+            BOOL_BINARY_OP(&&);
             break;
         }
         case OP_OR: {
-            or_op();
+            BOOL_BINARY_OP(||);
             break;
         }
         case OP_NOT: {
-            not_op();
+            bool a = AS_BOOL(stack_pop());
+            stack_push(BOOL_VALUE(!a));
+            break;
+        }
+        case OP_MOD: {
+            double b = AS_NUMBER(stack_pop());
+            double a = AS_NUMBER(stack_pop());
+            stack_push(NUMBER_VALUE(fmod(a, b)));
+            break;
+        }
+        case OP_NOP:
+            break;
+        case OP_TRUE:
+            stack_push(BOOL_VALUE(true));
+            break;
+        case OP_FALSE:
+            stack_push(BOOL_VALUE(false));
+            break;
+        case OP_NIL:
+            stack_push(NIL_VALUE());
+            break;
+        case OP_EQUAL: {
+            Value b = stack_pop();
+            Value a = stack_pop();
+            bool result = value_equals(a, b);
+            stack_push(BOOL_VALUE(result));
+            break;
+        }
+        case OP_GREATER: {
+            double b = AS_NUMBER(stack_pop());
+            double a = AS_NUMBER(stack_pop());
+            stack_push(BOOL_VALUE(a > b));
+            break;
+        }
+        case OP_LOWER: {
+            double b = AS_NUMBER(stack_pop());
+            double a = AS_NUMBER(stack_pop());
+            stack_push(BOOL_VALUE(a < b));
             break;
         }
         case OP_CONSTANT: {
-            uint8_t index = READ_BYTE();
-            Value val = chunk->constants.values[index];
-            stack_push(val);
+            CONSTANT_OP(READ_CONSTANT);
             break;
         }
-        case OP_RETURN: {
+        case OP_CONSTANT_LONG: {
+            CONSTANT_OP(READ_CONSTANT_LONG);
+            break;
+        }
+        case OP_DEFINE_GLOBAL: {
+            DEFINE_GLOBAL_OP(READ_STRING);
+            break;
+        }
+        case OP_DEFINE_GLOBAL_LONG: {
+            DEFINE_GLOBAL_OP(READ_STRING_LONG);
+            break;
+        }
+        case OP_SET_GLOBAL: {
+            SET_GLOBAL_OP(READ_STRING);
+            break;
+        }
+        case OP_SET_GLOBAL_LONG: {
+            SET_GLOBAL_OP(READ_STRING_LONG);
+            break;
+        }
+        case OP_GET_GLOBAL: {
+            GET_GLOBAL_OP(READ_STRING);
+            break;
+        }
+        case OP_GET_GLOBAL_LONG: {
+            GET_GLOBAL_OP(READ_STRING_LONG);
+            break;
+        }
+        case OP_PRINT:
             value_print(stack_pop());
             printf("\n");
+            break;
+        case OP_POP:
+            stack_pop();
+            break;
+        case OP_RETURN: {
             return;
         }
         }
 #ifdef VM_DEBUG
-        stack_print(stack_top, stack);
+        stack_print(qvm.stack_top, qvm.stack);
         printf("\n\n");
 #endif
     }
 #undef READ_BYTE
 }
-

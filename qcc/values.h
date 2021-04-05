@@ -2,33 +2,43 @@
 #define QUARTZ_VALUES_H
 
 #include "common.h"
+#include "object.h"
+#include "type.h"
 
 typedef enum {
-    VALUE_INTEGER,
-    VALUE_FLOAT,
+    VALUE_NUMBER,
     VALUE_BOOL,
-} ValueType;
+    VALUE_NIL,
+    VALUE_OBJ,
+} ValueKind;
 
 typedef struct {
-    ValueType type;
+    Type type;
+    ValueKind kind;
     union {
-        int number_int;
-        double number_float;
+        double number;
         bool boolean;
+        Obj* object;
     } as;
 } Value;
 
-#define INTEGER_VALUE(i) ((Value){ VALUE_INTEGER, { .number_int = i } })
-#define FLOAT_VALUE(f) ((Value){ VALUE_FLOAT, { .number_float = f } })
-#define BOOL_VALUE(b) ((Value){ VALUE_BOOL, { .boolean = b } })
+void value_print(Value val);
+bool value_equals(Value first, Value second);
+Value value_default(Type type);
 
-#define IS_INTEGER(val) val.type == VALUE_INTEGER
-#define IS_FLOAT(val) val.type == VALUE_FLOAT
-#define IS_BOOL(val) val.type == VALUE_BOOL
+#define NUMBER_VALUE(i) ((Value){ NUMBER_TYPE, VALUE_NUMBER, { .number = i } })
+#define BOOL_VALUE(b) ((Value){ BOOL_TYPE, VALUE_BOOL, { .boolean = b } })
+#define NIL_VALUE() ((Value){ NIL_TYPE, VALUE_NIL, { .object = NULL } })
+#define OBJ_VALUE(obj) ((Value){ UNKNOWN_TYPE, VALUE_OBJ, { .object = (Obj*) obj } })
 
-#define AS_INTEGER(val) val.as.number_int
-#define AS_FLOAT(val) val.as.number_float
+#define IS_NUMBER(val) (val.kind == VALUE_NUMBER)
+#define IS_BOOL(val) (val.kind == VALUE_BOOL)
+#define IS_NIL(val) (val.kind == VALUE_NIL)
+#define IS_OBJ(val) (val.kind == VALUE_OBJ)
+
+#define AS_NUMBER(val) val.as.number
 #define AS_BOOL(val) val.as.boolean
+#define AS_OBJ(val) ((Obj*) val.as.object)
 
 typedef struct {
     int size;
@@ -38,6 +48,6 @@ typedef struct {
 
 void init_valuearray(ValueArray* values);
 void free_valuearray(ValueArray* values);
-uint8_t valuearray_write(ValueArray* values, Value value);
+int valuearray_write(ValueArray* values, Value value);
 
 #endif

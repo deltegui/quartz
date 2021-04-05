@@ -1,1 +1,6 @@
-true && (!true || !false)
+var hola: Number = 10 * 3;
+
+print hola;
+
+hola = 23.34;
+print hola;

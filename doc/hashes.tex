@@ -1,0 +1,30 @@
+\chapter{Hash tables}
+
+\newpage
+
+\section{Introducción}
+
+Un hash es una de las estructuras de datos más importantes que existen.  Esto es así porque un hash te permite relacionar claves (en forma normalmente de strings) con valores con una complejidad de tiempo (de media) de O(1).  Es decir, un hash te garantiza que independientemente de la cantidad de elementos que tenga guardado, dado una clave te va a encontrar su valor asociado normalmente en el mismo espacio de tiempo.
+
+Sin embargo, remarquemos el 'normalmente',  porque en el peor de los casos puede ser lineal,  sobre todo si el hash esta mal implementado o se ha elegido mal la función para hacer hashing.  A pesar de esto es relativamente fácil evitar que la estructura de datos se degrade hasta el punto que la complejidad de búsqueda sea lineal.
+
+Desde el punto de vista de compiladores e intérpretes es de las estructuras de datos más importantes.  Se usan para muchas cosas,  por ejemplo:
+
+\begin{itemize}
+
+\item Variables globales: Las variables que el usuario pueda declarar como globales normalmente se suelen guardar en un hash table interno.
+
+\item Clases: Las clases en muchos lenguajes interpretados y dinámicos (ej: Ruby,  JavaScript,  Python...) se suelen implementar internamente con un hash table.  Por eso es tan fácil añadir nuevos métodos tras la declaración de la clase.  Otros lenguajes no permiten esto (Java,  C\#),  por lo que pueden permitirse una mejor implementación de las clases.
+
+% puede que venga bien dar referencias o explicar un poco lo que es el string internaling
+\item String internaling: El sitio donde se guardan los strings para permitir el internaling es,  normalmente,  un hash table.
+
+\end{itemize}
+
+Por esto debemos prestar especial atención a esta estructura de datos.  Una mala implementación puede afectar muy gravemente al rendimiento del lenguaje.
+
+\section{Una primera aproximación}
+
+Vamos a comenzar con una versión ideal de un hash table. Vamos a suponer que nuestras claves son únicamente las letras en ASCII.  Esto significa que únicamente tendremos como mucho unas 26 entradas. Vamos a llamar a cada uno de los huecos que tenemos en el hash como buckets.  Cada bucket va a representar una letra y si hay algo en ese bucket será el valor que esta asociado a esa letra.  El uso de memoria es perfecto.  Es constante en el tiempo y ocupa relativamente poco.  El rendimiento de búsqueda es también perfecto.  Dada una letra en ASCII simplemente lo pasamos a entero,  calculamos su módulo sobre 26 e indexamos el array con el resultado. 
+
+Esta primera versión de un hash table nos permite entender los fundamentos de esta estructura de datos.  Sin embargo, no podemos utilizar esta implementación por sus evidentes limitaciones.  Vamos ahora a pensar que no hay limite de longitud de las claves.  Ahora para poder sacar la posición del array vamos a pasar cada carácter del string a entero y los sumamos.  Tendríamos ahora un problema: ¿como decidimos el tamaño de nuestro array? Antes era el número de letras que podía haber,  pero ahora es infinito.  Lo mejor ahora,  para ahorrar memoria y porque no sabemos que tamaño elegir,  es simplemente hacer que el array se agrande cuando lo necesite.  Así que dado un string, obtenemos su valor númerico como lo hemos 

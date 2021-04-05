@@ -68,8 +68,7 @@ static void typecheck_expr(void* ctx, ExprStmt* expr) {
 static void typecheck_var(void* ctx, VarStmt* var) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    SymbolName var_name = create_symbol_name(var->identifier.start, var->identifier.length);
-    Symbol* symbol = CSYMBOL_LOOKUP(&var_name);
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     if (var->definition == NULL) {
         if (symbol->type == UNKNOWN_TYPE) {
@@ -93,8 +92,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    SymbolName var_name = create_symbol_name(identifier->name.start, identifier->name.length);
-    Symbol* symbol = CSYMBOL_LOOKUP(&var_name);
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
     checker->last_type = symbol->type;
 }
@@ -102,8 +100,7 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    SymbolName var_name = create_symbol_name(assignment->name.start, assignment->name.length);
-    Symbol* symbol = CSYMBOL_LOOKUP(&var_name);
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(assignment->name.start, assignment->name.length);
     assert(symbol != NULL);
 
     ACCEPT_EXPR(checker, assignment->value);

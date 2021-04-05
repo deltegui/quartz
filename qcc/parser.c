@@ -407,8 +407,7 @@ static Expr* identifier(Parser* parser, bool can_assign) {
 #endif
 
     Token identifier = parser->prev;
-    SymbolName symbol_name = create_symbol_name(identifier.start, identifier.length);
-    Symbol* existing = CSYMBOL_LOOKUP(&symbol_name);
+    Symbol* existing = CSYMBOL_LOOKUP_STR(identifier.start, identifier.length);
     if (!existing) {
         error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
         return NULL;

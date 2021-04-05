@@ -129,8 +129,7 @@ static void compile_var(void* ctx, VarStmt* var) {
     Compiler* compiler = (Compiler*) ctx;
     uint8_t global = identifier_constant(compiler, &var->identifier);
 
-    SymbolName name = create_symbol_name(var->identifier.start, var->identifier.length);
-    Symbol* symbol = CSYMBOL_LOOKUP(&name);
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(var->identifier.start, var->identifier.length);
     symbol->constant_index = global;
 
     if (var->definition == NULL) {
@@ -144,16 +143,14 @@ static void compile_var(void* ctx, VarStmt* var) {
 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
-    SymbolName name = create_symbol_name(identifier->name.start, identifier->name.length);
-    Symbol* symbol = CSYMBOL_LOOKUP(&name);
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(identifier->name.start, identifier->name.length);
     assert(symbol->constant_index != UINT8_MAX);
     emit_bytes(compiler, OP_GET_GLOBAL, symbol->constant_index);
 }
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
-    SymbolName name = create_symbol_name(assignment->name.start, assignment->name.length);
-    Symbol* symbol = CSYMBOL_LOOKUP(&name);
+    Symbol* symbol = CSYMBOL_LOOKUP_STR(assignment->name.start, assignment->name.length);
     assert(symbol->constant_index != UINT8_MAX);
     ACCEPT_EXPR(compiler, assignment->value);
     emit_bytes(compiler, OP_SET_GLOBAL, symbol->constant_index);

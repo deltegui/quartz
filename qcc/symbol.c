@@ -33,6 +33,11 @@ SymbolName create_symbol_name(const char* str, int length) {
     return name;
 }
 
+Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return symbol_lookup(table, &symbol_name);
+}
+
 Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {
     if (table->capacity == 0) {
         return NULL;

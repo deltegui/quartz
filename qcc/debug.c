@@ -255,7 +255,7 @@ static void print_var(void* ctx, VarStmt* var) {
     pretty_print("Var Stmt: [\n");
     OFFSET({
         pretty_print("Identifier: ");
-        printf("%.*s\n", var->identifier.length, var->identifier.start);
+        token_print(var->identifier);
         pretty_print("Definition: \n");
         OFFSET({
             ACCEPT_EXPR(var->definition);

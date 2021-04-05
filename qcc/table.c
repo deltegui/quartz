@@ -75,6 +75,7 @@ static void adjust_capacity(Table* table, int capacity) {
     for (int i = 0; i < table->capacity; i++) {
         table->entries[i].key = NULL;
         table->entries[i].value = NIL_VALUE();
+        table->entries[i].distance = 0;
     }
 
     for (int i = 0; i < old_capacity; i++) {

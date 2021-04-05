@@ -11,7 +11,9 @@ static void assert_list_stmt_equals(ListStmt* first, ListStmt* second);
 static void assert_expr_equals(Expr* first, Expr* second);
 static void compare_asts(Stmt* first, Stmt* second);
 static void assert_ast(const char* source, Stmt* expected_ast);
+static void assert_stmt_ast(const char* source, Stmt* expected);
 static void assert_expr_ast(const char* source, Expr* expected);
+static void should_parse_global_variables();
 
 static inline void assert_has_errors(const char* source) {
     Parser parser;
@@ -21,19 +23,23 @@ static inline void assert_has_errors(const char* source) {
 }
 
 static void assert_stmt_equals(Stmt* first, Stmt* second) {
-    assert_true(first->type == second->type);
-    switch (first->type) {
+    assert_true(first->kind == second->kind);
+    switch (first->kind) {
     case EXPR_STMT: {
         assert_expr_equals(first->expr.inner, second->expr.inner);
         break;
     }
     case VAR_STMT: {
-        // @todo implement
-        fail();
+        assert_true(first->var.identifier.kind == second->var.identifier.kind);
+        assert_expr_equals(first->var.definition, second->var.definition);
         break;
     }
     case LIST_STMT: {
         assert_list_stmt_equals(first->list, second->list);
+        break;
+    }
+    case PRINT_STMT: {
+        assert_expr_equals(first->print.inner, second->print.inner);
         break;
     }
     }
@@ -47,24 +53,37 @@ static void assert_list_stmt_equals(ListStmt* first, ListStmt* second) {
     }
 }
 
+static void assert_token_str_equal(Token first, Token second) {
+    char actual[first.length + 1];
+    sprintf(actual, "%.*s", first.length, first.start);
+    assert_string_equal(actual, second.start);
+}
+
 static void assert_expr_equals(Expr* first, Expr* second) {
-    assert_true(first->type == second->type);
-    switch (first->type) {
+    assert_true(first->kind == second->kind);
+    switch (first->kind) {
     case EXPR_BINARY: {
         assert_expr_equals(first->binary.left, second->binary.left);
-        assert_true(first->binary.op.type == second->binary.op.type);
+        assert_true(first->binary.op.kind == second->binary.op.kind);
         assert_expr_equals(first->binary.right, second->binary.right);
         break;
     }
     case EXPR_LITERAL: {
-        assert_true(first->literal.literal.type == second->literal.literal.type);
-        char actual[first->literal.literal.length + 1];
-        sprintf(actual, "%.*s", first->literal.literal.length, first->literal.literal.start);
-        assert_string_equal(actual, second->literal.literal.start);
+        assert_true(first->literal.literal.kind == second->literal.literal.kind);
+        assert_token_str_equal(first->literal.literal, second->literal.literal);
+        break;
+    }
+    case EXPR_IDENTIFIER: {
+        assert_token_str_equal(first->identifier.name, second->identifier.name);
+        break;
+    }
+    case EXPR_ASSIGNMENT: {
+        assert_expr_equals(first->assignment.value, second->assignment.value);
+        assert_token_str_equal(first->assignment.name, second->assignment.name);
         break;
     }
     case EXPR_UNARY: {
-        assert_true(first->unary.op.type == second->unary.op.type);
+        assert_true(first->unary.op.kind == second->unary.op.kind);
         break;
     }
     }
@@ -76,19 +95,26 @@ static void compare_asts(Stmt* first, Stmt* second) {
 
 static void assert_ast(const char* source, Stmt* expected_ast) {
     Parser parser;
+    INIT_CSYMBOL_TABLE();
     init_parser(&parser, source);
     Stmt* result = parse(&parser);
     compare_asts(result, expected_ast);
+    FREE_CSYMBOL_TABLE();
+}
+
+static void assert_stmt_ast(const char* source, Stmt* expected) {
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, expected);
+    Stmt* stmt = CREATE_LIST_STMT(list);
+    assert_ast(source, stmt);
+    free_stmt(stmt);
 }
 
 static void assert_expr_ast(const char* source, Expr* expected) {
     ExprStmt expr_stmt = (ExprStmt){
         .inner = expected,
     };
-    ListStmt* list = create_list_stmt();
-    list_stmt_add(list, CREATE_EXPR_STMT(expr_stmt));
-    assert_ast(source, CREATE_LIST_STMT(list));
-    free(list);
+    assert_stmt_ast(source, CREATE_EXPR_STMT(expr_stmt));
 }
 
 LiteralExpr true_ = (LiteralExpr){
@@ -96,7 +122,7 @@ LiteralExpr true_ = (LiteralExpr){
         .length = 4,
         .line = 1,
         .start = "true",
-        .type = TOKEN_TRUE
+        .kind = TOKEN_TRUE
     },
 };
 
@@ -105,7 +131,7 @@ LiteralExpr false_ = (LiteralExpr){
         .length = 5,
         .line = 1,
         .start = "false",
-        .type = TOKEN_FALSE
+        .kind = TOKEN_FALSE
     },
 };
 
@@ -114,7 +140,7 @@ LiteralExpr nil = (LiteralExpr){
         .length = 3,
         .line = 1,
         .start = "nil",
-        .type = TOKEN_NIL
+        .kind = TOKEN_NIL
     },
 };
 
@@ -123,7 +149,7 @@ LiteralExpr two = (LiteralExpr){
         .length = 1,
         .line = 1,
         .start = "2",
-        .type = TOKEN_NUMBER
+        .kind = TOKEN_NUMBER
     },
 };
 
@@ -132,7 +158,7 @@ LiteralExpr five = (LiteralExpr){
         .length = 1,
         .line = 1,
         .start = "5",
-        .type = TOKEN_NUMBER
+        .kind = TOKEN_NUMBER
     },
 };
 
@@ -140,49 +166,65 @@ Token sub_token = (Token){
     .length = 1,
     .line = 1,
     .start = "-",
-    .type = TOKEN_MINUS
+    .kind = TOKEN_MINUS
 };
 
 Token sum_token = (Token){
     .length = 1,
     .line = 1,
     .start = "+",
-    .type = TOKEN_PLUS
+    .kind = TOKEN_PLUS
 };
 
 Token div_token = (Token){
     .length = 1,
     .line = 1,
     .start = "/",
-    .type = TOKEN_SLASH
+    .kind = TOKEN_SLASH
 };
 
 Token star_token = (Token){
     .length = 1,
     .line = 1,
     .start = "*",
-    .type = TOKEN_STAR
+    .kind = TOKEN_STAR
 };
 
 Token bang_equal = (Token){
     .length = 2,
     .line = 1,
     .start = "!=",
-    .type = TOKEN_BANG_EQUAL
+    .kind = TOKEN_BANG_EQUAL
 };
 
 Token equal_equal = (Token){
     .length = 2,
     .line = 1,
     .start = "==",
-    .type = TOKEN_EQUAL_EQUAL
+    .kind = TOKEN_EQUAL_EQUAL
+};
+
+Token a_token = (Token){
+    .length = 1,
+    .line = 1,
+    .start = "a",
+    .kind = TOKEN_IDENTIFIER
 };
 
 Token example_str = (Token){
     .length = 12,
     .line = 1,
     .start = "Hello world!",
-    .type = TOKEN_STRING,
+    .kind = TOKEN_STRING,
+};
+
+IdentifierExpr a_identifier = (IdentifierExpr){
+    .name = (Token){
+        .length = 1,
+        .line = 1,
+        .start = "a",
+        .kind = TOKEN_IDENTIFIER
+    },
 };
 
 static void should_parse_additions() {
@@ -280,8 +322,62 @@ static void should_parse_reserved_words_as_literals() {
     );
 }
 
+static void should_parse_global_variables() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(two)
+    };
+    assert_stmt_ast(
+        " var a = 2; ",
+        CREATE_VAR_STMT(var)
+    );
+}
+
+static void should_use_of_globals() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    ExprStmt expr = (ExprStmt){
+        .inner = CREATE_INDENTIFIER_EXPR(a_identifier)
+    };
+
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, CREATE_VAR_STMT(var));
+    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+
+    Stmt* stmt = CREATE_LIST_STMT(list);
+    assert_ast(" var a = 5; a ; ", stmt);
+    free_stmt(stmt);
+}
+
+static void should_assign_vars() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    AssignmentExpr assigment = (AssignmentExpr){
+        .name = a_token,
+        .value = CREATE_LITERAL_EXPR(two),
+    };
+    ExprStmt expr = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(assigment),
+    };
+
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, CREATE_VAR_STMT(var));
+    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+
+    Stmt* stmt = CREATE_LIST_STMT(list);
+    assert_ast(" var a = 5; a = 2; ", stmt);
+    free_stmt(stmt);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_assign_vars),
+        cmocka_unit_test(should_use_of_globals),
+        cmocka_unit_test(should_parse_global_variables),
         cmocka_unit_test(should_parse_additions),
         cmocka_unit_test(should_parse_precedence),
         cmocka_unit_test(should_parse_grouping),

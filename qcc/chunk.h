@@ -26,6 +26,7 @@ typedef enum {
     OP_FALSE,
     OP_NIL,
     OP_NOP,
+    OP_PRINT,
     OP_RETURN,
 
     // Stack operations
@@ -33,6 +34,13 @@ typedef enum {
 
     // Declarations
     OP_CONSTANT,
+    OP_CONSTANT_LONG,
+    OP_DEFINE_GLOBAL,
+	OP_GET_GLOBAL,
+	OP_SET_GLOBAL,
+    OP_DEFINE_GLOBAL_LONG,
+	OP_GET_GLOBAL_LONG,
+	OP_SET_GLOBAL_LONG,
 } OpCode;
 
 typedef struct {
@@ -43,14 +51,11 @@ typedef struct {
     ValueArray constants;
 } Chunk;
 
-// Initializes an exiting chunk.
 void init_chunk(Chunk* chunk);
-
-// Frees an existing chunk.
 void free_chunk(Chunk* chunk);
-
-// Writes a bytecode to a chunk. It will store
-// the original line
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
+int chunk_add_constant(Chunk* chunk, Value value);
+
+uint16_t read_long(uint8_t** pc);
 
 #endif

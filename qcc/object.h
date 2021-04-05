@@ -5,10 +5,10 @@
 
 typedef enum {
     STRING_OBJ,
-} ObjType;
+} ObjKind;
 
 typedef struct Obj {
-    ObjType obj_type;
+    ObjKind kind;
     struct Obj* next;
 } Obj;
 
@@ -19,16 +19,17 @@ typedef struct {
     Obj obj;
     uint32_t hash;
     int length;
-    char cstr[]; // @todo would be better to call this just 'chars'?
+    char chars[];
 } ObjString;
 
-#define IS_STRING(obj) (obj->obj_type == STRING_OBJ)
+#define IS_STRING(obj) (obj->kind == STRING_OBJ)
 
 #define AS_STRING_OBJ(obj) ((ObjString*) obj)
-#define AS_CSTRING(obj) ( ((ObjString*) obj)->cstr )
+#define AS_CSTRING(obj) ( ((ObjString*) obj)->chars )
 
 void print_object(Obj* obj);
 ObjString* copy_string(const char* str, int length);
+uint32_t hash_string(const char* chars, int length);
 ObjString* concat_string(ObjString* first, ObjString* second);
 
 #endif

@@ -75,6 +75,7 @@ static void adjust_capacity(Table* table, int capacity) {
     for (int i = 0; i < table->capacity; i++) {
         table->entries[i].key = NULL;
         table->entries[i].value = NIL_VALUE();
+        table->entries[i].distance = 0;
     }
 
     for (int i = 0; i < old_capacity; i++) {
@@ -148,7 +149,7 @@ ObjString* table_find_string(Table* table, const char* chars, int length, uint32
             if (
                 length == current->length &&
                 hash == current->hash &&
-                memcmp(current->cstr, chars, length) == 0
+                memcmp(current->chars, chars, length) == 0
             ) {
                 return current;
             }

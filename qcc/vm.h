@@ -11,6 +11,7 @@ typedef struct {
     Value* stack_top;
     Obj* objects;
     Table strings;
+    Table globals;
 } QVM;
 
 void init_qvm();

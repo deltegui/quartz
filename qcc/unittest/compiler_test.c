@@ -9,7 +9,7 @@
 } while (false)
 
 static inline void assert_value_equal(Value expected, Value other) {
-    switch (expected.type) {
+    switch (expected.kind) {
     case VALUE_NUMBER:
         assert_float_equal(AS_NUMBER(expected), AS_NUMBER(other), 4);
         break;

@@ -4,7 +4,7 @@
 #include "vm.h"
 
 static void free_object(Obj* obj) {
-    switch (obj->obj_type) {
+    switch (obj->kind) {
     case STRING_OBJ: {
         ObjString* str = AS_STRING_OBJ(obj);
         FREE(ObjString, obj);

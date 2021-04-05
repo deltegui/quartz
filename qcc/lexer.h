@@ -22,6 +22,7 @@ typedef enum {
     TOKEN_LOWER,
     TOKEN_GREATER,
     TOKEN_SEMICOLON,
+    TOKEN_COLON,
 
     // Two character tokens
     TOKEN_AND,
@@ -38,11 +39,17 @@ typedef enum {
     TOKEN_FALSE,
     TOKEN_NIL,
     TOKEN_STRING,
+    TOKEN_PRINT,
     TOKEN_IDENTIFIER,
-} TokenType;
+
+    TOKEN_NUMBER_TYPE,
+    TOKEN_STRING_TYPE,
+    TOKEN_BOOL_TYPE,
+    TOKEN_NIL_TYPE
+} TokenKind;
 
 typedef struct {
-    TokenType type;
+    TokenKind kind;
     const char* start;
     uint8_t length;
     uint32_t line;
@@ -54,16 +61,7 @@ typedef struct {
     uint32_t line;
 } Lexer;
 
-// Initialize a exiting lexer using
-// the source file buffer. Notice that Tokens
-// returned by next_token function will use
-// that buffer, so dont free it until all tokens
-// are deleted too.
 void init_lexer(Lexer* lexer, const char* buffer);
-
-// Get next token from a lexer. If a TOKEN_ERROR is returned
-// it means was an error. If a TOKEN_END is returned you have
-// reached the end of the buffer.
 Token next_token(Lexer* lexer);
 
 #endif

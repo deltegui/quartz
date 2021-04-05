@@ -95,9 +95,11 @@ static void compare_asts(Stmt* first, Stmt* second) {
 
 static void assert_ast(const char* source, Stmt* expected_ast) {
     Parser parser;
+    INIT_CSYMBOL_TABLE();
     init_parser(&parser, source);
     Stmt* result = parse(&parser);
     compare_asts(result, expected_ast);
+    FREE_CSYMBOL_TABLE();
 }
 
 static void assert_stmt_ast(const char* source, Stmt* expected) {

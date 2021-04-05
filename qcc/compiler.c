@@ -130,6 +130,7 @@ static void compile_var(void* ctx, VarStmt* var) {
     uint8_t global = identifier_constant(compiler, &var->identifier);
 
     Symbol* symbol = CSYMBOL_LOOKUP_STR(var->identifier.start, var->identifier.length);
+    assert(symbol != NULL);
     symbol->constant_index = global;
 
     if (var->definition == NULL) {
@@ -144,6 +145,7 @@ static void compile_var(void* ctx, VarStmt* var) {
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
     Symbol* symbol = CSYMBOL_LOOKUP_STR(identifier->name.start, identifier->name.length);
+    assert(symbol != NULL);
     assert(symbol->constant_index != UINT8_MAX);
     emit_bytes(compiler, OP_GET_GLOBAL, symbol->constant_index);
 }
@@ -151,19 +153,17 @@ static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
     Symbol* symbol = CSYMBOL_LOOKUP_STR(assignment->name.start, assignment->name.length);
+    assert(symbol != NULL);
     assert(symbol->constant_index != UINT8_MAX);
     ACCEPT_EXPR(compiler, assignment->value);
     emit_bytes(compiler, OP_SET_GLOBAL, symbol->constant_index);
 }
 
-// TODO Maybe can this function be rewrited in a way that express the difference
-// between reserved words and real literals
 static void compile_literal(void* ctx, LiteralExpr* literal) {
     Compiler* compiler = (Compiler*) ctx;
     compiler->last_line = literal->literal.line;
     Value value;
     switch (literal->literal.kind) {
-    // We start with reserved words that have its own opcode.
     case TOKEN_TRUE: {
         emit(compiler, OP_TRUE);
         return;
@@ -176,7 +176,6 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
         emit(compiler, OP_NIL);
         return;
     }
-    // Continue creating linerals
     case TOKEN_NUMBER: {
         double d = (double) strtod(literal->literal.start, NULL);
         value = NUMBER_VALUE(d);
@@ -185,6 +184,7 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
     case TOKEN_STRING: {
         ObjString* str = copy_string(literal->literal.start, literal->literal.length);
         value = OBJ_VALUE(str);
+        value.type = STRING_TYPE;
         break;
     }
     default:

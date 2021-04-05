@@ -1,4 +1,5 @@
 #include "typechecker.h"
+#include <stdarg.h>
 #include "type.h"
 #include "common.h"
 #include "lexer.h"
@@ -10,7 +11,8 @@ typedef struct {
     bool has_error;
 } Typechecker;
 
-static void error(Typechecker* checker, const char* msg, Token* token);
+static void error_last_type_match(Typechecker* checker, Token* token, Type first, const char* message);
+static void error(Typechecker* checker, Token* token, const char* message, ...);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -39,15 +41,23 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
 #define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
 
-static void error(Typechecker* checker, const char* msg, Token* token) {
-    printf(
-        "[Line %d] Type error: %s: '%.*s'",
-        token->line,
-        msg,
-        token->length,
-        token->start);
+static void error_last_type_match(Typechecker* checker, Token* token, Type first, const char* message) {
+    Type last_type = checker->last_type;
+    error(checker, token, "The type '");
+    type_print(first);
+    printf("' does not match with type '");
+    type_print(last_type);
+    printf("' %s\n", message);
+}
+
+static void error(Typechecker* checker, Token* token, const char* message, ...) {
     checker->has_error = true;
     checker->last_type = UNKNOWN_TYPE;
+    va_list params;
+    va_start(params, message);
+    printf("[Line %d] Type error: ",token->line);
+    vprintf(message, params);
+    va_end(params);
 }
 
 bool typecheck(Stmt* ast) {
@@ -72,8 +82,12 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     assert(symbol != NULL);
     if (var->definition == NULL) {
         if (symbol->type == UNKNOWN_TYPE) {
-            error(checker, "Variables without declaration cannot be untyped. The variable type cannot be inferred", &var->identifier);
-            printf("\n");
+            error(
+                checker,
+                &var->identifier,
+                "Variables without definition cannot be untyped. The type of variable '%.*s' cannot be inferred.\n",
+                var->identifier.length,
+                var->identifier.start);
         }
         return;
     }
@@ -85,8 +99,11 @@ static void typecheck_var(void* ctx, VarStmt* var) {
         symbol->type = checker->last_type;
         return;
     }
-    error(checker, "Variable type does not match with asignment type", &var->identifier);
-    printf("\n");
+    error_last_type_match(
+        checker,
+        &var->identifier,
+        symbol->type,
+        "in variable declaration.");
 }
 
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
@@ -106,8 +123,11 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
     ACCEPT_EXPR(checker, assignment->value);
 
     if (symbol->type != checker->last_type) {
-        error(checker, "Variable type does not match with asignment type", &assignment->name);
-        printf("\n");
+        error_last_type_match(
+            checker,
+            &assignment->name,
+            symbol->type,
+            "in variable assignment.");
         return;
     }
     checker->last_type = symbol->type;
@@ -135,8 +155,7 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
         return;
     }
     default: {
-        error(checker, "Unknown type in expression", &literal->literal);
-        printf("\n");
+        error(checker, &literal->literal, "Unknown type in expression");
         return;
     }
     }
@@ -149,7 +168,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     ACCEPT_EXPR(checker, binary->right);
     Type right_type = checker->last_type;
 
-#define ERROR(msg) error(checker, msg, &binary->op);\
+#define ERROR(msg) error(checker, &binary->op, "%s", msg);\
     printf(" for types: '");\
     type_print(left_type);\
     printf("' and '");\
@@ -211,7 +230,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     ACCEPT_EXPR(checker, unary->expr);
     Type inner_type = checker->last_type;
 
-#define ERROR(msg) error(checker, msg, &unary->op);\
+#define ERROR(msg) error(checker, &unary->op, "%s", msg);\
     printf(" for type: '");\
     type_print(inner_type);\
     printf("'\n")

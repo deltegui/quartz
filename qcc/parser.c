@@ -42,6 +42,8 @@ static void syncronize(Parser* parser);
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenKind expected, const char* msg);
 
+static Symbol* get_identifier_symbol(Parser* parser, Token identifier);
+
 static Stmt* main_block(Parser* parser);
 
 static Stmt* declaration(Parser* parser);
@@ -164,11 +166,17 @@ static void error_at(Parser* parser, Token* token, const char* format, va_list p
 
 static void syncronize(Parser* parser) {
     parser->panic_mode = false;
-    while(parser->current.kind != TOKEN_SEMICOLON && parser->current.kind != TOKEN_END) {
-        advance(parser);
-    }
-    if (parser->current.kind == TOKEN_SEMICOLON) {
-        advance(parser); // consume semicolon
+    for (;;) {
+        switch (parser->current.kind) {
+        case TOKEN_SEMICOLON:
+            advance(parser); // consume semicolon
+        case TOKEN_VAR:
+        case TOKEN_PRINT:
+        case TOKEN_END:
+            return;
+        default:
+            advance(parser);
+        }
     }
 }
 
@@ -187,6 +195,19 @@ static bool consume(Parser* parser, TokenKind expected, const char* message) {
     }
     advance(parser);
     return true;
+}
+
+static Symbol* get_identifier_symbol(Parser* parser, Token identifier) {
+    Symbol* existing = CSYMBOL_LOOKUP_STR(identifier.start, identifier.length);
+    if (!existing) {
+        error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
+        return NULL;
+    }
+    if (existing->declaration_line > identifier.line) {
+        error_prev(parser, "Use of variable '%.*s' before declaration", identifier.length, identifier.start);
+        return NULL;
+    }
+    return existing;
 }
 
 Stmt* parse(Parser* parser) {
@@ -231,12 +252,17 @@ static Stmt* declaration(Parser* parser) {
 }
 
 static Stmt* statement(Parser* parser) {
+    Stmt* stmt;
     switch (parser->current.kind) {
     case TOKEN_PRINT:
-        return print_stmt(parser);
+        stmt = print_stmt(parser);
+        break;
     default:
-        return expr_stmt(parser);
+        stmt = expr_stmt(parser);
+        break;
     }
+    consume(parser, TOKEN_SEMICOLON, "Expected statement to end with ';'");
+    return stmt;
 }
 
 static Stmt* variable_decl(Parser* parser) {
@@ -275,7 +301,7 @@ static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
         .constant_index = UINT8_MAX,
     };
     Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
-    if (exsting && exsting->declaration_line < var_symbol.declaration_line) {
+    if (exsting) {
         error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
         return;
     }
@@ -288,13 +314,11 @@ static Stmt* print_stmt(Parser* parser) {
     PrintStmt print_stmt = (PrintStmt){
         .inner = expr,
     };
-    consume(parser, TOKEN_SEMICOLON, "Expected print to end with ';'");
     return CREATE_PRINT_STMT(print_stmt);
 }
 
 static Stmt* expr_stmt(Parser* parser) {
     Expr* expr = expression(parser);
-    consume(parser, TOKEN_SEMICOLON, "Expected statement to end with ';'");
     ExprStmt expr_stmt = (ExprStmt){
         .inner = expr,
     };
@@ -407,13 +431,8 @@ static Expr* identifier(Parser* parser, bool can_assign) {
 #endif
 
     Token identifier = parser->prev;
-    Symbol* existing = CSYMBOL_LOOKUP_STR(identifier.start, identifier.length);
+    Symbol* existing = get_identifier_symbol(parser, identifier);
     if (!existing) {
-        error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
-        return NULL;
-    }
-    if (existing->declaration_line > identifier.line) {
-        error_prev(parser, "Use of variable '%.*s' before declaration", identifier.length, identifier.start);
         return NULL;
     }
 

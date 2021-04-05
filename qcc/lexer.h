@@ -61,16 +61,7 @@ typedef struct {
     uint32_t line;
 } Lexer;
 
-// Initialize a exiting lexer using
-// the source file buffer. Notice that Tokens
-// returned by next_token function will use
-// that buffer, so dont free it until all tokens
-// are deleted too.
 void init_lexer(Lexer* lexer, const char* buffer);
-
-// Get next token from a lexer. If a TOKEN_ERROR is returned
-// it means was an error. If a TOKEN_END is returned you have
-// reached the end of the buffer.
 Token next_token(Lexer* lexer);
 
 #endif

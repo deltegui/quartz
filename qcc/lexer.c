@@ -1,5 +1,5 @@
-#include "string.h"
 #include "lexer.h"
+#include <string.h>
 
 #ifdef LEXER_DEBUG
 #include "debug.h"
@@ -141,11 +141,7 @@ static bool consume_multiline_comment(Lexer* lexer) {
 }
 
 static bool is_numeric(Lexer* lexer) {
-#define ASCII_ZERO 48
-#define ASCII_NINE 57
-    return *lexer->current >= ASCII_ZERO && *lexer->current <= ASCII_NINE;
-#undef ASCII_ZERO
-#undef ASCII_NINE
+    return *lexer->current >= '0' && *lexer->current <= '9';
 }
 
 static bool is_alpha(Lexer* lexer) {

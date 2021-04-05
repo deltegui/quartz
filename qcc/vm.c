@@ -69,8 +69,7 @@ void qvm_execute(Chunk* chunk) {
         case OP_ADD: {
             Value second = stack_peek(0);
             Value first = stack_peek(1);
-            // @todo this can be replaced with just checking runtime type
-            if (IS_OBJ(second) && IS_STRING(AS_OBJ(second)) && IS_OBJ(first) && IS_STRING(AS_OBJ(first))) {
+            if (first.type == STRING_TYPE && second.type == STRING_TYPE) {
                 STRING_CONCAT();
                 break;
             }

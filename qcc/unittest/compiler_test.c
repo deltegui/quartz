@@ -2,6 +2,7 @@
 #include "./common.h"
 #include "../compiler.h"
 #include "../chunk.h"
+#include "../values.h"
 
 #define CHUNK(...) do {\
     __VA_ARGS__\
@@ -9,20 +10,7 @@
 } while (false)
 
 static inline void assert_value_equal(Value expected, Value other) {
-    switch (expected.kind) {
-    case VALUE_NUMBER:
-        assert_float_equal(AS_NUMBER(expected), AS_NUMBER(other), 4);
-        break;
-    case VALUE_BOOL:
-        assert_int_equal(AS_BOOL(expected), AS_BOOL(other));
-        break;
-    case VALUE_NIL:
-        assert_true(IS_NIL(other));
-        break;
-    case VALUE_OBJ:
-        assert_true(false); // @todo Should we compare pointers directly?
-        break;
-    }
+    assert_true(value_equals(expected, other));
 }
 
 static void assert_chunk(Chunk* expected, Chunk* emitted) {
@@ -49,10 +37,14 @@ static void assert_compiled_chunk(const char* source, Chunk* expected) {
     free_chunk(&compiled);
 }
 
-static void emit_constant(Chunk* chunk, Value value, int line) {
+static void emit_value(Chunk* chunk, Value value, int line) {
     uint8_t index = valuearray_write(&chunk->constants, value);
-    chunk_write(chunk, OP_CONSTANT, 1);
     chunk_write(chunk, index, line);
+}
+
+static void emit_constant(Chunk* chunk, Value value, int line) {
+    chunk_write(chunk, OP_CONSTANT, line);
+    emit_value(chunk, value, line);
 }
 
 static void should_emit_binary() {
@@ -96,8 +88,46 @@ static void should_emit_comparisions() {
     free_chunk(&my);
 }
 
+static void should_compile_globals() {
+    Chunk my;
+    init_chunk(&my);
+    CHUNK({
+        uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4)));
+        emit_constant(&my, NUMBER_VALUE(5), 1);
+        emit_constant(&my, NUMBER_VALUE(2), 1);
+        chunk_write(&my, OP_MUL, 1);
+        chunk_write(&my, OP_DEFINE_GLOBAL, 1);
+        chunk_write(&my, index, 1);
+    });
+    assert_compiled_chunk("var esto = 5*2;", &my);
+    free_chunk(&my);
+}
+
+static void should_compile_globals_with_default_values() {
+    Chunk my;
+#define DEFAULT_VALUE(code, default_val) do {\
+    init_chunk(&my);\
+    CHUNK({\
+        uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4)));\
+        emit_constant(&my, default_val, 1);\
+        chunk_write(&my, OP_DEFINE_GLOBAL, 1);\
+        chunk_write(&my, index, 1);\
+    });\
+    assert_compiled_chunk(code, &my);\
+    free_chunk(&my);\
+} while(false)
+
+    DEFAULT_VALUE("var esto: Number;", NUMBER_VALUE(0));
+    DEFAULT_VALUE("var esto: Bool;", BOOL_VALUE(false));
+    DEFAULT_VALUE("var esto: String;", OBJ_VALUE(copy_string("", 0)));
+
+#undef DEFAULT_VALUE
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_compile_globals_with_default_values),
+        cmocka_unit_test(should_compile_globals),
         cmocka_unit_test(should_emit_binary),
         cmocka_unit_test(should_emit_complex_calc),
         cmocka_unit_test(should_emit_comparisions)

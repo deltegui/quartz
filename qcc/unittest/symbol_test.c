@@ -16,6 +16,13 @@
     free_symbol_table(&table);\
 } while (false)
 
+#define SCOPED_TABLE(...) do {\
+    ScopedSymbolTable table;\
+    init_scoped_symbol_table(&table);\
+    __VA_ARGS__\
+    free_scoped_symbol_table(&table);\
+} while (false)
+
 typedef struct {
     const char* str;
     int length;
@@ -207,11 +214,103 @@ static void should_return_null_if_symbol_does_not_exist() {
     });
 }
 
+static void scoped_symbol_should_inset_and_lookup() {
+    SymbolName e = create_symbol_name("e", 1);
+    SymbolName d = create_symbol_name("d", 1);
+    SymbolName c = create_symbol_name("c", 1);
+    SymbolName b = create_symbol_name("b", 1);
+    SymbolName a = create_symbol_name("a", 1);
+
+    Symbol sym_e = (Symbol) {
+        .name = e,
+        .declaration_line = 1,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+    Symbol sym_d = (Symbol) {
+        .name = d,
+        .declaration_line = 1,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+    Symbol sym_c = (Symbol) {
+        .name = c,
+        .declaration_line = 1,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+    Symbol sym_b = (Symbol) {
+        .name = b,
+        .declaration_line = 1,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+    Symbol sym_a = (Symbol) {
+        .name = a,
+        .declaration_line = 1,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+
+    SCOPED_TABLE({
+        scoped_symbol_insert(&table, sym_a);
+        scoped_symbol_insert(&table, sym_b);
+        symbol_create_scope(&table);
+            scoped_symbol_insert(&table, sym_c);
+            symbol_create_scope(&table);
+                scoped_symbol_insert(&table, sym_d);
+            symbol_end_scope(&table);
+        symbol_end_scope(&table);
+        symbol_create_scope(&table);
+            scoped_symbol_insert(&table, sym_e);
+        symbol_end_scope(&table);
+
+        symbol_reset_scopes(&table);
+        assert_non_null(scoped_symbol_lookup(&table, &a));
+        assert_non_null(scoped_symbol_lookup(&table, &b));
+        assert_null(scoped_symbol_lookup(&table, &c));
+        assert_null(scoped_symbol_lookup(&table, &d));
+        assert_null(scoped_symbol_lookup(&table, &e));
+        symbol_start_scope(&table);
+            symbol_start_scope(&table);
+                assert_non_null(scoped_symbol_lookup(&table, &a));
+                assert_non_null(scoped_symbol_lookup(&table, &b));
+                assert_non_null(scoped_symbol_lookup(&table, &c));
+                assert_non_null(scoped_symbol_lookup(&table, &d));
+                assert_null(scoped_symbol_lookup(&table, &e));
+            symbol_end_scope(&table);
+            assert_non_null(scoped_symbol_lookup(&table, &a));
+            assert_non_null(scoped_symbol_lookup(&table, &b));
+            assert_non_null(scoped_symbol_lookup(&table, &c));
+            assert_null(scoped_symbol_lookup(&table, &d));
+            assert_null(scoped_symbol_lookup(&table, &e));
+        symbol_end_scope(&table);
+        assert_non_null(scoped_symbol_lookup(&table, &a));
+        assert_non_null(scoped_symbol_lookup(&table, &b));
+        assert_null(scoped_symbol_lookup(&table, &c));
+        assert_null(scoped_symbol_lookup(&table, &d));
+        assert_null(scoped_symbol_lookup(&table, &e));
+        symbol_start_scope(&table);
+            assert_non_null(scoped_symbol_lookup(&table, &a));
+            assert_non_null(scoped_symbol_lookup(&table, &b));
+            assert_null(scoped_symbol_lookup(&table, &c));
+            assert_null(scoped_symbol_lookup(&table, &d));
+            assert_non_null(scoped_symbol_lookup(&table, &e));
+        symbol_end_scope(&table);
+        assert_non_null(scoped_symbol_lookup(&table, &a));
+        assert_non_null(scoped_symbol_lookup(&table, &b));
+        assert_null(scoped_symbol_lookup(&table, &c));
+        assert_null(scoped_symbol_lookup(&table, &d));
+        assert_null(scoped_symbol_lookup(&table, &e));
+    });
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        cmocka_unit_test(should_insert_symbols),
-        cmocka_unit_test(should_insert_sixteen_elements)
+        cmocka_unit_test(scoped_symbol_should_inset_and_lookup)
+        //cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        //cmocka_unit_test(should_insert_symbols),
+        //cmocka_unit_test(should_insert_sixteen_elements)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

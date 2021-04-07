@@ -53,7 +53,7 @@ my $have_err = 0;
 while(my ($key, $value) = each(%tests)) {
 	if($prog{$key}) {
 		print("RUNNING TEST: $key... ");
-		my $result = `$clox_bin $prog{$key}`;
+		my $result = `$clox_bin $prog{$key} 2>&1`;
 		if(!$result) {
 			$result = '';
 		}

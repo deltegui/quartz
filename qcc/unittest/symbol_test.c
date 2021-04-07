@@ -223,25 +223,25 @@ static void scoped_symbol_should_inset_and_lookup() {
 
     Symbol sym_e = (Symbol) {
         .name = e,
-        .declaration_line = 1,
+        .declaration_line = 5,
         .type = NUMBER_TYPE,
         .constant_index = -1,
     };
     Symbol sym_d = (Symbol) {
         .name = d,
-        .declaration_line = 1,
+        .declaration_line = 4,
         .type = NUMBER_TYPE,
         .constant_index = -1,
     };
     Symbol sym_c = (Symbol) {
         .name = c,
-        .declaration_line = 1,
+        .declaration_line = 3,
         .type = NUMBER_TYPE,
         .constant_index = -1,
     };
     Symbol sym_b = (Symbol) {
         .name = b,
-        .declaration_line = 1,
+        .declaration_line = 2,
         .type = NUMBER_TYPE,
         .constant_index = -1,
     };
@@ -305,12 +305,76 @@ static void scoped_symbol_should_inset_and_lookup() {
     });
 }
 
+static void scoped_symbol_should_insert_globals() {
+    SymbolName a = create_symbol_name("a", 1);
+    SymbolName b = create_symbol_name("b", 1);
+
+    Symbol sym_a = (Symbol) {
+        .name = a,
+        .declaration_line = 1,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+    Symbol sym_b = (Symbol) {
+        .name = b,
+        .declaration_line = 2,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+
+    SCOPED_TABLE({
+        scoped_symbol_insert(&table, sym_a);
+        scoped_symbol_insert(&table, sym_b);
+        Symbol* result_a = scoped_symbol_lookup(&table, &a);
+        Symbol* result_b = scoped_symbol_lookup(&table, &b);
+        assert_entry(&sym_a, result_a);
+        assert_entry(&sym_b, result_b);
+    });
+}
+
+static void scoped_symbol_should_insert_locals() {
+    SymbolName a = create_symbol_name("a", 1);
+    SymbolName b = create_symbol_name("b", 1);
+
+    Symbol sym_a = (Symbol) {
+        .name = a,
+        .declaration_line = 1,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+    Symbol sym_b = (Symbol) {
+        .name = b,
+        .declaration_line = 2,
+        .type = NUMBER_TYPE,
+        .constant_index = -1,
+    };
+
+    SCOPED_TABLE({
+        scoped_symbol_insert(&table, sym_a);
+        symbol_create_scope(&table);
+        scoped_symbol_insert(&table, sym_b);
+        symbol_end_scope(&table);
+
+        symbol_reset_scopes(&table);
+
+        Symbol* result_a = scoped_symbol_lookup(&table, &a);
+        symbol_start_scope(&table);
+        Symbol* result_b = scoped_symbol_lookup(&table, &b);
+        symbol_end_scope(&table);
+
+        assert_entry(&sym_a, result_a);
+        assert_entry(&sym_b, result_b);
+    });
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(scoped_symbol_should_inset_and_lookup)
-        //cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        //cmocka_unit_test(should_insert_symbols),
-        //cmocka_unit_test(should_insert_sixteen_elements)
+        cmocka_unit_test(scoped_symbol_should_insert_locals),
+        cmocka_unit_test(scoped_symbol_should_insert_globals),
+        cmocka_unit_test(scoped_symbol_should_inset_and_lookup),
+        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        cmocka_unit_test(should_insert_symbols),
+        cmocka_unit_test(should_insert_sixteen_elements)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -17,8 +17,11 @@ static void should_parse_global_variables();
 
 static inline void assert_has_errors(const char* source) {
     Parser parser;
-    init_parser(&parser, source);
+    ScopedSymbolTable symbols;
+    init_scoped_symbol_table(&symbols);
+    init_parser(&parser, source, &symbols);
     parse(&parser);
+    free_scoped_symbol_table(&symbols);
     assert_true(parser.has_error);
 }
 
@@ -95,11 +98,12 @@ static void compare_asts(Stmt* first, Stmt* second) {
 
 static void assert_ast(const char* source, Stmt* expected_ast) {
     Parser parser;
-    INIT_CSYMBOL_TABLE();
-    init_parser(&parser, source);
+    ScopedSymbolTable symbols;
+    init_scoped_symbol_table(&symbols);
+    init_parser(&parser, source, &symbols);
     Stmt* result = parse(&parser);
     compare_asts(result, expected_ast);
-    FREE_CSYMBOL_TABLE();
+    free_scoped_symbol_table(&symbols);
 }
 
 static void assert_stmt_ast(const char* source, Stmt* expected) {

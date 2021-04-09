@@ -7,12 +7,17 @@
 #include "symbol.h"
 
 typedef struct {
+    ScopedSymbolTable* symbols;
     Type last_type;
     bool has_error;
 } Typechecker;
 
 static void error_last_type_match(Typechecker* checker, Token* token, Type first, const char* message);
 static void error(Typechecker* checker, Token* token, const char* message, ...);
+
+static void start_scope(Typechecker* checker);
+static void end_scope(Typechecker* checker);
+static Symbol* lookup_str(Typechecker* checker, const char* name, int length);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -60,9 +65,23 @@ static void error(Typechecker* checker, Token* token, const char* message, ...) 
     va_end(params);
 }
 
-bool typecheck(Stmt* ast) {
+static void start_scope(Typechecker* checker) {
+    symbol_start_scope(checker->symbols);
+}
+
+static void end_scope(Typechecker* checker) {
+    symbol_end_scope(checker->symbols);
+}
+
+static Symbol* lookup_str(Typechecker* checker, const char* name, int length) {
+    return scoped_symbol_lookup_str(checker->symbols, name, length);
+}
+
+bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
+    checker.symbols = symbols;
     checker.has_error = false;
+    symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
     return !checker.has_error;
 }
@@ -78,7 +97,7 @@ static void typecheck_expr(void* ctx, ExprStmt* expr) {
 static void typecheck_var(void* ctx, VarStmt* var) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* symbol = CSYMBOL_LOOKUP_STR(var->identifier.start, var->identifier.length);
+    Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     if (var->definition == NULL) {
         if (symbol->type == UNKNOWN_TYPE) {
@@ -109,7 +128,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* symbol = CSYMBOL_LOOKUP_STR(identifier->name.start, identifier->name.length);
+    Symbol* symbol = lookup_str(checker, identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
     checker->last_type = symbol->type;
 }
@@ -117,7 +136,7 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* symbol = CSYMBOL_LOOKUP_STR(assignment->name.start, assignment->name.length);
+    Symbol* symbol = lookup_str(checker, assignment->name.start, assignment->name.length);
     assert(symbol != NULL);
 
     ACCEPT_EXPR(checker, assignment->value);

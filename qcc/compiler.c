@@ -9,17 +9,25 @@
 
 typedef struct {
     Parser parser;
+    ScopedSymbolTable symbols;
     Chunk* chunk;
     int last_line;
     bool has_error;
 } Compiler;
 
 static void error(Compiler* compiler, const char* message);
+
+static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
+void free_compiler(Compiler* compiler);
+
+static void start_scope(Compiler* compiler);
+static void end_scope(Compiler* compiler);
+static Symbol* lookup_str(Compiler* compiler, const char* name, int length);
+
 static void emit(Compiler* compiler, uint8_t bytecode);
 static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param);
 static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param);
 static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
-static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
 
 static uint16_t make_constant(Compiler* compiler, Value value);
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
@@ -57,42 +65,60 @@ static void error(Compiler* compiler, const char* message) {
 }
 
 void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
-    init_parser(&compiler->parser, source);
+    init_scoped_symbol_table(&compiler->symbols);
+    init_parser(&compiler->parser, source, &compiler->symbols);
     compiler->chunk = output;
     compiler->last_line = 1;
     compiler->has_error = false;
 }
 
+void free_compiler(Compiler* compiler) {
+    free_scoped_symbol_table(&compiler->symbols);
+}
+
 CompilationResult compile(const char* source, Chunk* output_chunk) {
     Compiler compiler;
     init_compiler(&compiler, source, output_chunk);
-    INIT_CSYMBOL_TABLE();
     Stmt* ast = parse(&compiler.parser);
     if (compiler.parser.has_error) {
-        FREE_CSYMBOL_TABLE();
+        free_compiler(&compiler);
         free_stmt(ast); // Although parser had errors, the ast exists.
         return PARSING_ERROR;
     }
-    if (!typecheck(ast)) {
-        FREE_CSYMBOL_TABLE();
+    if (!typecheck(ast, &compiler.symbols)) {
+        free_compiler(&compiler);
         free_stmt(ast);
         return TYPE_ERROR;
     }
+    symbol_reset_scopes(&compiler.symbols);
     ACCEPT_STMT(&compiler, ast);
     emit(&compiler, OP_RETURN);
 #ifdef COMPILER_DEBUG
-    CSYMBOL_TABLE_PRINT();
+    // TODO implement a proper way to print a ScopedSymbolTable
+    symbol_table_print(&compiler.symbols.global.symbols);
     valuearray_print(&compiler.chunk->constants);
     if (!compiler.has_error) {
         chunk_print(compiler.chunk);
     }
 #endif
+    free_compiler(&compiler);
     free_stmt(ast);
-    FREE_CSYMBOL_TABLE();
     if (compiler.has_error) {
         return COMPILATION_ERROR;
     }
     return COMPILATION_OK;
+}
+
+static void start_scope(Compiler* compiler) {
+    symbol_start_scope(&compiler->symbols);
+}
+
+static void end_scope(Compiler* compiler) {
+    symbol_end_scope(&compiler->symbols);
+}
+
+static Symbol* lookup_str(Compiler* compiler, const char* name, int length) {
+    return scoped_symbol_lookup_str(&compiler->symbols, name, length);
 }
 
 static void emit(Compiler* compiler, uint8_t bytecode) {
@@ -149,7 +175,7 @@ static void compile_var(void* ctx, VarStmt* var) {
     Compiler* compiler = (Compiler*) ctx;
     uint16_t global = identifier_constant(compiler, &var->identifier);
 
-    Symbol* symbol = CSYMBOL_LOOKUP_STR(var->identifier.start, var->identifier.length);
+    Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     symbol->constant_index = global;
 
@@ -164,7 +190,7 @@ static void compile_var(void* ctx, VarStmt* var) {
 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
-    Symbol* symbol = CSYMBOL_LOOKUP_STR(identifier->name.start, identifier->name.length);
+    Symbol* symbol = lookup_str(compiler, identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
     assert(symbol->constant_index != UINT16_MAX);
     emit_param(compiler, OP_GET_GLOBAL, OP_GET_GLOBAL_LONG, symbol->constant_index);
@@ -172,7 +198,7 @@ static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
-    Symbol* symbol = CSYMBOL_LOOKUP_STR(assignment->name.start, assignment->name.length);
+    Symbol* symbol = lookup_str(compiler, assignment->name.start, assignment->name.length);
     assert(symbol != NULL);
     assert(symbol->constant_index != UINT16_MAX);
     ACCEPT_EXPR(compiler, assignment->value);

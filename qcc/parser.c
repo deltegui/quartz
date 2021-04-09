@@ -39,6 +39,12 @@ static void error_prev(Parser* parser, const char* message, ...);
 static void error_at(Parser* parser, Token* token, const char* message, va_list params);
 static void syncronize(Parser* parser);
 
+static void create_scope(Parser* parser);
+static void end_scope(Parser* parser);
+static Symbol* lookup(Parser* parser, SymbolName* name);
+static Symbol* lookup_str(Parser* parser, const char* name, int length);
+static void insert(Parser* parser, Symbol entry);
+
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenKind expected, const char* msg);
 
@@ -122,7 +128,8 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     return left;
 }
 
-void init_parser(Parser* parser, const char* source) {
+void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols) {
+    parser->symbols = symbols;
     parser->current.kind = -1;
     parser->prev.kind = -1;
     init_lexer(&parser->lexer, source);
@@ -180,6 +187,26 @@ static void syncronize(Parser* parser) {
     }
 }
 
+static void create_scope(Parser* parser){
+    symbol_create_scope(parser->symbols);
+}
+
+static void end_scope(Parser* parser){
+    symbol_end_scope(parser->symbols);
+}
+
+static Symbol* lookup(Parser* parser, SymbolName* name){
+    return scoped_symbol_lookup(parser->symbols, name);
+}
+
+static Symbol* lookup_str(Parser* parser, const char* name, int length){
+    return scoped_symbol_lookup_str(parser->symbols, name, length);
+}
+
+static void insert(Parser* parser, Symbol entry){
+    scoped_symbol_insert(parser->symbols, entry);
+}
+
 static void advance(Parser* parser) {
     if (parser->current.kind == TOKEN_END) {
         return;
@@ -198,7 +225,7 @@ static bool consume(Parser* parser, TokenKind expected, const char* message) {
 }
 
 static Symbol* get_identifier_symbol(Parser* parser, Token identifier) {
-    Symbol* existing = CSYMBOL_LOOKUP_STR(identifier.start, identifier.length);
+    Symbol* existing = lookup_str(parser, identifier.start, identifier.length);
     if (!existing) {
         error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
         return NULL;
@@ -300,12 +327,12 @@ static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
         .type = type,
         .constant_index = UINT16_MAX,
     };
-    Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
+    Symbol* exsting = lookup(parser, &var_symbol.name);
     if (exsting) {
         error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
         return;
     }
-    CSYMBOL_INSERT(var_symbol);
+    insert(parser, var_symbol);
 }
 
 static Stmt* print_stmt(Parser* parser) {

@@ -11,8 +11,6 @@
 #include "stmt.h"   // for astprint
 #include "symbol.h" // for symbol_table_print
 
-#define CSYMBOL_TABLE_PRINT() symbol_table_print(&symbol_table)
-
 void symbol_table_print(SymbolTable* table);
 void chunk_print(Chunk* chunk);
 void token_print(Token token);

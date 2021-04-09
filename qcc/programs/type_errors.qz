@@ -1,0 +1,11 @@
+{
+    var a = 1;
+    var b = "hola" + a;
+    {
+        var a = true;
+        print a + 1;
+    }
+    var c: Bool = 'true';
+    var num: Number = false;
+    var str: String = 0;
+}

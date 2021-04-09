@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include <string.h> // for memset
 #include "typechecker.h"
 #include "values.h"
 #include "symbol.h" // to initialize and free
@@ -11,8 +12,13 @@ typedef struct {
     Parser parser;
     ScopedSymbolTable symbols;
     Chunk* chunk;
+
     int last_line;
     bool has_error;
+
+    int locals[UINT8_COUNT];
+    int scope_depth;
+    int next_local_index;
 } Compiler;
 
 static void error(Compiler* compiler, const char* message);
@@ -32,6 +38,10 @@ static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  u
 static uint16_t make_constant(Compiler* compiler, Value value);
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
 
+static uint16_t get_variable_index(Compiler* compiler, VarStmt* var);
+static void emit_variable_declaration(Compiler* compiler, uint16_t index);
+static void identifier_use(Compiler* compiler, Token identifier, bool for_setting);
+
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
 static void compile_literal(void* ctx, LiteralExpr* literal);
@@ -49,11 +59,13 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
 static void compile_expr(void* ctx, ExprStmt* expr);
 static void compile_var(void* ctx, VarStmt* var);
 static void compile_print(void* ctx, PrintStmt* print);
+static void compile_block(void* ctx, BlockStmt* block);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
     .visit_var = compile_var,
     .visit_print = compile_print,
+    .visit_block = compile_block,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -68,8 +80,13 @@ void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
     compiler->chunk = output;
+
     compiler->last_line = 1;
     compiler->has_error = false;
+
+    compiler->scope_depth = 0;
+    compiler->next_local_index = 0;
+    memset(compiler->locals, 0, UINT8_COUNT);
 }
 
 void free_compiler(Compiler* compiler) {
@@ -110,10 +127,17 @@ CompilationResult compile(const char* source, Chunk* output_chunk) {
 }
 
 static void start_scope(Compiler* compiler) {
+    compiler->scope_depth++;
     symbol_start_scope(&compiler->symbols);
 }
 
 static void end_scope(Compiler* compiler) {
+    compiler->next_local_index -= compiler->locals[compiler->scope_depth];
+    while (compiler->locals[compiler->scope_depth] > 0) {
+        emit(compiler, OP_POP);
+        compiler->locals[compiler->scope_depth]--;
+    }
+    compiler->scope_depth--;
     symbol_end_scope(&compiler->symbols);
 }
 
@@ -165,6 +189,17 @@ static void compile_print(void* ctx, PrintStmt* print) {
     emit(compiler, OP_PRINT);
 }
 
+static void compile_block(void* ctx, BlockStmt* block) {
+    Compiler* compiler = (Compiler*)ctx;
+    start_scope(compiler);
+    if (compiler->scope_depth > UINT8_MAX) {
+        error(compiler, "Too many scopes!");
+        return;
+    }
+    ACCEPT_STMT(compiler, block->stmts);
+    end_scope(compiler);
+}
+
 static void compile_expr(void* ctx, ExprStmt* expr) {
     Compiler* compiler = (Compiler*)ctx;
     ACCEPT_EXPR(compiler, expr->inner);
@@ -173,11 +208,12 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
 
 static void compile_var(void* ctx, VarStmt* var) {
     Compiler* compiler = (Compiler*) ctx;
-    uint16_t global = identifier_constant(compiler, &var->identifier);
+    uint16_t variable_index = get_variable_index(compiler, var);
 
     Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
-    symbol->constant_index = global;
+    symbol->constant_index = variable_index;
+    symbol->global = compiler->scope_depth == 0;
 
     if (var->definition == NULL) {
         uint16_t default_value = make_constant(compiler, value_default(symbol->type));
@@ -185,24 +221,54 @@ static void compile_var(void* ctx, VarStmt* var) {
     } else {
         ACCEPT_EXPR(compiler, var->definition);
     }
-    emit_param(compiler, OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG, global);
+    emit_variable_declaration(compiler, variable_index);
+}
+
+static uint16_t get_variable_index(Compiler* compiler, VarStmt* var) {
+    if (compiler->scope_depth == 0) {
+        return identifier_constant(compiler, &var->identifier);
+    }
+    uint16_t index = compiler->next_local_index;
+    compiler->locals[compiler->scope_depth]++;
+    compiler->next_local_index++;
+    return index;
+}
+
+static void emit_variable_declaration(Compiler* compiler, uint16_t index) {
+    if (compiler->scope_depth == 0) {
+        emit_param(compiler, OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG, index);
+    }
 }
 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
-    Symbol* symbol = lookup_str(compiler, identifier->name.start, identifier->name.length);
-    assert(symbol != NULL);
-    assert(symbol->constant_index != UINT16_MAX);
-    emit_param(compiler, OP_GET_GLOBAL, OP_GET_GLOBAL_LONG, symbol->constant_index);
+    identifier_use(compiler, identifier->name, false);
 }
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
-    Symbol* symbol = lookup_str(compiler, assignment->name.start, assignment->name.length);
-    assert(symbol != NULL);
-    assert(symbol->constant_index != UINT16_MAX);
     ACCEPT_EXPR(compiler, assignment->value);
-    emit_short(compiler, OP_SET_GLOBAL, symbol->constant_index);
+    identifier_use(compiler, assignment->name, true);
+}
+
+static void identifier_use(Compiler* compiler, Token identifier, bool for_setting) {
+    uint8_t op_global = OP_GET_GLOBAL;
+    uint8_t op_global_long = OP_GET_GLOBAL_LONG;
+    uint8_t op_local = OP_GET_LOCAL;
+    if (for_setting) {
+        op_global = OP_SET_GLOBAL;
+        op_global_long = OP_SET_GLOBAL_LONG;
+        op_local = OP_SET_LOCAL;
+    }
+    Symbol* symbol = lookup_str(compiler, identifier.start, identifier.length);
+    assert(symbol != NULL);
+    assert(symbol->constant_index < UINT16_MAX);
+    if (symbol->global) {
+        emit_param(compiler, op_global, op_global_long, symbol->constant_index);
+    } else {
+        assert(symbol->constant_index < UINT8_MAX);
+        emit_short(compiler, op_local, symbol->constant_index);
+    }
 }
 
 static void compile_literal(void* ctx, LiteralExpr* literal) {

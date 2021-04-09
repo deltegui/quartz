@@ -63,6 +63,8 @@ static const char* OpCodeStrings[] = {
     "OP_DEFINE_GLOBAL_LONG",
 	"OP_GET_GLOBAL_LONG",
 	"OP_SET_GLOBAL_LONG",
+	"OP_GET_LOCAL",
+	"OP_SET_LOCAL",
 };
 
 void opcode_print(uint8_t op) {
@@ -153,9 +155,11 @@ void chunk_print(Chunk* chunk) {
             i = chunk_opcode_print(chunk, i);
             break;
         }
+        case OP_DEFINE_GLOBAL:
         case OP_GET_GLOBAL:
         case OP_SET_GLOBAL:
-        case OP_DEFINE_GLOBAL:
+        case OP_GET_LOCAL:
+        case OP_SET_LOCAL:
         case OP_CONSTANT: {
             i = chunk_short_print(chunk, i);
             break;
@@ -182,6 +186,8 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_PERCENT: return "TokenPercent";
     case TOKEN_LEFT_PAREN: return "TokenLeftParen";
     case TOKEN_RIGHT_PAREN: return "TokenRightParen";
+    case TOKEN_LEFT_BRACE: return "TokenLeftBrace";
+    case TOKEN_RIGHT_BRACE: return "TokenRightBrace";
     case TOKEN_DOT: return "TokenDot";
     case TOKEN_EQUAL: return "TokenEqual";
     case TOKEN_BANG: return "TokenBang";
@@ -241,11 +247,13 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
 static void print_expr(void* ctx, ExprStmt* expr);
 static void print_var(void* ctx, VarStmt* var);
 static void print_print(void* ctx, PrintStmt* var);
+static void print_block(void* ctx, BlockStmt* block);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
     .visit_var = print_var,
     .visit_print = print_print,
+    .visit_block = print_block,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -269,6 +277,14 @@ static void pretty_print(const char *msg, ...) {
     printf("[PARSER DEBUG]: ");
     print_offset();
     printf("%s", msg);
+}
+
+static void print_block(void* ctx, BlockStmt* block) {
+    pretty_print("Block: {\n");
+    OFFSET({
+        ACCEPT_STMT(block->stmts);
+    });
+    pretty_print("}\n");
 }
 
 static void print_print(void* ctx, PrintStmt* print) {

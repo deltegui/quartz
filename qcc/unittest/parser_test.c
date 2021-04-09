@@ -45,6 +45,9 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_expr_equals(first->print.inner, second->print.inner);
         break;
     }
+    case BLOCK_STMT:
+        assert_stmt_equals(first->block.stmts, second->block.stmts);
+        break;
     }
 }
 
@@ -377,8 +380,37 @@ static void should_assign_vars() {
     free_stmt(stmt);
 }
 
+static void should_parse_blocks() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    AssignmentExpr assigment = (AssignmentExpr){
+        .name = a_token,
+        .value = CREATE_LITERAL_EXPR(two),
+    };
+    ExprStmt expr = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(assigment),
+    };
+
+    ListStmt* list = create_list_stmt();
+    list_stmt_add(list, CREATE_VAR_STMT(var));
+    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_LIST_STMT(list),
+    };
+
+    ListStmt* global = create_list_stmt();
+    list_stmt_add(global, CREATE_BLOCK_STMT(block));
+
+    Stmt* stmt = CREATE_LIST_STMT(global);
+    assert_ast(" { var a = 5; a = 2; } ", stmt);
+    free_stmt(stmt);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_parse_blocks),
         cmocka_unit_test(should_assign_vars),
         cmocka_unit_test(should_use_of_globals),
         cmocka_unit_test(should_parse_global_variables),

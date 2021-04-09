@@ -8,6 +8,7 @@ typedef enum {
     VAR_STMT,
     LIST_STMT,
     PRINT_STMT,
+    BLOCK_STMT,
 } StmtKind;
 
 struct _Stmt;
@@ -31,6 +32,10 @@ typedef struct {
     struct _Stmt** stmts;
 } ListStmt;
 
+typedef struct {
+    struct _Stmt* stmts;
+} BlockStmt;
+
 ListStmt* create_list_stmt();
 void list_stmt_add(ListStmt* list, struct _Stmt* stmt);
 
@@ -41,6 +46,7 @@ typedef struct _Stmt {
         VarStmt var;
         ListStmt* list;
         PrintStmt print;
+        BlockStmt block;
     };
 } Stmt;
 
@@ -48,18 +54,21 @@ typedef struct {
     void (*visit_expr)(void* ctx, ExprStmt* expr);
     void (*visit_var)(void* ctx, VarStmt* var);
     void (*visit_print)(void* ctx, PrintStmt* print);
+    void (*visit_block)(void* ctx, BlockStmt* block);
 } StmtVisitor;
 
 #define IS_VAR(stmt) (stmt.kind == VAR_STMT)
 #define IS_EXPR(stmt) (stmt.kind == EXPR_STMT)
 #define IS_LIST(stmt) (stmt.kind == LIST_STMT)
 #define IS_PRINT(stmt) (stmt.kind == PRINT_STMT)
+#define IS_BLOCK(stmt) (stmt.kind == BLOCK_STMT)
 
 #define CREATE_VAR_STMT(var) create_stmt(VAR_STMT, &var)
 #define CREATE_EXPR_STMT(expr) create_stmt(EXPR_STMT, &expr)
 // ListStmt is always a pointer (Because is created using create_list_stmt)
 #define CREATE_LIST_STMT(list) create_stmt(LIST_STMT, list)
 #define CREATE_PRINT_STMT(print) create_stmt(PRINT_STMT, &print)
+#define CREATE_BLOCK_STMT(block) create_stmt(BLOCK_STMT, &block)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* stmt);

@@ -16,6 +16,7 @@ typedef struct {
     int declaration_line;
     Type type;
     uint16_t constant_index;
+    bool global;
 } Symbol;
 
 typedef struct {
@@ -27,7 +28,6 @@ typedef struct {
 void init_symbol_table(SymbolTable* table);
 void free_symbol_table(SymbolTable* table);
 Symbol* symbol_lookup(SymbolTable* table, SymbolName* name);
-// TODO delete this
 Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length);
 void symbol_insert(SymbolTable* table, Symbol entry);
 

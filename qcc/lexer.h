@@ -23,6 +23,8 @@ typedef enum {
     TOKEN_GREATER,
     TOKEN_SEMICOLON,
     TOKEN_COLON,
+    TOKEN_LEFT_BRACE,
+    TOKEN_RIGHT_BRACE,
 
     // Two character tokens
     TOKEN_AND,

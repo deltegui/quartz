@@ -21,6 +21,12 @@ typedef struct {
     int next_local_index;
 } Compiler;
 
+struct IdentifierOps {
+    uint8_t op_global;
+    uint8_t op_global_long;
+    uint8_t op_local;
+};
+
 static void error(Compiler* compiler, const char* message);
 
 static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
@@ -40,7 +46,7 @@ static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
 
 static uint16_t get_variable_index(Compiler* compiler, VarStmt* var);
 static void emit_variable_declaration(Compiler* compiler, uint16_t index);
-static void identifier_use(Compiler* compiler, Token identifier, bool for_setting);
+static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -240,34 +246,38 @@ static void emit_variable_declaration(Compiler* compiler, uint16_t index) {
     }
 }
 
+struct IdentifierOps ops_get_identifier = (struct IdentifierOps) {
+    .op_global = OP_GET_GLOBAL,
+    .op_global_long = OP_GET_GLOBAL_LONG,
+    .op_local = OP_GET_LOCAL,
+};
+
+struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
+    .op_global = OP_SET_GLOBAL,
+    .op_global_long = OP_SET_GLOBAL_LONG,
+    .op_local = OP_SET_LOCAL,
+};
+
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
-    identifier_use(compiler, identifier->name, false);
+    identifier_use(compiler, identifier->name, &ops_get_identifier);
 }
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
     ACCEPT_EXPR(compiler, assignment->value);
-    identifier_use(compiler, assignment->name, true);
+    identifier_use(compiler, assignment->name, &ops_set_identifier);
 }
 
-static void identifier_use(Compiler* compiler, Token identifier, bool for_setting) {
-    uint8_t op_global = OP_GET_GLOBAL;
-    uint8_t op_global_long = OP_GET_GLOBAL_LONG;
-    uint8_t op_local = OP_GET_LOCAL;
-    if (for_setting) {
-        op_global = OP_SET_GLOBAL;
-        op_global_long = OP_SET_GLOBAL_LONG;
-        op_local = OP_SET_LOCAL;
-    }
+static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops) {
     Symbol* symbol = lookup_str(compiler, identifier.start, identifier.length);
     assert(symbol != NULL);
     assert(symbol->constant_index < UINT16_MAX);
     if (symbol->global) {
-        emit_param(compiler, op_global, op_global_long, symbol->constant_index);
+        emit_param(compiler, ops->op_global, ops->op_global_long, symbol->constant_index);
     } else {
         assert(symbol->constant_index < UINT8_MAX);
-        emit_short(compiler, op_local, symbol->constant_index);
+        emit_short(compiler, ops->op_local, symbol->constant_index);
     }
 }
 

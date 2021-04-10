@@ -56,7 +56,6 @@ static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
 static void register_symbol(Parser* parser, Token* tkn_symbol, Type type);
 
-static Stmt* stmt_block(Parser* parser);
 static Stmt* statement(Parser* parser);
 static Stmt* block_stmt(Parser* parser);
 static Stmt* print_stmt(Parser* parser);
@@ -261,7 +260,7 @@ Stmt* parse(Parser* parser) {
 
 static Stmt* declaration_block(Parser* parser) {
     ListStmt* list = create_list_stmt();
-    while (parser->current.kind != TOKEN_END) {
+    while (parser->current.kind != TOKEN_RIGHT_BRACE && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
         list_stmt_add(list, stmt);
         if (parser->panic_mode) {
@@ -280,19 +279,6 @@ static Stmt* declaration(Parser* parser) {
     }
 }
 
-// TODO this function depends on block delcaration (consumes left brace)
-static Stmt* stmt_block(Parser* parser) {
-    ListStmt* list = create_list_stmt();
-    while (parser->current.kind != TOKEN_RIGHT_BRACE && parser->current.kind != TOKEN_END) {
-        Stmt* stmt = declaration(parser);
-        list_stmt_add(list, stmt);
-        if (parser->panic_mode) {
-            syncronize(parser);
-        }
-    }
-    return CREATE_LIST_STMT(list);
-}
-
 static Stmt* statement(Parser* parser) {
     switch (parser->current.kind) {
     case TOKEN_LEFT_BRACE:
@@ -308,7 +294,7 @@ static Stmt* block_stmt(Parser* parser) {
     advance(parser); // consume {
     BlockStmt block;
     create_scope(parser);
-    block.stmts = stmt_block(parser);
+    block.stmts = declaration_block(parser);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected block to end with '}'");
     end_scope(parser);
     return CREATE_BLOCK_STMT(block);

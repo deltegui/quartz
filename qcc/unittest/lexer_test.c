@@ -81,6 +81,15 @@ static void should_scan_arithmetic_operators() {
     );
 }
 
+static void should_scan_braces() {
+    assert_types(
+        " {   }   ",
+        2,
+        TOKEN_LEFT_BRACE,
+        TOKEN_RIGHT_BRACE
+    );
+}
+
 static void should_scan_boolean_operators() {
     assert_types(
         "  !   && ! || &&   ==   !=   =",
@@ -319,6 +328,7 @@ static void should_tokenize_type_names() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_scan_braces),
         cmocka_unit_test(should_tokenize_type_names),
         cmocka_unit_test(should_scan_global_declarations_with_types),
         cmocka_unit_test(should_scan_global_declarations),

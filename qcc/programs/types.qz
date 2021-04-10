@@ -1,0 +1,14 @@
+var my_global_num: Number;
+var my_global_str: String;
+var my_global_bool: Bool;
+{
+    var my_local_num: Number = 1;
+    var my_local_str: String = "local";
+    var my_local_bool: Bool = true;
+    print my_local_num;
+    print my_local_str;
+    print my_local_bool;
+}
+print my_global_num;
+print my_global_str;
+print my_global_bool;

@@ -194,6 +194,16 @@ void qvm_execute(Chunk* chunk) {
             GET_GLOBAL_OP(READ_STRING_LONG);
             break;
         }
+        case OP_GET_LOCAL: {
+            uint8_t stack_index = READ_BYTE();
+            stack_push(qvm.stack[stack_index]);
+            break;
+        }
+        case OP_SET_LOCAL: {
+            uint8_t stack_index = READ_BYTE();
+            qvm.stack[stack_index] = stack_peek(0);
+            break;
+        }
         case OP_PRINT:
             value_print(stack_pop());
             printf("\n");

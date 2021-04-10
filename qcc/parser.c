@@ -39,18 +39,25 @@ static void error_prev(Parser* parser, const char* message, ...);
 static void error_at(Parser* parser, Token* token, const char* message, va_list params);
 static void syncronize(Parser* parser);
 
+static void create_scope(Parser* parser);
+static void end_scope(Parser* parser);
+static Symbol* current_scope_lookup(Parser* parser, SymbolName* name);
+static Symbol* lookup_str(Parser* parser, const char* name, int length);
+static void insert(Parser* parser, Symbol entry);
+
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenKind expected, const char* msg);
 
 static Symbol* get_identifier_symbol(Parser* parser, Token identifier);
 
-static Stmt* main_block(Parser* parser);
+static Stmt* declaration_block(Parser* parser);
 
 static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
 static void register_symbol(Parser* parser, Token* tkn_symbol, Type type);
 
 static Stmt* statement(Parser* parser);
+static Stmt* block_stmt(Parser* parser);
 static Stmt* print_stmt(Parser* parser);
 static Stmt* expr_stmt(Parser* parser);
 
@@ -122,7 +129,8 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     return left;
 }
 
-void init_parser(Parser* parser, const char* source) {
+void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols) {
+    parser->symbols = symbols;
     parser->current.kind = -1;
     parser->prev.kind = -1;
     init_lexer(&parser->lexer, source);
@@ -180,6 +188,26 @@ static void syncronize(Parser* parser) {
     }
 }
 
+static void create_scope(Parser* parser){
+    symbol_create_scope(parser->symbols);
+}
+
+static void end_scope(Parser* parser){
+    symbol_end_scope(parser->symbols);
+}
+
+static Symbol* current_scope_lookup(Parser* parser, SymbolName* name){
+    return symbol_lookup(&parser->symbols->current->symbols, name);
+}
+
+static Symbol* lookup_str(Parser* parser, const char* name, int length){
+    return scoped_symbol_lookup_str(parser->symbols, name, length);
+}
+
+static void insert(Parser* parser, Symbol entry){
+    scoped_symbol_insert(parser->symbols, entry);
+}
+
 static void advance(Parser* parser) {
     if (parser->current.kind == TOKEN_END) {
         return;
@@ -198,7 +226,7 @@ static bool consume(Parser* parser, TokenKind expected, const char* message) {
 }
 
 static Symbol* get_identifier_symbol(Parser* parser, Token identifier) {
-    Symbol* existing = CSYMBOL_LOOKUP_STR(identifier.start, identifier.length);
+    Symbol* existing = lookup_str(parser, identifier.start, identifier.length);
     if (!existing) {
         error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
         return NULL;
@@ -223,16 +251,16 @@ Stmt* parse(Parser* parser) {
     if (parser->current.kind == TOKEN_END) {
         return NULL;
     }
-    Stmt* ast = main_block(parser);
+    Stmt* ast = declaration_block(parser);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
     return ast;
 }
 
-static Stmt* main_block(Parser* parser) {
+static Stmt* declaration_block(Parser* parser) {
     ListStmt* list = create_list_stmt();
-    while (parser->current.kind != TOKEN_END) {
+    while (parser->current.kind != TOKEN_RIGHT_BRACE && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
         list_stmt_add(list, stmt);
         if (parser->panic_mode) {
@@ -252,17 +280,24 @@ static Stmt* declaration(Parser* parser) {
 }
 
 static Stmt* statement(Parser* parser) {
-    Stmt* stmt;
     switch (parser->current.kind) {
+    case TOKEN_LEFT_BRACE:
+        return block_stmt(parser);
     case TOKEN_PRINT:
-        stmt = print_stmt(parser);
-        break;
+        return print_stmt(parser);
     default:
-        stmt = expr_stmt(parser);
-        break;
+        return expr_stmt(parser);
     }
-    consume(parser, TOKEN_SEMICOLON, "Expected statement to end with ';'");
-    return stmt;
+}
+
+static Stmt* block_stmt(Parser* parser) {
+    advance(parser); // consume {
+    BlockStmt block;
+    create_scope(parser);
+    block.stmts = declaration_block(parser);
+    consume(parser, TOKEN_RIGHT_BRACE, "Expected block to end with '}'");
+    end_scope(parser);
+    return CREATE_BLOCK_STMT(block);
 }
 
 static Stmt* variable_decl(Parser* parser) {
@@ -299,13 +334,14 @@ static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
         .declaration_line = tkn_symbol->line,
         .type = type,
         .constant_index = UINT16_MAX,
+        .global = false, // we dont know
     };
-    Symbol* exsting = CSYMBOL_LOOKUP(&var_symbol.name);
+    Symbol* exsting = current_scope_lookup(parser, &var_symbol.name);
     if (exsting) {
         error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
         return;
     }
-    CSYMBOL_INSERT(var_symbol);
+    insert(parser, var_symbol);
 }
 
 static Stmt* print_stmt(Parser* parser) {
@@ -314,6 +350,7 @@ static Stmt* print_stmt(Parser* parser) {
     PrintStmt print_stmt = (PrintStmt){
         .inner = expr,
     };
+    consume(parser, TOKEN_SEMICOLON, "Expected print statment to end with ';'");
     return CREATE_PRINT_STMT(print_stmt);
 }
 
@@ -322,6 +359,7 @@ static Stmt* expr_stmt(Parser* parser) {
     ExprStmt expr_stmt = (ExprStmt){
         .inner = expr,
     };
+    consume(parser, TOKEN_SEMICOLON, "Expected expression to end with ';'");
     return CREATE_EXPR_STMT(expr_stmt);
 }
 

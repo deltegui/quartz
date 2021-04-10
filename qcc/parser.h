@@ -5,8 +5,10 @@
 #include "lexer.h"
 #include "expr.h"
 #include "stmt.h"
+#include "symbol.h"
 
 typedef struct {
+    ScopedSymbolTable* symbols;
     Lexer lexer;
     Token current;
     Token prev;
@@ -14,7 +16,7 @@ typedef struct {
     bool has_error;
 } Parser;
 
-void init_parser(Parser* parser, const char* source);
+void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols);
 Stmt* parse(Parser* parser);
 
 #endif

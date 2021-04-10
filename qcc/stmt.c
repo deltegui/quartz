@@ -42,6 +42,11 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     case PRINT_STMT:
         stmt->kind = PRINT_STMT;
         stmt->print = *(PrintStmt*)stmt_node;
+        break;
+    case BLOCK_STMT:
+        stmt->kind = BLOCK_STMT;
+        stmt->block = *(BlockStmt*)stmt_node;
+        break;
     }
     return stmt;
 }
@@ -71,6 +76,9 @@ void free_stmt(Stmt* stmt) {
     case PRINT_STMT:
         free_expr(stmt->print.inner);
         break;
+    case BLOCK_STMT:
+        free_stmt(stmt->block.stmts);
+        break;
     }
     free(stmt);
 }
@@ -91,6 +99,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case VAR_STMT: DISPATCH(visit_var, var); break;
     case LIST_STMT: visit_list_stmt(visitor, ctx, stmt->list); break;
     case PRINT_STMT: DISPATCH(visit_print, print); break;
+    case BLOCK_STMT: DISPATCH(visit_block, block); break;
     }
 #undef DISPATCH
 }

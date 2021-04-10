@@ -2,7 +2,8 @@
 #define QUARTZ_TYPECHECKER_H
 
 #include "stmt.h"
+#include "symbol.h"
 
-bool typecheck(Stmt* ast);
+bool typecheck(Stmt* ast, ScopedSymbolTable* symbols);
 
 #endif

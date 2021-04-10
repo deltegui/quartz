@@ -1,0 +1,29 @@
+print "GLOBAL!";
+var a = "a global";
+var e = "e global";
+{
+    print "FIRST!";
+    var a = "a first local";
+    var b = "b first local";
+    var d = "d first local";
+    {
+        print "SECOND!";
+        var a = "a second local";
+        var b = "b second local";
+        var c = "c second local";
+        print a;
+        print b;
+        print c;
+        print d;
+        print e;
+        print "END SECOND!";
+    }
+    print a;
+    print b;
+    print d;
+    print e;
+    print "END FIRST!";
+}
+print a;
+print e;
+print "END GLOBAL!";

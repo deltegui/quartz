@@ -5,7 +5,7 @@ if [ "$1" = "--help" ]; then
     exit 0
 fi
 
-CC="clang"
+CC="clang -g"
 LIBS=-lcmocka
 BIN="./a.out"
 AND_EXEC="&& $BIN"

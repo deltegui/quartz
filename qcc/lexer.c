@@ -262,6 +262,8 @@ static inline Token scan_token(Lexer* lexer) {
     case '%': return create_token(lexer, TOKEN_PERCENT);
     case '(': return create_token(lexer, TOKEN_LEFT_PAREN);
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
+    case '{': return create_token(lexer, TOKEN_LEFT_BRACE);
+    case '}': return create_token(lexer, TOKEN_RIGHT_BRACE);
     case '.': return create_token(lexer, TOKEN_DOT);
     case ';': return create_token(lexer, TOKEN_SEMICOLON);
     case ':': return create_token(lexer, TOKEN_COLON);

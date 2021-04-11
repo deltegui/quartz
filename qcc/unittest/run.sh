@@ -23,19 +23,19 @@ fi
 SOURCES=`find ../*.c -maxdepth 1 ! -name qcc.c | tr '\n' ' '`
 echo $SOURCES
 
-echo "\n\n-------- [LEXER TESTS] --------"
-sh -c "$CC $MACROS ./lexer_test.c $SOURCES $LIBS $AND_EXEC"
-
-echo "\n\n-------- [PARSER TESTS] --------"
-sh -c "$CC $MACROS ./parser_test.c $SOURCES $LIBS $AND_EXEC"
+# echo "\n\n-------- [LEXER TESTS] --------"
+# sh -c "$CC $MACROS ./lexer_test.c $SOURCES $LIBS $AND_EXEC"
+# 
+# echo "\n\n-------- [PARSER TESTS] --------"
+# sh -c "$CC $MACROS ./parser_test.c $SOURCES $LIBS $AND_EXEC"
 
 echo "\n\n-------- [COMPILER TESTS] --------"
 sh -c "$CC $MACROS ./compiler_test.c $SOURCES $LIBS $AND_EXEC"
 
-echo "\n\n-------- [TABLE TESTS] --------"
-sh -c "$CC $MACROS ./table_test.c $SOURCES $LIBS $AND_EXEC"
+# echo "\n\n-------- [TABLE TESTS] --------"
+# sh -c "$CC $MACROS ./table_test.c $SOURCES $LIBS $AND_EXEC"
+# 
+# echo "\n\n-------- [SYMBOL TESTS] --------"
+# sh -c "$CC $MACROS ./symbol_test.c $SOURCES $LIBS $AND_EXEC"
 
-echo "\n\n-------- [SYMBOL TESTS] --------"
-sh -c "$CC $MACROS ./symbol_test.c $SOURCES $LIBS $AND_EXEC"
-
-rm $BIN
+# rm $BIN

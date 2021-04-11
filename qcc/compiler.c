@@ -117,8 +117,7 @@ CompilationResult compile(const char* source, Chunk* output_chunk) {
     ACCEPT_STMT(&compiler, ast);
     emit(&compiler, OP_RETURN);
 #ifdef COMPILER_DEBUG
-    // TODO implement a proper way to print a ScopedSymbolTable
-    symbol_table_print(&compiler.symbols.global.symbols);
+    scoped_symbol_table_print(&compiler.symbols);
     valuearray_print(&compiler.chunk->constants);
     if (!compiler.has_error) {
         chunk_print(compiler.chunk);

@@ -3,7 +3,7 @@
 #include "expr.h"
 #include "type.h"
 
-void symbol_table_print(SymbolTable* table) {
+static void symbol_table_print(SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
     printf("| Name\t| Line\t| Type\n");
     printf("|-------|-------|------------\n");
@@ -21,6 +21,17 @@ void symbol_table_print(SymbolTable* table) {
         printf("\n");
     }
     printf("\n\n");
+}
+
+static void symbol_node_print(SymbolNode* node) {
+    symbol_table_print(&node->symbols);
+    for (int i = 0; i < node->size; i++) {
+        symbol_node_print(&node->childs[i]);
+    }
+}
+
+void scoped_symbol_table_print(ScopedSymbolTable* table) {
+    symbol_node_print(&table->global);
 }
 
 void valuearray_print(ValueArray* values) {

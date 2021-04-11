@@ -8,10 +8,17 @@
 #include "debug.h"
 #endif
 
+typedef enum {
+    MODE_SCRIPT,
+    MODE_FUNCTION,
+} CompilerMode;
+
 typedef struct {
     Parser parser;
     ScopedSymbolTable symbols;
-    Chunk* chunk;
+
+    ObjFunction* func;
+    CompilerMode mode;
 
     int last_line;
     bool has_error;
@@ -29,8 +36,10 @@ struct IdentifierOps {
 
 static void error(Compiler* compiler, const char* message);
 
-static void init_compiler(Compiler* compiler, const char* source, Chunk* output);
-void free_compiler(Compiler* compiler);
+static void init_compiler(Compiler* compiler, CompilerMode mode, const char* source);
+static void free_compiler(Compiler* compiler);
+
+static Chunk* current_chunk(Compiler* compiler);
 
 static void start_scope(Compiler* compiler);
 static void end_scope(Compiler* compiler);
@@ -82,10 +91,12 @@ static void error(Compiler* compiler, const char* message) {
     compiler->has_error = true;
 }
 
-void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
+static void init_compiler(Compiler* compiler, CompilerMode mode, const char* source) {
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
-    compiler->chunk = output;
+
+    compiler->func = new_function();
+    compiler->mode = mode;
 
     compiler->last_line = 1;
     compiler->has_error = false;
@@ -95,22 +106,30 @@ void init_compiler(Compiler* compiler, const char* source, Chunk* output) {
     memset(compiler->locals, 0, UINT8_COUNT);
 }
 
-void free_compiler(Compiler* compiler) {
+static void free_compiler(Compiler* compiler) {
     free_scoped_symbol_table(&compiler->symbols);
 }
 
-CompilationResult compile(const char* source, Chunk* output_chunk) {
+static Chunk* current_chunk(Compiler* compiler) {
+    return &compiler->func->chunk;
+}
+
+CompilationResult compile(const char* source, ObjFunction** result) {
+#define END_WITH(final) do {\
+        free_compiler(&compiler);\
+        free_stmt(ast);\
+        *result = final;\
+} while (false)
+
     Compiler compiler;
-    init_compiler(&compiler, source, output_chunk);
+    init_compiler(&compiler, MODE_SCRIPT, source);
     Stmt* ast = parse(&compiler.parser);
     if (compiler.parser.has_error) {
-        free_compiler(&compiler);
-        free_stmt(ast); // Although parser had errors, the ast exists.
+        END_WITH(NULL);
         return PARSING_ERROR;
     }
     if (!typecheck(ast, &compiler.symbols)) {
-        free_compiler(&compiler);
-        free_stmt(ast);
+        END_WITH(NULL);
         return TYPE_ERROR;
     }
     symbol_reset_scopes(&compiler.symbols);
@@ -118,17 +137,18 @@ CompilationResult compile(const char* source, Chunk* output_chunk) {
     emit(&compiler, OP_RETURN);
 #ifdef COMPILER_DEBUG
     scoped_symbol_table_print(&compiler.symbols);
-    valuearray_print(&compiler.chunk->constants);
+    valuearray_print(&compiler.func->chunk.constants);
     if (!compiler.has_error) {
-        chunk_print(compiler.chunk);
+        chunk_print(&compiler.func->chunk);
     }
 #endif
-    free_compiler(&compiler);
-    free_stmt(ast);
+    END_WITH(compiler.func);
     if (compiler.has_error) {
         return COMPILATION_ERROR;
     }
     return COMPILATION_OK;
+
+#undef END_WITH
 }
 
 static void start_scope(Compiler* compiler) {
@@ -151,7 +171,7 @@ static Symbol* lookup_str(Compiler* compiler, const char* name, int length) {
 }
 
 static void emit(Compiler* compiler, uint8_t bytecode) {
-    chunk_write(compiler->chunk, bytecode, compiler->last_line);
+    chunk_write(current_chunk(compiler), bytecode, compiler->last_line);
 }
 
 static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param) {
@@ -176,7 +196,7 @@ static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  u
 }
 
 static uint16_t make_constant(Compiler* compiler, Value value) {
-    int constant_index = chunk_add_constant(compiler->chunk, value);
+    int constant_index = chunk_add_constant(current_chunk(compiler), value);
     if (constant_index > UINT16_COUNT) {
         error(compiler, "Too many constants for chunk!");
         return 0;

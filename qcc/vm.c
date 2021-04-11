@@ -14,6 +14,7 @@ void init_qvm() {
     init_table(&qvm.globals);
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
+    qvm.frame_count = 0;
 }
 
 void free_qvm() {
@@ -67,22 +68,22 @@ static inline Value stack_peek(uint8_t distance) {
     ObjString* identifier = str_read();\
     stack_push(table_find(&qvm.globals, identifier))
 
-void qvm_execute(Chunk* chunk) {
+static void run(ObjFunction* func) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
 #endif
 
-    uint8_t* pc = chunk->code;
+    CallFrame* frame = &qvm.frames[qvm.frame_count - 1];
 
-#define READ_BYTE() *(pc++)
-#define READ_CONSTANT() chunk->constants.values[READ_BYTE()]
+#define READ_BYTE() *(frame->pc++)
+#define READ_CONSTANT() func->chunk.constants.values[READ_BYTE()]
 #define READ_STRING() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT()))
-#define READ_CONSTANT_LONG() chunk->constants.values[read_long(&pc)]
+#define READ_CONSTANT_LONG() func->chunk.constants.values[read_long(&frame->pc)]
 #define READ_STRING_LONG() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT_LONG()))
 
     for (;;) {
 #ifdef VM_DEBUG
-        opcode_print(*pc);
+        opcode_print(*frame->pc);
 #endif
         switch (READ_BYTE()) {
         case OP_ADD: {
@@ -195,13 +196,13 @@ void qvm_execute(Chunk* chunk) {
             break;
         }
         case OP_GET_LOCAL: {
-            uint8_t stack_index = READ_BYTE();
-            stack_push(qvm.stack[stack_index]);
+            uint8_t slot = READ_BYTE();
+            stack_push(frame->slots[slot]);
             break;
         }
         case OP_SET_LOCAL: {
-            uint8_t stack_index = READ_BYTE();
-            qvm.stack[stack_index] = stack_peek(0);
+            uint8_t slot = READ_BYTE();
+            frame->slots[slot] = stack_peek(0);
             break;
         }
         case OP_PRINT:
@@ -221,4 +222,13 @@ void qvm_execute(Chunk* chunk) {
 #endif
     }
 #undef READ_BYTE
+}
+
+void qvm_execute(ObjFunction* func) {
+    // stack_push(OBJ_VALUE(func));// WARNING THIS SHIT
+    CallFrame* frame = &qvm.frames[qvm.frame_count++];
+    frame->func = func;
+    frame->pc = func->chunk.code;
+    frame->slots = qvm.stack;
+    run(func);
 }

@@ -5,6 +5,8 @@
 #include "table.h"
 
 static Obj* alloc_obj(size_t size, ObjKind kind);
+static ObjString* alloc_string(const char* chars, int length, uint32_t hash);
+static void print_function(ObjFunction* func);
 
 #define ALLOC_OBJ(type, kind) (type*) alloc_obj(sizeof(type), kind)
 #define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, STRING_OBJ)
@@ -15,6 +17,13 @@ static Obj* alloc_obj(size_t size, ObjKind kind) {
     obj->next = qvm.objects;
     qvm.objects = obj;
     return obj;
+}
+
+ObjFunction* new_function() {
+    ObjFunction* func = ALLOC_OBJ(ObjFunction, FUNCTION_OBJ);
+    init_chunk(&func->chunk);
+    func->arity = 0;
+    return func;
 }
 
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
@@ -60,5 +69,13 @@ void print_object(Obj* obj) {
         printf("'%s'", AS_CSTRING(obj));
         break;
     }
+    case FUNCTION_OBJ: {
+        printf("<fn>");
+        break;
     }
+    }
+}
+
+bool is_obj_kind(Obj* obj, ObjKind kind) {
+    return obj->kind == kind;
 }

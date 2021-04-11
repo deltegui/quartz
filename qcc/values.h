@@ -2,8 +2,10 @@
 #define QUARTZ_VALUES_H
 
 #include "common.h"
-#include "object.h"
 #include "type.h"
+
+typedef struct s_obj Obj;
+typedef struct s_obj_string ObjString;
 
 typedef enum {
     VALUE_NUMBER,

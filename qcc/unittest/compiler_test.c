@@ -5,7 +5,7 @@
 #include "../values.h"
 #include "../vm.h"
 
-#define CHUNK(code, ...) do {\
+#define ASSERT_CHUNK(code, ...) do {\
     Chunk my;\
     init_qvm();\
     init_chunk(&my);\
@@ -55,7 +55,7 @@ static void emit_constant(Chunk* chunk, Value value, int line) {
 }
 
 static void should_emit_binary() {
-    CHUNK("2+2;", {
+    ASSERT_CHUNK("2+2;", {
         emit_constant(&my, NUMBER_VALUE(2), 1);
         emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_ADD, 1);
@@ -64,7 +64,7 @@ static void should_emit_binary() {
 }
 
 static void should_emit_complex_calc() {
-    CHUNK("(5+4)*2;", {
+    ASSERT_CHUNK("(5+4)*2;", {
         emit_constant(&my, NUMBER_VALUE(5), 1);
         emit_constant(&my, NUMBER_VALUE(4), 1);
         chunk_write(&my, OP_ADD, 1);
@@ -75,7 +75,7 @@ static void should_emit_complex_calc() {
 }
 
 static void should_emit_comparisions() {
-    CHUNK("1 == 2;", {
+    ASSERT_CHUNK("1 == 2;", {
         emit_constant(&my, NUMBER_VALUE(1), 1);
         emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_EQUAL, 1);
@@ -84,7 +84,7 @@ static void should_emit_comparisions() {
 }
 
 static void should_compile_globals() {
-    CHUNK("var esto = 5*2;", {
+    ASSERT_CHUNK("var esto = 5*2;", {
         uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4)));
         emit_constant(&my, NUMBER_VALUE(5), 1);
         emit_constant(&my, NUMBER_VALUE(2), 1);
@@ -96,7 +96,7 @@ static void should_compile_globals() {
 
 static void should_compile_globals_with_default_values() {
 #define DEFAULT_VALUE(code, default_val) do {\
-    CHUNK(code, {\
+    ASSERT_CHUNK(code, {\
         uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4)));\
         emit_constant(&my, default_val, 1);\
         chunk_write(&my, OP_DEFINE_GLOBAL, 1);\

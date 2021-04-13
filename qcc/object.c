@@ -6,7 +6,6 @@
 
 static Obj* alloc_obj(size_t size, ObjKind kind);
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash);
-static void print_function(ObjFunction* func);
 
 #define ALLOC_OBJ(type, kind) (type*) alloc_obj(sizeof(type), kind)
 #define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, STRING_OBJ)
@@ -70,7 +69,8 @@ void print_object(Obj* obj) {
         break;
     }
     case FUNCTION_OBJ: {
-        printf("<fn>");
+        ObjFunction* fn = AS_FUNCTION(obj);
+        printf("<fn '%s'>", AS_CSTRING(fn->name));
         break;
     }
     }

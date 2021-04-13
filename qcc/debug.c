@@ -204,6 +204,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_BANG: return "TokenBang";
     case TOKEN_AND: return "TokenAnd";
     case TOKEN_OR: return "TokenOr";
+    case TOKEN_FUNCTION: return "TokenFunction";
     case TOKEN_VAR: return "TokenVar";
     case TOKEN_NUMBER: return "TokenNumber";
     case TOKEN_TRUE: return "TokenTrue";
@@ -224,6 +225,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_STRING_TYPE: return "TokenStringType";
     case TOKEN_BOOL_TYPE: return "TokenBoolType";
     case TOKEN_NIL_TYPE: return "TokenNilType";
+    case TOKEN_COMMA: return "TokenComma";
     default: return "Unknown";
     }
 }

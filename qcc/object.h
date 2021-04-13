@@ -28,6 +28,11 @@ typedef struct {
     Obj obj;
     int arity;
     Chunk chunk;
+    /*
+      TODO This field is only being used in print_object.
+      It is really necessary?
+    */
+    ObjString* name;
 } ObjFunction;
 
 void print_object(Obj* obj);

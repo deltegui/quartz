@@ -225,7 +225,7 @@ static void run(ObjFunction* func) {
 }
 
 void qvm_execute(ObjFunction* func) {
-    // stack_push(OBJ_VALUE(func));// WARNING THIS SHIT
+    // stack_push(OBJ_VALUE(func));// TODO THIS SHIT
     CallFrame* frame = &qvm.frames[qvm.frame_count++];
     frame->func = func;
     frame->pc = func->chunk.code;

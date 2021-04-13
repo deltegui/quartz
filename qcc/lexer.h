@@ -25,6 +25,7 @@ typedef enum {
     TOKEN_COLON,
     TOKEN_LEFT_BRACE,
     TOKEN_RIGHT_BRACE,
+    TOKEN_COMMA,
 
     // Two character tokens
     TOKEN_AND,
@@ -35,6 +36,7 @@ typedef enum {
     TOKEN_GREATER_EQUAL,
 
     // Multi-character tokens
+    TOKEN_FUNCTION,
     TOKEN_VAR,
     TOKEN_NUMBER,
     TOKEN_TRUE,

@@ -215,6 +215,9 @@ static Token scan_identifier(Lexer* lexer) {
         if (match_subtoken(lexer, "alse", 1, 5)) {
             return create_token(lexer, TOKEN_FALSE);
         }
+        if (match_subtoken(lexer, "n", 1, 2)) {
+            return create_token(lexer, TOKEN_FUNCTION);
+        }
     }
     case 'n': {
         if (match_subtoken(lexer, "il", 1, 3)) {
@@ -267,6 +270,7 @@ static inline Token scan_token(Lexer* lexer) {
     case '.': return create_token(lexer, TOKEN_DOT);
     case ';': return create_token(lexer, TOKEN_SEMICOLON);
     case ':': return create_token(lexer, TOKEN_COLON);
+    case ',': return create_token(lexer, TOKEN_COMMA);
     case '<': {
         if (consume(lexer, '=')) {
             return create_token(lexer, TOKEN_LOWER_EQUAL);

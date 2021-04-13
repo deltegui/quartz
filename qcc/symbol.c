@@ -11,6 +11,25 @@
 static Symbol* find(SymbolTable* table, SymbolName* name);
 static void grow_symbol_table(SymbolTable* table);
 
+FunctionSymbol create_function_symbol() {
+    FunctionSymbol fn_sym = (FunctionSymbol) {
+        .return_type = NIL_TYPE
+    };
+    init_param_array(&fn_sym.param_types);
+    return fn_sym;
+}
+
+void free_symbol(Symbol* symbol) {
+    switch (symbol->kind) {
+    case FUNCTION_SYMBOL: {
+        free_param_array(&symbol->function.param_types);
+        break;
+    }
+    case VAR_SYMBOL:
+        break;
+    }
+}
+
 void init_symbol_table(SymbolTable* table) {
     table->size = 0;
     table->capacity = 0;
@@ -18,6 +37,9 @@ void init_symbol_table(SymbolTable* table) {
 }
 
 void free_symbol_table(SymbolTable* table) {
+    for (int i = 0; i < table->size; i++) {
+        free_symbol(&table->entries[i]);
+    }
     free(table->entries);
     init_symbol_table(table);
 }

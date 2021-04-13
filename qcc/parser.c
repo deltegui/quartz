@@ -1,6 +1,7 @@
 #include "parser.h"
 #include <stdarg.h>
 #include "common.h"
+#include "fnparams.h"
 #include "symbol.h"
 #include "type.h"
 
@@ -54,7 +55,10 @@ static Stmt* declaration_block(Parser* parser);
 
 static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
-static void register_symbol(Parser* parser, Token* tkn_symbol, Type type);
+static Stmt* function_decl(Parser* parser);
+static void parse_function_params_declaration(Parser* parser, FunctionStmt* fn, FunctionSymbol* fn_sym);
+static Symbol create_symbol(Token* tkn_symbol, Type type);
+static void register_symbol(Parser* parser, Symbol symbol);
 
 static Stmt* statement(Parser* parser);
 static Stmt* block_stmt(Parser* parser);
@@ -274,6 +278,10 @@ static Stmt* declaration(Parser* parser) {
     switch (parser->current.kind) {
     case TOKEN_VAR:
         return variable_decl(parser);
+    // TODO uncomment this
+    /*case TOKEN_FUNCTION:
+        return function_decl(parser);
+        */
     default:
         return statement(parser);
     }
@@ -316,7 +324,7 @@ static Stmt* variable_decl(Parser* parser) {
         advance(parser); // consume type
     }
 
-    register_symbol(parser, &var.identifier, var_type);
+    register_symbol(parser, create_symbol(&var.identifier, var_type));
 
     var.definition = NULL;
     if (parser->current.kind == TOKEN_EQUAL) {
@@ -328,20 +336,74 @@ static Stmt* variable_decl(Parser* parser) {
     return CREATE_VAR_STMT(var);
 }
 
-static void register_symbol(Parser* parser, Token* tkn_symbol, Type type) {
-    Symbol var_symbol = (Symbol){
+static Stmt* function_decl(Parser* parser) {
+    advance(parser); // consume fn
+
+    FunctionSymbol fn_sym = create_function_symbol();
+    FunctionStmt fn;
+    init_param_array(&fn.params);
+    fn.identifier = parser->current;
+
+    advance(parser); // consume identifier
+    consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
+
+    if (parser->current.kind != TOKEN_RIGHT_PAREN) {
+        parse_function_params_declaration(parser, &fn, &fn_sym);
+    }
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after function params in declaration");
+
+    block_stmt(parser);
+
+    Symbol symbol = create_symbol(&fn.identifier, FUNCTION_TYPE);
+    symbol.function = fn_sym;
+    register_symbol(parser, symbol);
+    return CREATE_FUNCTION_STMT(fn);
+}
+
+static void parse_function_params_declaration(Parser* parser, FunctionStmt* fn, FunctionSymbol* fn_sym) {
+    for (;;) {
+        if (parser->current.kind != TOKEN_IDENTIFIER) {
+            error(parser, "Expected to have an identifier in parameter in function declaration");
+            break;
+        }
+        PARAM_ARRAY_ADD_TOKEN(&fn->params, parser->current);
+        advance(parser); // cosume param identifier
+        if (parser->current.kind != TOKEN_COLON) {
+            error(parser, "Expected function parameter to have a type in function declaration");
+            break;
+        }
+        advance(parser); // cosume colon
+        Type type = type_from_token_kind(parser->current.kind);
+        if (type == UNKNOWN_TYPE) {
+            error (parser, "Unknown type in function param in function declaration");
+            break;
+        }
+        PARAM_ARRAY_ADD_TYPE(&fn_sym->param_types, type);
+        advance(parser); // consume type
+        if (parser->current.kind != TOKEN_COMMA) {
+            break;
+        }
+        advance(parser); // consume comma
+    }
+}
+
+static Symbol create_symbol(Token* tkn_symbol, Type type) {
+    return (Symbol){
         .name = create_symbol_name(tkn_symbol->start, tkn_symbol->length),
         .declaration_line = tkn_symbol->line,
         .type = type,
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
     };
-    Symbol* exsting = current_scope_lookup(parser, &var_symbol.name);
+}
+
+static void register_symbol(Parser* parser, Symbol symbol) {
+    Symbol* exsting = current_scope_lookup(parser, &symbol.name);
     if (exsting) {
         error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
         return;
     }
-    insert(parser, var_symbol);
+    insert(parser, symbol);
 }
 
 static Stmt* print_stmt(Parser* parser) {

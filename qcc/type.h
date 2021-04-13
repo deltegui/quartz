@@ -8,6 +8,7 @@ typedef enum {
     BOOL_TYPE,
     NIL_TYPE,
     STRING_TYPE,
+    FUNCTION_TYPE,
     UNKNOWN_TYPE,
 } Type;
 

@@ -49,6 +49,6 @@ ObjString* concat_string(ObjString* first, ObjString* second);
 #define IS_FUNTION(obj) (is_obj_kind(obj, FUNCTION_OBJ));
 #define AS_FUNCTION(obj) ((ObjFunction*) obj)
 
-ObjFunction* new_function();
+ObjFunction* new_function(const char* name, int length);
 
 #endif

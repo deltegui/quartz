@@ -17,6 +17,7 @@ void type_print(Type type) {
     case BOOL_TYPE: printf("Bool"); break;
     case NIL_TYPE: printf("Nil"); break;
     case STRING_TYPE: printf("String"); break;
+    case FUNCTION_TYPE: printf("Function"); break;
     case UNKNOWN_TYPE: printf("Unknown"); break;
     }
 }

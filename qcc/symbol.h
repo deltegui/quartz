@@ -2,6 +2,7 @@
 #define QUARTZ_SYMBOL_H
 
 #include "type.h"
+#include "fnparams.h"
 
 typedef struct {
     const char* str;
@@ -11,13 +12,32 @@ typedef struct {
 
 SymbolName create_symbol_name(const char* str, int length);
 
+typedef enum {
+    FUNCTION_SYMBOL,
+    VAR_SYMBOL
+} SymbolKind;
+
 typedef struct {
+    ParamArray param_types;
+    Type return_type;
+} FunctionSymbol;
+
+// TODO Is this necessary?
+FunctionSymbol create_function_symbol();
+
+typedef struct {
+    SymbolKind kind;
     SymbolName name;
     int declaration_line;
     Type type;
     uint16_t constant_index;
     bool global;
+    union {
+        FunctionSymbol function;
+    };
 } Symbol;
+
+void free_symbol(Symbol* symbol);
 
 typedef struct {
     Symbol* entries;

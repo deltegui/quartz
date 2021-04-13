@@ -35,6 +35,10 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
         stmt->kind = VAR_STMT;
         stmt->var = *(VarStmt*)stmt_node;
         break;
+    case FUNCTION_STMT:
+        stmt->kind = FUNCTION_STMT;
+        stmt->function = *(FunctionStmt*)stmt_node;
+        break;
     case LIST_STMT:
         stmt->kind = LIST_STMT;
         stmt->list = (ListStmt*)stmt_node;
@@ -68,6 +72,10 @@ void free_stmt(Stmt* stmt) {
         break;
     case VAR_STMT:
         free_expr(stmt->var.definition);
+        break;
+    case FUNCTION_STMT:
+        free_stmt(stmt->function.body);
+        free_param_array(&stmt->function.params);
         break;
     case LIST_STMT:
         free_list_stmt(stmt->list);

@@ -3,6 +3,12 @@
 static void free_list_stmt(ListStmt* list_stmt);
 static void visit_list_stmt(StmtVisitor* visitor, void* ctx, ListStmt* list);
 
+FunctionStmt create_function_stmt() {
+    FunctionStmt fn;
+    init_param_array(&fn.params);
+    return fn;
+}
+
 ListStmt* create_list_stmt() {
 #define INITIAL_CAPACITY 2
     ListStmt* list_stmt = (ListStmt*) malloc(sizeof(ListStmt));
@@ -108,6 +114,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case LIST_STMT: visit_list_stmt(visitor, ctx, stmt->list); break;
     case PRINT_STMT: DISPATCH(visit_print, print); break;
     case BLOCK_STMT: DISPATCH(visit_block, block); break;
+    case FUNCTION_STMT: DISPATCH(visit_function, function); break;
     }
 #undef DISPATCH
 }

@@ -19,7 +19,7 @@ void free_param_array(ParamArray* params) {
 void param_array_add(ParamArray* params, Param param) {
     if (params->size + 1 > params->capacity) {
         params->capacity = PARAMS_GROW_CAPACITY(params);
-        params->params = (Param*) realloc(params->params, sizeof(Param));
+        params->params = (Param*) realloc(params->params, sizeof(Param) * params->capacity);
     }
     assert(params->capacity > 0);
     assert(params->params != NULL);

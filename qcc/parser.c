@@ -278,10 +278,8 @@ static Stmt* declaration(Parser* parser) {
     switch (parser->current.kind) {
     case TOKEN_VAR:
         return variable_decl(parser);
-    // TODO uncomment this
-    /*case TOKEN_FUNCTION:
+    case TOKEN_FUNCTION:
         return function_decl(parser);
-        */
     default:
         return statement(parser);
     }
@@ -340,13 +338,11 @@ static Stmt* function_decl(Parser* parser) {
     advance(parser); // consume fn
 
     FunctionSymbol fn_sym = create_function_symbol();
-    FunctionStmt fn;
-    init_param_array(&fn.params);
+    FunctionStmt fn = create_function_stmt();
     fn.identifier = parser->current;
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
-
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
         parse_function_params_declaration(parser, &fn, &fn_sym);
     }

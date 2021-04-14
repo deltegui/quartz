@@ -45,9 +45,15 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_expr_equals(first->print.inner, second->print.inner);
         break;
     }
-    case BLOCK_STMT:
+    case BLOCK_STMT: {
         assert_stmt_equals(first->block.stmts, second->block.stmts);
         break;
+    }
+    case FUNCTION_STMT: {
+        // TODO equal function name
+        assert_stmt_equals(first->function.body, second->function.body);
+        break;
+    }
     }
 }
 
@@ -218,11 +224,39 @@ Token a_token = (Token){
     .kind = TOKEN_IDENTIFIER
 };
 
+Token b_token = (Token){
+    .length = 1,
+    .line = 1,
+    .start = "b",
+    .kind = TOKEN_IDENTIFIER
+};
+
+Token string_type_token = (Token){
+    .length = 6,
+    .line = 1,
+    .start = "String",
+    .kind = TOKEN_STRING_TYPE
+};
+
+Token number_type_token = (Token){
+    .length = 6,
+    .line = 1,
+    .start = "Number",
+    .kind = TOKEN_NUMBER_TYPE
+};
+
 Token example_str = (Token){
     .length = 12,
     .line = 1,
     .start = "Hello world!",
     .kind = TOKEN_STRING,
+};
+
+Token fn_token = (Token){
+     .length = 2,
+     .line = 1,
+     .start = "fn",
+     .kind = TOKEN_FUNCTION,
 };
 
 IdentifierExpr a_identifier = (IdentifierExpr){
@@ -408,19 +442,47 @@ static void should_parse_blocks() {
     free_stmt(stmt);
 }
 
+static void should_parse_function_declarations() {
+    FunctionStmt fn = create_function_stmt();
+    Token fn_identifier = (Token){
+        .length = 1,
+        .line = 1,
+        .start = "hola",
+        .kind = TOKEN_FUNCTION,
+    };
+    fn.identifier = fn_identifier;
+    PARAM_ARRAY_ADD_TOKEN(&fn.params, a_token);
+    PARAM_ARRAY_ADD_TOKEN(&fn.params, b_token);
+    BlockStmt fn_body = (BlockStmt){
+        .stmts = CREATE_LIST_STMT(create_list_stmt()),
+    };
+    fn.body = CREATE_BLOCK_STMT(fn_body);
+    assert_stmt_ast(" fn hola (a: Number, b: String) {} ", CREATE_FUNCTION_STMT(fn));
+}
+
+static void should_parse_empty_blocks() {
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_LIST_STMT(create_list_stmt()),
+    };
+    Stmt* stmt = CREATE_BLOCK_STMT(block);
+    assert_stmt_ast("{   } ", stmt);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(should_parse_blocks),
-        cmocka_unit_test(should_assign_vars),
-        cmocka_unit_test(should_use_of_globals),
-        cmocka_unit_test(should_parse_global_variables),
-        cmocka_unit_test(should_parse_additions),
-        cmocka_unit_test(should_parse_precedence),
-        cmocka_unit_test(should_parse_grouping),
-        cmocka_unit_test(should_fail),
-        cmocka_unit_test(should_parse_strings),
-        cmocka_unit_test(should_parse_reserved_words_as_literals),
-        cmocka_unit_test(should_parse_equality)
+        // cmocka_unit_test(should_parse_empty_blocks)
+        cmocka_unit_test(should_parse_function_declarations)
+        // cmocka_unit_test(should_parse_blocks),
+        // cmocka_unit_test(should_assign_vars),
+        // cmocka_unit_test(should_use_of_globals),
+        // cmocka_unit_test(should_parse_global_variables),
+        // cmocka_unit_test(should_parse_additions),
+        // cmocka_unit_test(should_parse_precedence),
+        // cmocka_unit_test(should_parse_grouping),
+        // cmocka_unit_test(should_fail),
+        // cmocka_unit_test(should_parse_strings),
+        // cmocka_unit_test(should_parse_reserved_words_as_literals),
+        // cmocka_unit_test(should_parse_equality)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

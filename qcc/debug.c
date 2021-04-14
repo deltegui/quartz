@@ -261,12 +261,14 @@ static void print_expr(void* ctx, ExprStmt* expr);
 static void print_var(void* ctx, VarStmt* var);
 static void print_print(void* ctx, PrintStmt* var);
 static void print_block(void* ctx, BlockStmt* block);
+static void print_function(void* ctx, FunctionStmt* block);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
     .visit_var = print_var,
     .visit_print = print_print,
     .visit_block = print_block,
+    .visit_function = print_function,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -387,6 +389,26 @@ static void print_unary(void* ctx, UnaryExpr* unary) {
         pretty_print("Expr: \n");
         OFFSET({
             ACCEPT_EXPR(unary->expr);
+        });
+    });
+    pretty_print("]\n");
+}
+
+static void print_function(void* ctx, FunctionStmt* block) {
+    pretty_print("Function '");
+    printf("%.*s' [\n", block->identifier.length, block->identifier.start);
+    OFFSET({
+        pretty_print("Params: (");
+        for (int i = 0; i < block->params.size; i++) {
+            printf(
+                "%.*s, ",
+                block->params.params[i].identifier.length,
+                block->params.params[i].identifier.start);
+        }
+        printf(")\n");
+        pretty_print("Body: \n");
+        OFFSET({
+            ACCEPT_STMT(block->body);
         });
     });
     pretty_print("]\n");

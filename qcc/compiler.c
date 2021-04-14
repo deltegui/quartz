@@ -95,7 +95,7 @@ static void init_compiler(Compiler* compiler, CompilerMode mode, const char* sou
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
 
-    compiler->func = new_function();
+    compiler->func = new_function("<GLOBAL>", 8);
     compiler->mode = mode;
 
     compiler->last_line = 1;

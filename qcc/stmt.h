@@ -30,13 +30,15 @@ typedef struct {
     struct _Stmt* body;
 } FunctionStmt;
 
+FunctionStmt create_function_stmt();
+
 typedef struct {
     Expr* inner;
 } PrintStmt;
 
 typedef struct {
     int capacity;
-    int length;
+    int length; // TODO rename this to size.
     struct _Stmt** stmts;
 } ListStmt;
 

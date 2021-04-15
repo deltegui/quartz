@@ -325,12 +325,12 @@ static void scoped_symbol_should_insert_locals() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
-        // cmocka_unit_test(scoped_symbol_should_insert_locals),
-        // cmocka_unit_test(scoped_symbol_should_insert_globals),
-        cmocka_unit_test(scoped_symbol_should_insert_and_lookup)
-        // cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        // cmocka_unit_test(should_insert_symbols),
-        // cmocka_unit_test(should_insert_sixteen_elements)
+        cmocka_unit_test(scoped_symbol_should_insert_locals),
+        cmocka_unit_test(scoped_symbol_should_insert_globals),
+        cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
+        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        cmocka_unit_test(should_insert_symbols),
+        cmocka_unit_test(should_insert_sixteen_elements)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -445,7 +445,7 @@ static void should_parse_blocks() {
 }
 
 static void should_parse_function_declarations() {
-    FunctionStmt fn = create_function_stmt();
+    FunctionStmt fn;
     Token fn_identifier = (Token){
         .length = 1,
         .line = 1,
@@ -453,8 +453,9 @@ static void should_parse_function_declarations() {
         .kind = TOKEN_FUNCTION,
     };
     fn.identifier = fn_identifier;
-    PARAM_ARRAY_ADD_TOKEN(&fn.params, a_token);
-    PARAM_ARRAY_ADD_TOKEN(&fn.params, b_token);
+    // FIXME subtitute this with symbol table calls
+    // PARAM_ARRAY_ADD_TOKEN(&fn.params, a_token);
+    // PARAM_ARRAY_ADD_TOKEN(&fn.params, b_token);
     BlockStmt fn_body = (BlockStmt){
         .stmts = CREATE_LIST_STMT(create_list_stmt()),
     };

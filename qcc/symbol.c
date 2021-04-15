@@ -8,10 +8,52 @@
 #define S_GROW_CAPACITY(cap) (cap < 8 ? 8 : cap * 2)
 #define SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
 
+static FunctionSymbol create_function_symbol();
 static Symbol* find(SymbolTable* table, SymbolName* name);
 static void grow_symbol_table(SymbolTable* table);
+static SymbolKind kind_from_type(Type type);
 
-FunctionSymbol create_function_symbol() {
+SymbolName create_symbol_name(const char* str, int length) {
+    assert(length != 0);
+    assert(str != NULL);
+    SymbolName name = (SymbolName){
+        .str = str,
+        .length = length,
+        .hash = hash_string(str, length),
+    };
+    return name;
+}
+
+Symbol create_symbol_from_token(Token* token, Type type) {
+    return create_symbol(
+        create_symbol_name(token->start, token->length),
+        token->line,
+        type);
+}
+
+Symbol create_symbol(SymbolName name, int line, Type type) {
+    Symbol symbol = (Symbol){
+        .kind = kind_from_type(type),
+        .name = name,
+        .declaration_line = line,
+        .type = type,
+        .constant_index = UINT16_MAX,
+        .global = false, // we dont know
+    };
+    if (symbol.kind == FUNCTION_SYMBOL) {
+        symbol.function = create_function_symbol();
+    }
+    return symbol;
+}
+
+static SymbolKind kind_from_type(Type type) {
+    switch (type) {
+    case FUNCTION_TYPE: return FUNCTION_SYMBOL;
+    default: return VAR_SYMBOL;
+    }
+}
+
+static FunctionSymbol create_function_symbol() {
     FunctionSymbol fn_sym = (FunctionSymbol) {
         .return_type = NIL_TYPE
     };
@@ -37,27 +79,13 @@ void init_symbol_table(SymbolTable* table) {
 }
 
 void free_symbol_table(SymbolTable* table) {
-    for (int i = 0; i < table->size; i++) {
-        free_symbol(&table->entries[i]);
+    for (int i = 0; i < table->capacity; i++) {
+        if (! IS_EMPTY(&table->entries[i])) {
+            free_symbol(&table->entries[i]);
+        }
     }
     free(table->entries);
     init_symbol_table(table);
-}
-
-SymbolName create_symbol_name(const char* str, int length) {
-    assert(length != 0);
-    assert(str != NULL);
-    SymbolName name = (SymbolName){
-        .str = str,
-        .length = length,
-        .hash = hash_string(str, length),
-    };
-    return name;
-}
-
-Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length) {
-    SymbolName symbol_name = create_symbol_name(name, length);
-    return symbol_lookup(table, &symbol_name);
 }
 
 Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {
@@ -69,6 +97,11 @@ Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {
         return NULL;
     }
     return symbol;
+}
+
+Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return symbol_lookup(table, &symbol_name);
 }
 
 void symbol_insert(SymbolTable* table, Symbol symbol) {

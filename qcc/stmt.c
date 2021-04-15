@@ -6,6 +6,7 @@ static void visit_list_stmt(StmtVisitor* visitor, void* ctx, ListStmt* list);
 FunctionStmt create_function_stmt() {
     FunctionStmt fn;
     init_param_array(&fn.params);
+    fn.body = NULL;
     return fn;
 }
 
@@ -80,8 +81,8 @@ void free_stmt(Stmt* stmt) {
         free_expr(stmt->var.definition);
         break;
     case FUNCTION_STMT:
-        free_stmt(stmt->function.body);
         free_param_array(&stmt->function.params);
+        free_stmt(stmt->function.body);
         break;
     case LIST_STMT:
         free_list_stmt(stmt->list);

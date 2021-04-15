@@ -22,9 +22,6 @@ typedef struct {
     Type return_type;
 } FunctionSymbol;
 
-// TODO Is this necessary?
-FunctionSymbol create_function_symbol();
-
 typedef struct {
     SymbolKind kind;
     SymbolName name;
@@ -37,6 +34,8 @@ typedef struct {
     };
 } Symbol;
 
+Symbol create_symbol_from_token(Token* token, Type type);
+Symbol create_symbol(SymbolName name, int line, Type type);
 void free_symbol(Symbol* symbol);
 
 typedef struct {

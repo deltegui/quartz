@@ -10,7 +10,7 @@ void init_param_array(ParamArray* params) {
 }
 
 void free_param_array(ParamArray* params) {
-    if (params->params == NULL) {
+    if (params->size == 0) {
         return;
     }
     free(params->params);

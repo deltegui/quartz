@@ -20,9 +20,10 @@ static inline void assert_has_errors(const char* source) {
     ScopedSymbolTable symbols;
     init_scoped_symbol_table(&symbols);
     init_parser(&parser, source, &symbols);
-    parse(&parser);
+    Stmt* result = parse(&parser);
     free_scoped_symbol_table(&symbols);
     assert_true(parser.has_error);
+    free_stmt(result);
 }
 
 static void assert_stmt_equals(Stmt* first, Stmt* second) {
@@ -113,6 +114,7 @@ static void assert_ast(const char* source, Stmt* expected_ast) {
     Stmt* result = parse(&parser);
     compare_asts(result, expected_ast);
     free_scoped_symbol_table(&symbols);
+    free_stmt(result);
 }
 
 static void assert_stmt_ast(const char* source, Stmt* expected) {
@@ -470,19 +472,19 @@ static void should_parse_empty_blocks() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
-        // cmocka_unit_test(should_parse_empty_blocks)
-        cmocka_unit_test(should_parse_function_declarations)
-        // cmocka_unit_test(should_parse_blocks),
-        // cmocka_unit_test(should_assign_vars),
-        // cmocka_unit_test(should_use_of_globals),
-        // cmocka_unit_test(should_parse_global_variables),
-        // cmocka_unit_test(should_parse_additions),
-        // cmocka_unit_test(should_parse_precedence),
-        // cmocka_unit_test(should_parse_grouping),
-        // cmocka_unit_test(should_fail),
-        // cmocka_unit_test(should_parse_strings),
-        // cmocka_unit_test(should_parse_reserved_words_as_literals),
-        // cmocka_unit_test(should_parse_equality)
+        cmocka_unit_test(should_parse_empty_blocks),
+        cmocka_unit_test(should_parse_function_declarations),
+        cmocka_unit_test(should_parse_blocks),
+        cmocka_unit_test(should_assign_vars),
+        cmocka_unit_test(should_use_of_globals),
+        cmocka_unit_test(should_parse_global_variables),
+        cmocka_unit_test(should_parse_additions),
+        cmocka_unit_test(should_parse_precedence),
+        cmocka_unit_test(should_parse_grouping),
+        cmocka_unit_test(should_fail),
+        cmocka_unit_test(should_parse_strings),
+        cmocka_unit_test(should_parse_reserved_words_as_literals),
+        cmocka_unit_test(should_parse_equality)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -57,7 +57,6 @@ static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
 static Stmt* function_decl(Parser* parser);
 static void parse_function_params_declaration(Parser* parser, FunctionStmt* fn, FunctionSymbol* fn_sym);
-static Symbol create_symbol(Token* tkn_symbol, Type type);
 static void register_symbol(Parser* parser, Symbol symbol);
 
 static Stmt* statement(Parser* parser);
@@ -322,7 +321,7 @@ static Stmt* variable_decl(Parser* parser) {
         advance(parser); // consume type
     }
 
-    register_symbol(parser, create_symbol(&var.identifier, var_type));
+    register_symbol(parser, create_symbol_from_token(&var.identifier, var_type));
 
     var.definition = NULL;
     if (parser->current.kind == TOKEN_EQUAL) {
@@ -337,21 +336,19 @@ static Stmt* variable_decl(Parser* parser) {
 static Stmt* function_decl(Parser* parser) {
     advance(parser); // consume fn
 
-    FunctionSymbol fn_sym = create_function_symbol();
     FunctionStmt fn = create_function_stmt();
     fn.identifier = parser->current;
+    Symbol symbol = create_symbol_from_token(&fn.identifier, FUNCTION_TYPE);
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
-        parse_function_params_declaration(parser, &fn, &fn_sym);
+        parse_function_params_declaration(parser, &fn, &symbol.function);
     }
     consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after function params in declaration");
 
-    block_stmt(parser);
+    fn.body = block_stmt(parser);
 
-    Symbol symbol = create_symbol(&fn.identifier, FUNCTION_TYPE);
-    symbol.function = fn_sym;
     register_symbol(parser, symbol);
     return CREATE_FUNCTION_STMT(fn);
 }
@@ -381,16 +378,6 @@ static void parse_function_params_declaration(Parser* parser, FunctionStmt* fn, 
         }
         advance(parser); // consume comma
     }
-}
-
-static Symbol create_symbol(Token* tkn_symbol, Type type) {
-    return (Symbol){
-        .name = create_symbol_name(tkn_symbol->start, tkn_symbol->length),
-        .declaration_line = tkn_symbol->line,
-        .type = type,
-        .constant_index = UINT16_MAX,
-        .global = false, // we dont know
-    };
 }
 
 static void register_symbol(Parser* parser, Symbol symbol) {

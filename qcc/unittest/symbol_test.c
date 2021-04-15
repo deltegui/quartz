@@ -3,6 +3,7 @@
 #include "./common.h"
 #include "../symbol.h"
 #include "../typechecker.h"
+#include "../debug.h"
 
 #define TABLE(...) do {\
     SymbolTable table;\
@@ -159,13 +160,9 @@ symbol_t sym[] = {
 
 static void should_insert_symbols() {
     TABLE({
-        Symbol entry = (Symbol){
-            .name = create_symbol_name("hello", 5),
-            .declaration_line = 1,
-            .type = STRING_TYPE
-        };
-        symbol_insert(&table, entry);
         SymbolName key = create_symbol_name("hello", 5);
+        Symbol entry = create_symbol(key, 1, STRING_TYPE);
+        symbol_insert(&table, entry);
         Symbol* stored = symbol_lookup(&table, &key);
         assert_entry(&entry, stored);
     });
@@ -175,21 +172,19 @@ static void should_insert_sixteen_elements() {
     TABLE({
         for (int i = 0; i < SYM_LENGTH; i++) {
             symbol_t* symbol = &sym[i];
-            Symbol entry = (Symbol){
-                .name = create_symbol_name(symbol->str, symbol->length),
-                .declaration_line = symbol->declaration_line,
-                .type = symbol->type,
-            };
+            Symbol entry = create_symbol(
+                create_symbol_name(symbol->str, symbol->length),
+                symbol->declaration_line,
+                symbol->type);
             symbol_insert(&table, entry);
         }
         for (int i = 0; i < SYM_LENGTH; i++) {
             symbol_t* symbol = &sym[i];
             SymbolName key = create_symbol_name(symbol->str, symbol->length);
-            Symbol expected = (Symbol){
-                .name = key,
-                .declaration_line = symbol->declaration_line,
-                .type = symbol->type,
-            };
+            Symbol expected = create_symbol(
+                key,
+                symbol->declaration_line,
+                symbol->type);
             Symbol* actual = symbol_lookup(&table, &key);
             assert_entry(&expected, actual);
         }
@@ -203,56 +198,40 @@ static void should_return_null_if_symbol_does_not_exist() {
         assert_null(entry);
 
         SymbolName manolo = create_symbol_name("manolo", 6);
-        Symbol manolo_entry = (Symbol){
-            .name = manolo,
-            .declaration_line = 1,
-            .type = UNKNOWN_TYPE,
-        };
+        Symbol manolo_entry = create_symbol(manolo, 1, UNKNOWN_TYPE);
         symbol_insert(&table, manolo_entry);
         entry = symbol_lookup(&table, &alberto);
         assert_null(entry);
     });
 }
 
-static void scoped_symbol_should_inset_and_lookup() {
-    SymbolName e = create_symbol_name("e", 1);
-    SymbolName d = create_symbol_name("d", 1);
-    SymbolName c = create_symbol_name("c", 1);
-    SymbolName b = create_symbol_name("b", 1);
+static void scoped_symbol_should_insert_and_lookup() {
     SymbolName a = create_symbol_name("a", 1);
-
-    Symbol sym_e = (Symbol) {
-        .name = e,
-        .declaration_line = 5,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
-    Symbol sym_d = (Symbol) {
-        .name = d,
-        .declaration_line = 4,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
-    Symbol sym_c = (Symbol) {
-        .name = c,
-        .declaration_line = 3,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
-    Symbol sym_b = (Symbol) {
-        .name = b,
-        .declaration_line = 2,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
-    Symbol sym_a = (Symbol) {
-        .name = a,
-        .declaration_line = 1,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
+    SymbolName b = create_symbol_name("b", 1);
+    SymbolName c = create_symbol_name("c", 1);
+    SymbolName d = create_symbol_name("d", 1);
+    SymbolName e = create_symbol_name("e", 1);
+    Symbol sym_a = create_symbol(a, 1, NUMBER_TYPE);
+    Symbol sym_b = create_symbol(b, 2, NUMBER_TYPE);
+    Symbol sym_c = create_symbol(c, 3, NUMBER_TYPE);
+    Symbol sym_d = create_symbol(d, 4, NUMBER_TYPE);
+    Symbol sym_e = create_symbol(e, 5, NUMBER_TYPE);
 
     SCOPED_TABLE({
+        /*
+        {
+            a, b
+            {
+                c
+                {
+                    d
+                }
+            }
+            {
+                e
+            }
+        }
+        */
         scoped_symbol_insert(&table, sym_a);
         scoped_symbol_insert(&table, sym_b);
         symbol_create_scope(&table);
@@ -308,20 +287,8 @@ static void scoped_symbol_should_inset_and_lookup() {
 static void scoped_symbol_should_insert_globals() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName b = create_symbol_name("b", 1);
-
-    Symbol sym_a = (Symbol) {
-        .name = a,
-        .declaration_line = 1,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
-    Symbol sym_b = (Symbol) {
-        .name = b,
-        .declaration_line = 2,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
-
+    Symbol sym_a = create_symbol(a, 1, NUMBER_TYPE);
+    Symbol sym_b = create_symbol(b, 2, NUMBER_TYPE);
     SCOPED_TABLE({
         scoped_symbol_insert(&table, sym_a);
         scoped_symbol_insert(&table, sym_b);
@@ -335,19 +302,8 @@ static void scoped_symbol_should_insert_globals() {
 static void scoped_symbol_should_insert_locals() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName b = create_symbol_name("b", 1);
-
-    Symbol sym_a = (Symbol) {
-        .name = a,
-        .declaration_line = 1,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
-    Symbol sym_b = (Symbol) {
-        .name = b,
-        .declaration_line = 2,
-        .type = NUMBER_TYPE,
-        .constant_index = -1,
-    };
+    Symbol sym_a = create_symbol(a, 1, NUMBER_TYPE);
+    Symbol sym_b = create_symbol(b, 2, NUMBER_TYPE);
 
     SCOPED_TABLE({
         scoped_symbol_insert(&table, sym_a);
@@ -369,12 +325,12 @@ static void scoped_symbol_should_insert_locals() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(scoped_symbol_should_insert_locals),
-        cmocka_unit_test(scoped_symbol_should_insert_globals),
-        cmocka_unit_test(scoped_symbol_should_inset_and_lookup),
-        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        cmocka_unit_test(should_insert_symbols),
-        cmocka_unit_test(should_insert_sixteen_elements)
+        // cmocka_unit_test(scoped_symbol_should_insert_locals),
+        // cmocka_unit_test(scoped_symbol_should_insert_globals),
+        cmocka_unit_test(scoped_symbol_should_insert_and_lookup)
+        // cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        // cmocka_unit_test(should_insert_symbols),
+        // cmocka_unit_test(should_insert_sixteen_elements)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

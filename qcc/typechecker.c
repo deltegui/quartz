@@ -164,7 +164,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
-    // TODO fill me
+    ACCEPT_STMT(ctx, function->body);
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

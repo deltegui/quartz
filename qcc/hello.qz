@@ -1,6 +1,3 @@
-var hola: Number = 10 * 3;
-
-print hola;
-
-hola = 23.34;
-print hola;
+fn pipo(hola: Number): String {
+    var a: String;
+}

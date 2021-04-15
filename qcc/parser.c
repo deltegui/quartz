@@ -354,6 +354,20 @@ static Stmt* function_decl(Parser* parser) {
     }
     consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after function params in declaration");
 
+    if (parser->current.kind == TOKEN_COLON) {
+        advance(parser); // consume colon
+        Type return_type = type_from_token_kind(parser->current.kind);
+        if (return_type == UNKNOWN_TYPE) {
+            error(
+                parser,
+                "Unknown return type in function '%.*s'",
+                fn.identifier.length,
+                fn.identifier.start);
+        }
+        symbol.function.return_type = return_type;
+        advance(parser); // consume type
+    }
+
     fn.body = block_stmt(parser);
     add_params_to_body(parser, &symbol.function);
 

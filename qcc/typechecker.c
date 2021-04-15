@@ -37,12 +37,14 @@ static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
 static void typecheck_print(void* ctx, PrintStmt* print);
 static void typecheck_block(void* ctx, BlockStmt* block);
+static void typecheck_function(void* ctx, FunctionStmt* function);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
     .visit_var = typecheck_var,
     .visit_print = typecheck_print,
     .visit_block = typecheck_block,
+    .visit_function = typecheck_function,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -159,6 +161,10 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
         return;
     }
     checker->last_type = symbol->type;
+}
+
+static void typecheck_function(void* ctx, FunctionStmt* function) {
+    // TODO fill me
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

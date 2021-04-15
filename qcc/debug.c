@@ -398,14 +398,6 @@ static void print_function(void* ctx, FunctionStmt* function) {
     pretty_print("Function '");
     printf("%.*s' [\n", function->identifier.length, function->identifier.start);
     OFFSET({
-        pretty_print("Params: (");
-        for (int i = 0; i < function->params.size; i++) {
-            printf(
-                "%.*s, ",
-                function->params.params[i].identifier.length,
-                function->params.params[i].identifier.start);
-        }
-        printf(")\n");
         pretty_print("Body: \n");
         OFFSET({
             ACCEPT_STMT(function->body);

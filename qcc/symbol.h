@@ -18,6 +18,8 @@ typedef enum {
 } SymbolKind;
 
 typedef struct {
+    // TODO Should we unified params and params types?
+    ParamArray params;
     ParamArray param_types;
     Type return_type;
 } FunctionSymbol;
@@ -76,6 +78,7 @@ void symbol_create_scope(ScopedSymbolTable* table);
 void symbol_end_scope(ScopedSymbolTable* table);
 void symbol_start_scope(ScopedSymbolTable* table);
 void symbol_reset_scopes(ScopedSymbolTable* table);
+void symbol_open_prev_scope(ScopedSymbolTable* table);
 
 Symbol* scoped_symbol_lookup(ScopedSymbolTable* table, SymbolName* name);
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* table, const char* name, int length);

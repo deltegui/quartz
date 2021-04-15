@@ -57,6 +57,7 @@ static FunctionSymbol create_function_symbol() {
     FunctionSymbol fn_sym = (FunctionSymbol) {
         .return_type = NIL_TYPE
     };
+    init_param_array(&fn_sym.params);
     init_param_array(&fn_sym.param_types);
     return fn_sym;
 }
@@ -64,6 +65,7 @@ static FunctionSymbol create_function_symbol() {
 void free_symbol(Symbol* symbol) {
     switch (symbol->kind) {
     case FUNCTION_SYMBOL: {
+        free_param_array(&symbol->function.params);
         free_param_array(&symbol->function.param_types);
         break;
     }
@@ -263,4 +265,12 @@ Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* table, const char* name, int
 void scoped_symbol_insert(ScopedSymbolTable* table, Symbol entry) {
     assert(table->current != NULL);
     symbol_insert(&table->current->symbols, entry);
+}
+
+void symbol_open_prev_scope(ScopedSymbolTable* table) {
+    assert(table->current != NULL);
+    assert(table->current->childs != NULL);
+    assert(table->current->capacity > 0);
+    assert(table->current->size > 0);
+    table->current = &table->current->childs[table->current->size - 1];
 }

@@ -26,11 +26,8 @@ typedef struct {
 
 typedef struct {
     Token identifier;
-    ParamArray params;
     struct _Stmt* body;
 } FunctionStmt;
-
-FunctionStmt create_function_stmt();
 
 typedef struct {
     Expr* inner;

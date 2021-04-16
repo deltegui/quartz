@@ -66,8 +66,8 @@ static void assert_buffer_is_loaded(Table* table, char* buffer, int amount) {
     FOR_EACH_BUFFER_WORD(buffer, amount, {
         ObjString* str = copy_string(start, current - start);
         Value val = table_find(table, str);
-        assert_false(IS_NIL(val));
-        assert_true(AS_NUMBER(val) == current_word);
+        assert_false(VALUE_IS_NIL(val));
+        assert_true(VALUE_AS_NUMBER(val) == current_word);
     });
 }
 
@@ -138,8 +138,8 @@ static void should_insert_and_get_one_element() {
     Entry e = create_entry("demo", 5);
     table_set(&table, e.key, e.value);
     Value val = table_find(&table, e.key);
-    assert_true(IS_NUMBER(val));
-    assert_float_equal(AS_NUMBER(val), 5, 1);
+    assert_true(VALUE_IS_NUMBER(val));
+    assert_float_equal(VALUE_AS_NUMBER(val), 5, 1);
 }
 
 static void benchmark_insert_large_amount_of_elements() {
@@ -158,7 +158,7 @@ static void should_return_nil_if_the_key_is_not_found() {
     TABLE_BENCHMARK(367000, {
         const char* word = "las cosas buenas son dificiles de conseguir";
         Value result = table_find(&table, copy_string(word, 4));
-        assert_true(IS_NIL(result));
+        assert_true(VALUE_IS_NIL(result));
     });
 }
 
@@ -170,7 +170,7 @@ static void benchamark_find_after_delete() {
         });
         const char* word = "las cosas buenas son dificiles de conseguir";
         Value result = table_find(&table, copy_string(word, 4));
-        assert_true(IS_NIL(result));
+        assert_true(VALUE_IS_NIL(result));
     });
 }
 
@@ -183,9 +183,9 @@ static void should_substitute_old_key() {
 
     Value val = table_find(&table, first.key);
 
-    assert_true(IS_NUMBER(val));
+    assert_true(VALUE_IS_NUMBER(val));
     assert_int_equal(table.size, 1);
-    assert_float_equal(AS_NUMBER(val), 10, 1);
+    assert_float_equal(VALUE_AS_NUMBER(val), 10, 1);
 }
 
 int main(void) {

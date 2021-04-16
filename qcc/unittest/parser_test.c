@@ -34,7 +34,9 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case VAR_STMT: {
-        assert_true(first->var.identifier.kind == second->var.identifier.kind);
+        assert_true(token_equals(
+            &first->var.identifier,
+            &second->var.identifier));
         assert_expr_equals(first->var.definition, second->var.definition);
         break;
     }
@@ -51,7 +53,9 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case FUNCTION_STMT: {
-        // TODO equal function name
+        assert_true(token_equals(
+            &first->function.identifier,
+            &second->function.identifier));
         assert_stmt_equals(first->function.body, second->function.body);
         break;
     }
@@ -451,10 +455,10 @@ static void should_parse_blocks() {
 static void should_parse_function_declarations() {
     FunctionStmt fn;
     Token fn_identifier = (Token){
-        .length = 1,
+        .length = 4,
         .line = 1,
         .start = "hola",
-        .kind = TOKEN_FUNCTION,
+        .kind = TOKEN_IDENTIFIER,
     };
     fn.identifier = fn_identifier;
     BlockStmt fn_body = (BlockStmt){
@@ -467,10 +471,10 @@ static void should_parse_function_declarations() {
 static void should_parse_returns() {
     FunctionStmt fn;
     Token fn_identifier = (Token){
-        .length = 1,
+        .length = 4,
         .line = 1,
         .start = "hola",
-        .kind = TOKEN_FUNCTION,
+        .kind = TOKEN_IDENTIFIER,
     };
     fn.identifier = fn_identifier;
     ListStmt* body = create_list_stmt();

@@ -162,7 +162,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
             "in variable assignment.");
         return;
     }
-    checker->last_type = symbol->type; // TODO should we be explicit like here?
+    checker->last_type = symbol->type;
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
@@ -178,6 +178,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
             symbol->function.return_type,
             "in function return");
     }
+    checker->last_type = symbol->function.return_type;
 }
 
 static void typecheck_return(void* ctx, ReturnStmt* return_) {

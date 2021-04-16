@@ -137,7 +137,6 @@ static int chunk_long_print(Chunk* chunk, int i) {
     return ++i;
 }
 
-// TODO refactor.
 static void standalone_chunk_print(Chunk* chunk) {
     for (int i = 0; i < chunk->size; i++) {
         printf("[%d] %04x\n", i, chunk->code[i]);

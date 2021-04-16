@@ -32,8 +32,8 @@ typedef struct {
 } symbol_t;
 
 static void assert_key(SymbolName* first, SymbolName* second) {
-    assert_int_equal(memcmp(first->str, second->str, first->length), 0);
     assert_int_equal(first->length, second->length);
+    assert_int_equal(memcmp(first->str, second->str, first->length), 0);
     assert_int_equal(first->hash, second->hash);
 }
 

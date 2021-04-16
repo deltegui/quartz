@@ -345,8 +345,19 @@ static void should_tokenize_function_declarations() {
     );
 }
 
+static void should_tokenize_returns() {
+    assert_types(
+        " return 22; ",
+        3,
+        TOKEN_RETURN,
+        TOKEN_NUMBER,
+        TOKEN_SEMICOLON
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_tokenize_returns),
         cmocka_unit_test(should_tokenize_function_declarations),
         cmocka_unit_test(should_scan_braces),
         cmocka_unit_test(should_tokenize_type_names),

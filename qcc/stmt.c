@@ -8,19 +8,19 @@ ListStmt* create_list_stmt() {
     ListStmt* list_stmt = (ListStmt*) malloc(sizeof(ListStmt));
     list_stmt->stmts = (Stmt**) malloc(sizeof(Stmt*) * INITIAL_CAPACITY);
     list_stmt->capacity = INITIAL_CAPACITY;
-    list_stmt->length = 0;
+    list_stmt->size = 0;
     return list_stmt;
 #undef INITIAL_CAPACITY
 }
 
 void list_stmt_add(ListStmt* list, Stmt* stmt) {
 #define GROWTH_FACTOR 2
-    if (list->capacity <= list->length + 1) {
+    if (list->capacity <= list->size + 1) {
         list->capacity = list->capacity * GROWTH_FACTOR;
         list->stmts = (Stmt**) realloc(list->stmts, sizeof(Stmt**) * list->capacity);
     }
-    list->stmts[list->length] = stmt;
-    list->length++;
+    list->stmts[list->size] = stmt;
+    list->size++;
 #undef GROWTH_FACTOR
 }
 
@@ -51,12 +51,16 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
         stmt->kind = BLOCK_STMT;
         stmt->block = *(BlockStmt*)stmt_node;
         break;
+    case RETURN_STMT:
+        stmt->kind = RETURN_STMT;
+        stmt->return_ = *(ReturnStmt*)stmt_node;
+        break;
     }
     return stmt;
 }
 
 static void free_list_stmt(ListStmt* list_stmt) {
-    for (int i = 0; i < list_stmt->length; i++) {
+    for (int i = 0; i < list_stmt->size; i++) {
         free_stmt(list_stmt->stmts[i]);
     }
     free(list_stmt->stmts);
@@ -86,12 +90,15 @@ void free_stmt(Stmt* stmt) {
     case BLOCK_STMT:
         free_stmt(stmt->block.stmts);
         break;
+    case RETURN_STMT:
+        free_expr(stmt->return_.inner);
+        break;
     }
     free(stmt);
 }
 
 static void visit_list_stmt(StmtVisitor* visitor, void* ctx, ListStmt* list) {
-    for (int i = 0; i < list->length; i++) {
+    for (int i = 0; i < list->size; i++) {
         stmt_dispatch(visitor, ctx, list->stmts[i]);
     }
 }
@@ -108,6 +115,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case PRINT_STMT: DISPATCH(visit_print, print); break;
     case BLOCK_STMT: DISPATCH(visit_block, block); break;
     case FUNCTION_STMT: DISPATCH(visit_function, function); break;
+    case RETURN_STMT: DISPATCH(visit_return, return_); break;
     }
 #undef DISPATCH
 }

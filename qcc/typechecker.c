@@ -12,7 +12,7 @@ typedef struct {
     bool has_error;
 } Typechecker;
 
-static void error_last_type_match(Typechecker* checker, Token* token, Type first, const char* message);
+static void error_last_type_match(Typechecker* checker, Token* where, Type first, const char* message);
 static void error(Typechecker* checker, Token* token, const char* message, ...);
 
 static void start_scope(Typechecker* checker);
@@ -38,6 +38,7 @@ static void typecheck_var(void* ctx, VarStmt* var);
 static void typecheck_print(void* ctx, PrintStmt* print);
 static void typecheck_block(void* ctx, BlockStmt* block);
 static void typecheck_function(void* ctx, FunctionStmt* function);
+static void typecheck_return(void* ctx, ReturnStmt* function);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -45,14 +46,15 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_print = typecheck_print,
     .visit_block = typecheck_block,
     .visit_function = typecheck_function,
+    .visit_return = typecheck_return,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
 #define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
 
-static void error_last_type_match(Typechecker* checker, Token* token, Type first, const char* message) {
+static void error_last_type_match(Typechecker* checker, Token* where, Type first, const char* message) {
     Type last_type = checker->last_type;
-    error(checker, token, "The type '");
+    error(checker, where, "The type '");
     type_print(first);
     printf("' does not match with type '");
     type_print(last_type);
@@ -164,7 +166,22 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
+    Typechecker* checker = (Typechecker*) ctx;
     ACCEPT_STMT(ctx, function->body);
+    Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
+    assert(symbol != NULL);
+    if (symbol->function.return_type != checker->last_type) {
+        error_last_type_match(
+            checker,
+            &function->identifier,
+            symbol->function.return_type,
+            "in function return");
+    }
+}
+
+static void typecheck_return(void* ctx, ReturnStmt* return_) {
+    // TODO what happends if other stmts alters checker->last_type after a return?
+    ACCEPT_EXPR(ctx, return_->inner);
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

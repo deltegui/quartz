@@ -64,6 +64,7 @@ static void register_symbol(Parser* parser, Symbol symbol);
 static Stmt* statement(Parser* parser);
 static Stmt* block_stmt(Parser* parser);
 static Stmt* print_stmt(Parser* parser);
+static Stmt* return_stmt(Parser* parser);
 static Stmt* expr_stmt(Parser* parser);
 
 static Expr* expression(Parser* parser);
@@ -296,6 +297,8 @@ static Stmt* statement(Parser* parser) {
         return block_stmt(parser);
     case TOKEN_PRINT:
         return print_stmt(parser);
+    case TOKEN_RETURN:
+        return return_stmt(parser);
     default:
         return expr_stmt(parser);
     }
@@ -430,6 +433,16 @@ static Stmt* print_stmt(Parser* parser) {
     };
     consume(parser, TOKEN_SEMICOLON, "Expected print statment to end with ';'");
     return CREATE_PRINT_STMT(print_stmt);
+}
+
+static Stmt* return_stmt(Parser* parser) {
+    advance(parser); // consume return
+    Expr* expr = expression(parser);
+    ReturnStmt return_stmt = (ReturnStmt){
+        .inner = expr,
+    };
+    consume(parser, TOKEN_SEMICOLON, "Expected return statment to end with ';'");
+    return CREATE_RETURN_STMT(return_stmt);
 }
 
 static Stmt* expr_stmt(Parser* parser) {

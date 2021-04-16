@@ -55,13 +55,17 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_stmt_equals(first->function.body, second->function.body);
         break;
     }
+    case RETURN_STMT: {
+        assert_expr_equals(first->return_.inner, second->return_.inner);
+        break;
+    }
     }
 }
 
 static void assert_list_stmt_equals(ListStmt* first, ListStmt* second) {
-    assert_true(first->length == second->length);
+    assert_true(first->size == second->size);
     assert_true(first->capacity == second->capacity);
-    for (int i = 0; i < first->length; i++) {
+    for (int i = 0; i < first->size; i++) {
         assert_stmt_equals(first->stmts[i], second->stmts[i]);
     }
 }
@@ -463,6 +467,32 @@ static void should_parse_function_declarations() {
     assert_stmt_ast(" fn hola (a: Number, b: String) {} ", CREATE_FUNCTION_STMT(fn));
 }
 
+static void should_parse_returns() {
+    FunctionStmt fn;
+    Token fn_identifier = (Token){
+        .length = 1,
+        .line = 1,
+        .start = "hola",
+        .kind = TOKEN_FUNCTION,
+    };
+    fn.identifier = fn_identifier;
+    // FIXME subtitute this with symbol table calls
+    // PARAM_ARRAY_ADD_TOKEN(&fn.params, a_token);
+    // PARAM_ARRAY_ADD_TOKEN(&fn.params, b_token);
+    ListStmt* body = create_list_stmt();
+    ReturnStmt return_ = (ReturnStmt){
+        .inner = CREATE_LITERAL_EXPR(true_),
+    };
+    list_stmt_add(body, CREATE_RETURN_STMT(return_));
+    BlockStmt fn_body = (BlockStmt){
+        .stmts = CREATE_LIST_STMT(body),
+    };
+    fn.body = CREATE_BLOCK_STMT(fn_body);
+    assert_stmt_ast(
+        " fn hola (a: Number, b: String): Bool { return true; } ",
+        CREATE_FUNCTION_STMT(fn));
+}
+
 static void should_parse_empty_blocks() {
     BlockStmt block = (BlockStmt){
         .stmts = CREATE_LIST_STMT(create_list_stmt()),
@@ -473,6 +503,7 @@ static void should_parse_empty_blocks() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_parse_returns),
         cmocka_unit_test(should_parse_empty_blocks),
         cmocka_unit_test(should_parse_function_declarations),
         cmocka_unit_test(should_parse_blocks),

@@ -229,6 +229,11 @@ static Token scan_identifier(Lexer* lexer) {
             return create_token(lexer, TOKEN_VAR);
         }
     }
+    case 'r': {
+        if (match_subtoken(lexer, "eturn", 1, 6)) {
+            return create_token(lexer, TOKEN_RETURN);
+        }
+    }
     case 'p': {
         if (match_subtoken(lexer, "rint", 1, 5)) {
             return create_token(lexer, TOKEN_PRINT);

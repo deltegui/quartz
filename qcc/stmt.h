@@ -11,6 +11,7 @@ typedef enum {
     LIST_STMT,
     PRINT_STMT,
     BLOCK_STMT,
+    RETURN_STMT,
 } StmtKind;
 
 struct _Stmt;
@@ -35,13 +36,17 @@ typedef struct {
 
 typedef struct {
     int capacity;
-    int length; // TODO rename this to size.
+    int size;
     struct _Stmt** stmts;
 } ListStmt;
 
 typedef struct {
     struct _Stmt* stmts;
 } BlockStmt;
+
+typedef struct {
+    Expr* inner;
+} ReturnStmt;
 
 ListStmt* create_list_stmt();
 void list_stmt_add(ListStmt* list, struct _Stmt* stmt);
@@ -55,6 +60,7 @@ typedef struct _Stmt {
         ListStmt* list;
         PrintStmt print;
         BlockStmt block;
+        ReturnStmt return_;
     };
 } Stmt;
 
@@ -64,6 +70,7 @@ typedef struct {
     void (*visit_function)(void* ctx, FunctionStmt* function);
     void (*visit_print)(void* ctx, PrintStmt* print);
     void (*visit_block)(void* ctx, BlockStmt* block);
+    void (*visit_return)(void* ctx, ReturnStmt* ret);
 } StmtVisitor;
 
 #define IS_VAR(stmt) (stmt.kind == VAR_STMT)
@@ -72,7 +79,9 @@ typedef struct {
 #define IS_LIST(stmt) (stmt.kind == LIST_STMT)
 #define IS_PRINT(stmt) (stmt.kind == PRINT_STMT)
 #define IS_BLOCK(stmt) (stmt.kind == BLOCK_STMT)
+#define IS_RETURN(stmt) (stmt.kind == RETURN_STMT)
 
+#define CREATE_RETURN_STMT(return_) create_stmt(RETURN_STMT, &return_)
 #define CREATE_VAR_STMT(var) create_stmt(VAR_STMT, &var)
 #define CREATE_FUNCTION_STMT(fn) create_stmt(FUNCTION_STMT, &fn)
 #define CREATE_EXPR_STMT(expr) create_stmt(EXPR_STMT, &expr)

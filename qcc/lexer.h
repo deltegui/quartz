@@ -36,6 +36,7 @@ typedef enum {
     TOKEN_GREATER_EQUAL,
 
     // Multi-character tokens
+    TOKEN_RETURN,
     TOKEN_FUNCTION,
     TOKEN_VAR,
     TOKEN_NUMBER,

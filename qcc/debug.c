@@ -226,6 +226,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_BOOL_TYPE: return "TokenBoolType";
     case TOKEN_NIL_TYPE: return "TokenNilType";
     case TOKEN_COMMA: return "TokenComma";
+    case TOKEN_RETURN: return "TokenReturn";
     default: return "Unknown";
     }
 }
@@ -262,6 +263,7 @@ static void print_var(void* ctx, VarStmt* var);
 static void print_print(void* ctx, PrintStmt* var);
 static void print_block(void* ctx, BlockStmt* block);
 static void print_function(void* ctx, FunctionStmt* function);
+static void print_return(void* ctx, ReturnStmt* return_);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -269,6 +271,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_print = print_print,
     .visit_block = print_block,
     .visit_function = print_function,
+    .visit_return = print_return,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -314,6 +317,14 @@ static void print_expr(void* ctx, ExprStmt* expr) {
     pretty_print("Expr Stmt: [\n");
     OFFSET({
         ACCEPT_EXPR(expr->inner);
+    });
+    pretty_print("]\n");
+}
+
+static void print_return(void* ctx, ReturnStmt* return_) {
+    pretty_print("Return Stmt: [\n");
+    OFFSET({
+        ACCEPT_EXPR(return_->inner);
     });
     pretty_print("]\n");
 }

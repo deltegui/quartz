@@ -40,7 +40,7 @@ Symbol create_symbol(SymbolName name, int line, Type type) {
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
     };
-    if (symbol.kind == FUNCTION_SYMBOL) {
+    if (symbol.kind == SYMBOL_FUNCTION) {
         symbol.function = create_function_symbol();
     }
     return symbol;
@@ -48,14 +48,14 @@ Symbol create_symbol(SymbolName name, int line, Type type) {
 
 static SymbolKind kind_from_type(Type type) {
     switch (type) {
-    case FUNCTION_TYPE: return FUNCTION_SYMBOL;
-    default: return VAR_SYMBOL;
+    case TYPE_FUNCTION: return SYMBOL_FUNCTION;
+    default: return SYMBOL_VAR;
     }
 }
 
 static FunctionSymbol create_function_symbol() {
     FunctionSymbol fn_sym = (FunctionSymbol) {
-        .return_type = NIL_TYPE
+        .return_type = TYPE_NIL
     };
     init_param_array(&fn_sym.params);
     init_param_array(&fn_sym.param_types);
@@ -64,12 +64,12 @@ static FunctionSymbol create_function_symbol() {
 
 void free_symbol(Symbol* symbol) {
     switch (symbol->kind) {
-    case FUNCTION_SYMBOL: {
+    case SYMBOL_FUNCTION: {
         free_param_array(&symbol->function.params);
         free_param_array(&symbol->function.param_types);
         break;
     }
-    case VAR_SYMBOL:
+    case SYMBOL_VAR:
         break;
     }
 }
@@ -125,7 +125,7 @@ static void grow_symbol_table(SymbolTable* table) {
     for (int i = 0; i < table->capacity; i++) {
         Symbol* symbol = &table->entries[i];
         symbol->declaration_line = 0;
-        symbol->type = UNKNOWN_TYPE;
+        symbol->type = TYPE_UNKNOWN;
         symbol->name.str = NULL;
         symbol->name.length = 0;
         symbol->name.hash = 0;

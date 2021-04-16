@@ -5,11 +5,11 @@
 
 static void free_object(Obj* obj) {
     switch (obj->kind) {
-    case STRING_OBJ: {
+    case OBJ_STRING: {
         FREE(ObjString, obj);
         break;
     }
-    case FUNCTION_OBJ: {
+    case OBJ_FUNCTION: {
         ObjFunction* func = OBJ_AS_FUNCTION(obj);
         free_chunk(&func->chunk);
         FREE(ObjFunction, obj);

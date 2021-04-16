@@ -28,10 +28,10 @@ void value_print(Value val);
 bool value_equals(Value first, Value second);
 Value value_default(Type type);
 
-#define NUMBER_VALUE(i) ((Value){ NUMBER_TYPE, VALUE_NUMBER, { .number = i } })
-#define BOOL_VALUE(b) ((Value){ BOOL_TYPE, VALUE_BOOL, { .boolean = b } })
-#define NIL_VALUE() ((Value){ NIL_TYPE, VALUE_NIL, { .object = NULL } })
-#define OBJ_VALUE(obj) ((Value){ UNKNOWN_TYPE, VALUE_OBJ, { .object = (Obj*) obj } })
+#define NUMBER_VALUE(i) ((Value){ TYPE_NUMBER, VALUE_NUMBER, { .number = i } })
+#define BOOL_VALUE(b) ((Value){ TYPE_BOOL, VALUE_BOOL, { .boolean = b } })
+#define NIL_VALUE() ((Value){ TYPE_NIL, VALUE_NIL, { .object = NULL } })
+#define OBJ_VALUE(obj) ((Value){ TYPE_UNKNOWN, VALUE_OBJ, { .object = (Obj*) obj } })
 
 #define VALUE_IS_NUMBER(val) (val.kind == VALUE_NUMBER)
 #define VALUE_IS_BOOL(val) (val.kind == VALUE_BOOL)

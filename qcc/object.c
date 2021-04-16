@@ -8,7 +8,7 @@ static Obj* alloc_obj(size_t size, ObjKind kind);
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash);
 
 #define ALLOC_OBJ(type, kind) (type*) alloc_obj(sizeof(type), kind)
-#define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, STRING_OBJ)
+#define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, OBJ_STRING)
 
 static Obj* alloc_obj(size_t size, ObjKind kind) {
     Obj* obj = (Obj*) qvm_realloc(NULL, 0, size);
@@ -19,7 +19,7 @@ static Obj* alloc_obj(size_t size, ObjKind kind) {
 }
 
 ObjFunction* new_function(const char* name, int length) {
-    ObjFunction* func = ALLOC_OBJ(ObjFunction, FUNCTION_OBJ);
+    ObjFunction* func = ALLOC_OBJ(ObjFunction, OBJ_FUNCTION);
     init_chunk(&func->chunk);
     func->arity = 0;
     func->name = copy_string(name, length);
@@ -65,11 +65,11 @@ ObjString* concat_string(ObjString* first, ObjString* second) {
 
 void print_object(Obj* obj) {
     switch (obj->kind) {
-    case STRING_OBJ: {
+    case OBJ_STRING: {
         printf("'%s'", OBJ_AS_CSTRING(obj));
         break;
     }
-    case FUNCTION_OBJ: {
+    case OBJ_FUNCTION: {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
         printf("<fn '%s'>", OBJ_AS_CSTRING(fn->name));
         break;

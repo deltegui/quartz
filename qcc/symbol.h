@@ -13,8 +13,8 @@ typedef struct {
 SymbolName create_symbol_name(const char* str, int length);
 
 typedef enum {
-    FUNCTION_SYMBOL,
-    VAR_SYMBOL
+    SYMBOL_FUNCTION,
+    SYMBOL_VAR
 } SymbolKind;
 
 typedef struct {

@@ -238,10 +238,10 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_PRINT: return "TokenPrint";
     case TOKEN_SEMICOLON: return "TokenSemicolon";
     case TOKEN_COLON: return "TokenColon";
-    case TOKEN_NUMBER_TYPE: return "TokenNumberType";
-    case TOKEN_STRING_TYPE: return "TokenStringType";
-    case TOKEN_BOOL_TYPE: return "TokenBoolType";
-    case TOKEN_NIL_TYPE: return "TokenNilType";
+    case TOKEN_TYPE_NUMBER: return "TokenNumberType";
+    case TOKEN_TYPE_STRING: return "TokenStringType";
+    case TOKEN_TYPE_BOOL: return "TokenBoolType";
+    case TOKEN_TYPE_NIL: return "TokenNilType";
     case TOKEN_COMMA: return "TokenComma";
     case TOKEN_RETURN: return "TokenReturn";
     default: return "Unknown";

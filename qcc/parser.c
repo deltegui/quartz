@@ -269,15 +269,15 @@ Stmt* parse(Parser* parser) {
 }
 
 static Stmt* declaration_block(Parser* parser) {
-    ListStmt* list = create_list_stmt();
+    ListStmt* list = create_stmt_list();
     while (parser->current.kind != TOKEN_RIGHT_BRACE && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
-        list_stmt_add(list, stmt);
+        stmt_list_add(list, stmt);
         if (parser->panic_mode) {
             syncronize(parser);
         }
     }
-    return CREATE_LIST_STMT(list);
+    return CREATE_STMT_LIST(list);
 }
 
 static Stmt* declaration(Parser* parser) {
@@ -311,7 +311,7 @@ static Stmt* block_stmt(Parser* parser) {
     block.stmts = declaration_block(parser);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected block to end with '}'");
     end_scope(parser);
-    return CREATE_BLOCK_STMT(block);
+    return CREATE_STMT_BLOCK(block);
 }
 
 static Stmt* variable_decl(Parser* parser) {
@@ -320,11 +320,11 @@ static Stmt* variable_decl(Parser* parser) {
     var.identifier = parser->current;
     advance(parser); // consume identifier
 
-    Type var_type = UNKNOWN_TYPE;
+    Type var_type = TYPE_UNKNOWN;
     if (parser->current.kind == TOKEN_COLON) {
         advance(parser); // consume :
         var_type = type_from_token_kind(parser->current.kind);
-        if (var_type == UNKNOWN_TYPE) {
+        if (var_type == TYPE_UNKNOWN) {
             error(parser, "Unkown type in variable declaration");
         }
         advance(parser); // consume type
@@ -339,7 +339,7 @@ static Stmt* variable_decl(Parser* parser) {
     }
 
     consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
-    return CREATE_VAR_STMT(var);
+    return CREATE_STMT_VAR(var);
 }
 
 static Stmt* function_decl(Parser* parser) {
@@ -348,7 +348,7 @@ static Stmt* function_decl(Parser* parser) {
     FunctionStmt fn = (FunctionStmt){
         .identifier = parser->current,
     };
-    Symbol symbol = create_symbol_from_token(&fn.identifier, FUNCTION_TYPE);
+    Symbol symbol = create_symbol_from_token(&fn.identifier, TYPE_FUNCTION);
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
@@ -360,7 +360,7 @@ static Stmt* function_decl(Parser* parser) {
     if (parser->current.kind == TOKEN_COLON) {
         advance(parser); // consume colon
         Type return_type = type_from_token_kind(parser->current.kind);
-        if (return_type == UNKNOWN_TYPE) {
+        if (return_type == TYPE_UNKNOWN) {
             error(
                 parser,
                 "Unknown return type in function '%.*s'",
@@ -375,7 +375,7 @@ static Stmt* function_decl(Parser* parser) {
     add_params_to_body(parser, &symbol.function);
 
     register_symbol(parser, symbol);
-    return CREATE_FUNCTION_STMT(fn);
+    return CREATE_STMT_FUNCTION(fn);
 }
 
 static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn_sym) {
@@ -392,7 +392,7 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
         }
         advance(parser); // cosume colon
         Type type = type_from_token_kind(parser->current.kind);
-        if (type == UNKNOWN_TYPE) {
+        if (type == TYPE_UNKNOWN) {
             error (parser, "Unknown type in function param in function declaration");
             break;
         }
@@ -432,7 +432,7 @@ static Stmt* print_stmt(Parser* parser) {
         .inner = expr,
     };
     consume(parser, TOKEN_SEMICOLON, "Expected print statment to end with ';'");
-    return CREATE_PRINT_STMT(print_stmt);
+    return CREATE_STMT_PRINT(print_stmt);
 }
 
 static Stmt* return_stmt(Parser* parser) {
@@ -442,7 +442,7 @@ static Stmt* return_stmt(Parser* parser) {
         .inner = expr,
     };
     consume(parser, TOKEN_SEMICOLON, "Expected return statment to end with ';'");
-    return CREATE_RETURN_STMT(return_stmt);
+    return CREATE_STMT_RETURN(return_stmt);
 }
 
 static Stmt* expr_stmt(Parser* parser) {
@@ -451,7 +451,7 @@ static Stmt* expr_stmt(Parser* parser) {
         .inner = expr,
     };
     consume(parser, TOKEN_SEMICOLON, "Expected expression to end with ';'");
-    return CREATE_EXPR_STMT(expr_stmt);
+    return CREATE_STMT_EXPR(expr_stmt);
 }
 
 static Expr* expression(Parser* parser) {

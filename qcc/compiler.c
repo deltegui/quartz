@@ -368,7 +368,7 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
     case TOKEN_STRING: {
         ObjString* str = copy_string(literal->literal.start, literal->literal.length);
         value = OBJ_VALUE(str);
-        value.type = STRING_TYPE;
+        value.type = TYPE_STRING;
         break;
     }
     default:

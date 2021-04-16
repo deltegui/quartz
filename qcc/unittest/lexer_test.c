@@ -291,7 +291,7 @@ static void should_scan_global_declarations_with_types() {
             .length = 6,
             .line = 1,
             .start = "Number",
-            .kind = TOKEN_NUMBER_TYPE
+            .kind = TOKEN_TYPE_NUMBER
         },
         (Token){
             .length = 1,
@@ -318,10 +318,10 @@ static void should_tokenize_type_names() {
     assert_types(
         "  Number String   Bool Nil ",
         4,
-        TOKEN_NUMBER_TYPE,
-        TOKEN_STRING_TYPE,
-        TOKEN_BOOL_TYPE,
-        TOKEN_NIL_TYPE
+        TOKEN_TYPE_NUMBER,
+        TOKEN_TYPE_STRING,
+        TOKEN_TYPE_BOOL,
+        TOKEN_TYPE_NIL
     );
 }
 
@@ -334,11 +334,11 @@ static void should_tokenize_function_declarations() {
         TOKEN_LEFT_PAREN,
         TOKEN_IDENTIFIER,
         TOKEN_COLON,
-        TOKEN_STRING_TYPE,
+        TOKEN_TYPE_STRING,
         TOKEN_COMMA,
         TOKEN_IDENTIFIER,
         TOKEN_COLON,
-        TOKEN_NUMBER_TYPE,
+        TOKEN_TYPE_NUMBER,
         TOKEN_RIGHT_PAREN,
         TOKEN_LEFT_BRACE,
         TOKEN_RIGHT_BRACE

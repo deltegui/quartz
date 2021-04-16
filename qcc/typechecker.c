@@ -63,7 +63,7 @@ static void error_last_type_match(Typechecker* checker, Token* where, Type first
 
 static void error(Typechecker* checker, Token* token, const char* message, ...) {
     checker->has_error = true;
-    checker->last_type = UNKNOWN_TYPE;
+    checker->last_type = TYPE_UNKNOWN;
     va_list params;
     va_start(params, message);
     printf("[Line %d] Type error: ",token->line);
@@ -113,7 +113,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     if (var->definition == NULL) {
-        if (symbol->type == UNKNOWN_TYPE) {
+        if (symbol->type == TYPE_UNKNOWN) {
             error(
                 checker,
                 &var->identifier,
@@ -127,7 +127,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     if (symbol->type == checker->last_type) {
         return;
     }
-    if (symbol->type == UNKNOWN_TYPE) {
+    if (symbol->type == TYPE_UNKNOWN) {
         symbol->type = checker->last_type;
         return;
     }
@@ -170,7 +170,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     ACCEPT_STMT(ctx, function->body);
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
-    assert(symbol->kind == FUNCTION_SYMBOL);
+    assert(symbol->kind == SYMBOL_FUNCTION);
     if (symbol->function.return_type != checker->last_type) {
         error_last_type_match(
             checker,
@@ -191,20 +191,20 @@ static void typecheck_literal(void* ctx, LiteralExpr* literal) {
 
     switch (literal->literal.kind) {
     case TOKEN_NUMBER: {
-        checker->last_type = NUMBER_TYPE;
+        checker->last_type = TYPE_NUMBER;
         return;
     }
     case TOKEN_TRUE:
     case TOKEN_FALSE: {
-        checker->last_type = BOOL_TYPE;
+        checker->last_type = TYPE_BOOL;
         return;
     }
     case TOKEN_NIL: {
-        checker->last_type = NIL_TYPE;
+        checker->last_type = TYPE_NIL;
         return;
     }
     case TOKEN_STRING: {
-        checker->last_type = STRING_TYPE;
+        checker->last_type = TYPE_STRING;
         return;
     }
     default: {
@@ -230,11 +230,11 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
 
     switch (binary->op.kind) {
     case TOKEN_PLUS: {
-        if (left_type == STRING_TYPE && right_type == STRING_TYPE) {
-            checker->last_type = STRING_TYPE;
+        if (left_type == TYPE_STRING && right_type == TYPE_STRING) {
+            checker->last_type = TYPE_STRING;
             return;
         }
-        // just continue to NUMBER_TYPE
+        // just continue to TYPE_NUMBER
     }
     case TOKEN_LOWER:
     case TOKEN_LOWER_EQUAL:
@@ -244,8 +244,8 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_STAR:
     case TOKEN_PERCENT:
     case TOKEN_SLASH: {
-        if (left_type == NUMBER_TYPE && right_type == NUMBER_TYPE) {
-            checker->last_type = NUMBER_TYPE;
+        if (left_type == TYPE_NUMBER && right_type == TYPE_NUMBER) {
+            checker->last_type = TYPE_NUMBER;
             return;
         }
         ERROR("Invalid types for numeric operation");
@@ -253,8 +253,8 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     }
     case TOKEN_AND:
     case TOKEN_OR: {
-        if (left_type == BOOL_TYPE && right_type == BOOL_TYPE) {
-            checker->last_type = BOOL_TYPE;
+        if (left_type == TYPE_BOOL && right_type == TYPE_BOOL) {
+            checker->last_type = TYPE_BOOL;
             return;
         }
         ERROR("Invalid types for boolean operation");
@@ -263,7 +263,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_EQUAL_EQUAL:
     case TOKEN_BANG_EQUAL: {
         if (left_type == right_type) {
-            checker->last_type = BOOL_TYPE;
+            checker->last_type = TYPE_BOOL;
             return;
         }
         ERROR("Elements with different types arent coparable");
@@ -290,8 +290,8 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 
     switch (unary->op.kind) {
     case TOKEN_BANG: {
-        if (inner_type == BOOL_TYPE) {
-            checker->last_type = BOOL_TYPE;
+        if (inner_type == TYPE_BOOL) {
+            checker->last_type = TYPE_BOOL;
             return;
         }
         ERROR("Invalid type for not operation");
@@ -299,7 +299,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     }
     case TOKEN_PLUS:
     case TOKEN_MINUS: {
-        if (inner_type == NUMBER_TYPE) {
+        if (inner_type == TYPE_NUMBER) {
             checker->last_type = inner_type;
             return;
         }

@@ -47,10 +47,10 @@ typedef enum {
     TOKEN_PRINT,
     TOKEN_IDENTIFIER,
 
-    TOKEN_NUMBER_TYPE,
-    TOKEN_STRING_TYPE,
-    TOKEN_BOOL_TYPE,
-    TOKEN_NIL_TYPE
+    TOKEN_TYPE_NUMBER,
+    TOKEN_TYPE_STRING,
+    TOKEN_TYPE_BOOL,
+    TOKEN_TYPE_NIL
 } TokenKind;
 
 typedef struct {

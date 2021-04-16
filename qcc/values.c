@@ -14,12 +14,12 @@ void value_print(Value val) {
 }
 
 Value value_default(Type type) {
-    assert(type != UNKNOWN_TYPE);
+    assert(type != TYPE_UNKNOWN);
     switch (type) {
-    case NUMBER_TYPE: return NUMBER_VALUE(0);
-    case BOOL_TYPE: return BOOL_VALUE(false);
-    case STRING_TYPE: return OBJ_VALUE(copy_string("", 0));
-    case NIL_TYPE:
+    case TYPE_NUMBER: return NUMBER_VALUE(0);
+    case TYPE_BOOL: return BOOL_VALUE(false);
+    case TYPE_STRING: return OBJ_VALUE(copy_string("", 0));
+    case TYPE_NIL:
     default:
         return NIL_VALUE();
     }

@@ -241,20 +241,20 @@ static Token scan_identifier(Lexer* lexer) {
     }
     case 'N': {
         if (match_subtoken(lexer, "umber", 1, 6)) {
-            return create_token(lexer, TOKEN_NUMBER_TYPE);
+            return create_token(lexer, TOKEN_TYPE_NUMBER);
         }
         if (match_subtoken(lexer, "il", 1, 3)) {
-            return create_token(lexer, TOKEN_NIL_TYPE);
+            return create_token(lexer, TOKEN_TYPE_NIL);
         }
     }
     case 'S': {
         if (match_subtoken(lexer, "tring", 1, 6)) {
-            return create_token(lexer, TOKEN_STRING_TYPE);
+            return create_token(lexer, TOKEN_TYPE_STRING);
         }
     }
     case 'B': {
         if (match_subtoken(lexer, "ool", 1, 4)) {
-            return create_token(lexer, TOKEN_BOOL_TYPE);
+            return create_token(lexer, TOKEN_TYPE_BOOL);
         }
     }
     }

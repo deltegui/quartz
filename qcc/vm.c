@@ -89,7 +89,7 @@ static void run(ObjFunction* func) {
         case OP_ADD: {
             Value second = stack_peek(0);
             Value first = stack_peek(1);
-            if (first.type == STRING_TYPE && second.type == STRING_TYPE) {
+            if (first.type == TYPE_STRING && second.type == TYPE_STRING) {
                 STRING_CONCAT();
                 break;
             }

@@ -29,37 +29,37 @@ static inline void assert_has_errors(const char* source) {
 static void assert_stmt_equals(Stmt* first, Stmt* second) {
     assert_true(first->kind == second->kind);
     switch (first->kind) {
-    case EXPR_STMT: {
+    case STMT_EXPR: {
         assert_expr_equals(first->expr.inner, second->expr.inner);
         break;
     }
-    case VAR_STMT: {
+    case STMT_VAR: {
         assert_true(token_equals(
             &first->var.identifier,
             &second->var.identifier));
         assert_expr_equals(first->var.definition, second->var.definition);
         break;
     }
-    case LIST_STMT: {
+    case STMT_LIST: {
         assert_list_stmt_equals(first->list, second->list);
         break;
     }
-    case PRINT_STMT: {
+    case STMT_PRINT: {
         assert_expr_equals(first->print.inner, second->print.inner);
         break;
     }
-    case BLOCK_STMT: {
+    case STMT_BLOCK: {
         assert_stmt_equals(first->block.stmts, second->block.stmts);
         break;
     }
-    case FUNCTION_STMT: {
+    case STMT_FUNCTION: {
         assert_true(token_equals(
             &first->function.identifier,
             &second->function.identifier));
         assert_stmt_equals(first->function.body, second->function.body);
         break;
     }
-    case RETURN_STMT: {
+    case STMT_RETURN: {
         assert_expr_equals(first->return_.inner, second->return_.inner);
         break;
     }
@@ -126,18 +126,18 @@ static void assert_ast(const char* source, Stmt* expected_ast) {
 }
 
 static void assert_stmt_ast(const char* source, Stmt* expected) {
-    ListStmt* list = create_list_stmt();
-    list_stmt_add(list, expected);
-    Stmt* stmt = CREATE_LIST_STMT(list);
+    ListStmt* list = create_stmt_list();
+    stmt_list_add(list, expected);
+    Stmt* stmt = CREATE_STMT_LIST(list);
     assert_ast(source, stmt);
     free_stmt(stmt);
 }
 
 static void assert_expr_ast(const char* source, Expr* expected) {
-    ExprStmt expr_stmt = (ExprStmt){
+    ExprStmt stmt_expr = (ExprStmt){
         .inner = expected,
     };
-    assert_stmt_ast(source, CREATE_EXPR_STMT(expr_stmt));
+    assert_stmt_ast(source, CREATE_STMT_EXPR(stmt_expr));
 }
 
 LiteralExpr true_ = (LiteralExpr){
@@ -245,14 +245,14 @@ Token string_type_token = (Token){
     .length = 6,
     .line = 1,
     .start = "String",
-    .kind = TOKEN_STRING_TYPE
+    .kind = TOKEN_TYPE_STRING
 };
 
 Token number_type_token = (Token){
     .length = 6,
     .line = 1,
     .start = "Number",
-    .kind = TOKEN_NUMBER_TYPE
+    .kind = TOKEN_TYPE_NUMBER
 };
 
 Token example_str = (Token){
@@ -380,7 +380,7 @@ static void should_parse_global_variables() {
     };
     assert_stmt_ast(
         " var a = 2; ",
-        CREATE_VAR_STMT(var)
+        CREATE_STMT_VAR(var)
     );
 }
 
@@ -393,11 +393,11 @@ static void should_use_of_globals() {
         .inner = CREATE_INDENTIFIER_EXPR(a_identifier)
     };
 
-    ListStmt* list = create_list_stmt();
-    list_stmt_add(list, CREATE_VAR_STMT(var));
-    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+    ListStmt* list = create_stmt_list();
+    stmt_list_add(list, CREATE_STMT_VAR(var));
+    stmt_list_add(list, CREATE_STMT_EXPR(expr));
 
-    Stmt* stmt = CREATE_LIST_STMT(list);
+    Stmt* stmt = CREATE_STMT_LIST(list);
     assert_ast(" var a = 5; a ; ", stmt);
     free_stmt(stmt);
 }
@@ -415,11 +415,11 @@ static void should_assign_vars() {
         .inner = CREATE_ASSIGNMENT_EXPR(assigment),
     };
 
-    ListStmt* list = create_list_stmt();
-    list_stmt_add(list, CREATE_VAR_STMT(var));
-    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+    ListStmt* list = create_stmt_list();
+    stmt_list_add(list, CREATE_STMT_VAR(var));
+    stmt_list_add(list, CREATE_STMT_EXPR(expr));
 
-    Stmt* stmt = CREATE_LIST_STMT(list);
+    Stmt* stmt = CREATE_STMT_LIST(list);
     assert_ast(" var a = 5; a = 2; ", stmt);
     free_stmt(stmt);
 }
@@ -437,17 +437,17 @@ static void should_parse_blocks() {
         .inner = CREATE_ASSIGNMENT_EXPR(assigment),
     };
 
-    ListStmt* list = create_list_stmt();
-    list_stmt_add(list, CREATE_VAR_STMT(var));
-    list_stmt_add(list, CREATE_EXPR_STMT(expr));
+    ListStmt* list = create_stmt_list();
+    stmt_list_add(list, CREATE_STMT_VAR(var));
+    stmt_list_add(list, CREATE_STMT_EXPR(expr));
     BlockStmt block = (BlockStmt){
-        .stmts = CREATE_LIST_STMT(list),
+        .stmts = CREATE_STMT_LIST(list),
     };
 
-    ListStmt* global = create_list_stmt();
-    list_stmt_add(global, CREATE_BLOCK_STMT(block));
+    ListStmt* global = create_stmt_list();
+    stmt_list_add(global, CREATE_STMT_BLOCK(block));
 
-    Stmt* stmt = CREATE_LIST_STMT(global);
+    Stmt* stmt = CREATE_STMT_LIST(global);
     assert_ast(" { var a = 5; a = 2; } ", stmt);
     free_stmt(stmt);
 }
@@ -462,10 +462,10 @@ static void should_parse_function_declarations() {
     };
     fn.identifier = fn_identifier;
     BlockStmt fn_body = (BlockStmt){
-        .stmts = CREATE_LIST_STMT(create_list_stmt()),
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
     };
-    fn.body = CREATE_BLOCK_STMT(fn_body);
-    assert_stmt_ast(" fn hola (a: Number, b: String) {} ", CREATE_FUNCTION_STMT(fn));
+    fn.body = CREATE_STMT_BLOCK(fn_body);
+    assert_stmt_ast(" fn hola (a: Number, b: String) {} ", CREATE_STMT_FUNCTION(fn));
 }
 
 static void should_parse_returns() {
@@ -477,25 +477,25 @@ static void should_parse_returns() {
         .kind = TOKEN_IDENTIFIER,
     };
     fn.identifier = fn_identifier;
-    ListStmt* body = create_list_stmt();
+    ListStmt* body = create_stmt_list();
     ReturnStmt return_ = (ReturnStmt){
         .inner = CREATE_LITERAL_EXPR(true_),
     };
-    list_stmt_add(body, CREATE_RETURN_STMT(return_));
+    stmt_list_add(body, CREATE_STMT_RETURN(return_));
     BlockStmt fn_body = (BlockStmt){
-        .stmts = CREATE_LIST_STMT(body),
+        .stmts = CREATE_STMT_LIST(body),
     };
-    fn.body = CREATE_BLOCK_STMT(fn_body);
+    fn.body = CREATE_STMT_BLOCK(fn_body);
     assert_stmt_ast(
         " fn hola (a: Number, b: String): Bool { return true; } ",
-        CREATE_FUNCTION_STMT(fn));
+        CREATE_STMT_FUNCTION(fn));
 }
 
 static void should_parse_empty_blocks() {
     BlockStmt block = (BlockStmt){
-        .stmts = CREATE_LIST_STMT(create_list_stmt()),
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
     };
-    Stmt* stmt = CREATE_BLOCK_STMT(block);
+    Stmt* stmt = CREATE_STMT_BLOCK(block);
     assert_stmt_ast("{   } ", stmt);
 }
 

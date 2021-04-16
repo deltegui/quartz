@@ -52,116 +52,116 @@ symbol_t sym[] = {
         .str = "a",
         .length = 1,
         .declaration_line = 12,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "b",
         .length = 1,
         .declaration_line = 12,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "c",
         .length = 1,
         .declaration_line = 15,
-        .type = NUMBER_TYPE
+        .type = TYPE_NUMBER
     },
     {
         .str = "d",
         .length = 1,
         .declaration_line = 16,
-        .type = BOOL_TYPE
+        .type = TYPE_BOOL
     },
     {
         .str = "e",
         .length = 1,
         .declaration_line = 17,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "f",
         .length = 1,
         .declaration_line = 20,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "g",
         .length = 1,
         .declaration_line = 19,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "h",
         .length = 1,
         .declaration_line = 22,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "i",
         .length = 1,
         .declaration_line = 25,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "j",
         .length = 1,
         .declaration_line = 28,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "k",
         .length = 1,
         .declaration_line = 29,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "l",
         .length = 1,
         .declaration_line = 34,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "momo",
         .length = 4,
         .declaration_line = 145,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "mamon",
         .length = 5,
         .declaration_line = 223,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "paquito66",
         .length = 9,
         .declaration_line = 123,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "z",
         .length = 1,
         .declaration_line = 89,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "y",
         .length = 1,
         .declaration_line = 43,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
     {
         .str = "x",
         .length = 1,
         .declaration_line = 45,
-        .type = STRING_TYPE
+        .type = TYPE_STRING
     },
 };
 
 static void should_insert_symbols() {
     TABLE({
         SymbolName key = create_symbol_name("hello", 5);
-        Symbol entry = create_symbol(key, 1, STRING_TYPE);
+        Symbol entry = create_symbol(key, 1, TYPE_STRING);
         symbol_insert(&table, entry);
         Symbol* stored = symbol_lookup(&table, &key);
         assert_entry(&entry, stored);
@@ -198,7 +198,7 @@ static void should_return_null_if_symbol_does_not_exist() {
         assert_null(entry);
 
         SymbolName manolo = create_symbol_name("manolo", 6);
-        Symbol manolo_entry = create_symbol(manolo, 1, UNKNOWN_TYPE);
+        Symbol manolo_entry = create_symbol(manolo, 1, TYPE_UNKNOWN);
         symbol_insert(&table, manolo_entry);
         entry = symbol_lookup(&table, &alberto);
         assert_null(entry);
@@ -211,11 +211,11 @@ static void scoped_symbol_should_insert_and_lookup() {
     SymbolName c = create_symbol_name("c", 1);
     SymbolName d = create_symbol_name("d", 1);
     SymbolName e = create_symbol_name("e", 1);
-    Symbol sym_a = create_symbol(a, 1, NUMBER_TYPE);
-    Symbol sym_b = create_symbol(b, 2, NUMBER_TYPE);
-    Symbol sym_c = create_symbol(c, 3, NUMBER_TYPE);
-    Symbol sym_d = create_symbol(d, 4, NUMBER_TYPE);
-    Symbol sym_e = create_symbol(e, 5, NUMBER_TYPE);
+    Symbol sym_a = create_symbol(a, 1, TYPE_NUMBER);
+    Symbol sym_b = create_symbol(b, 2, TYPE_NUMBER);
+    Symbol sym_c = create_symbol(c, 3, TYPE_NUMBER);
+    Symbol sym_d = create_symbol(d, 4, TYPE_NUMBER);
+    Symbol sym_e = create_symbol(e, 5, TYPE_NUMBER);
 
     SCOPED_TABLE({
         /*
@@ -287,8 +287,8 @@ static void scoped_symbol_should_insert_and_lookup() {
 static void scoped_symbol_should_insert_globals() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName b = create_symbol_name("b", 1);
-    Symbol sym_a = create_symbol(a, 1, NUMBER_TYPE);
-    Symbol sym_b = create_symbol(b, 2, NUMBER_TYPE);
+    Symbol sym_a = create_symbol(a, 1, TYPE_NUMBER);
+    Symbol sym_b = create_symbol(b, 2, TYPE_NUMBER);
     SCOPED_TABLE({
         scoped_symbol_insert(&table, sym_a);
         scoped_symbol_insert(&table, sym_b);
@@ -302,8 +302,8 @@ static void scoped_symbol_should_insert_globals() {
 static void scoped_symbol_should_insert_locals() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName b = create_symbol_name("b", 1);
-    Symbol sym_a = create_symbol(a, 1, NUMBER_TYPE);
-    Symbol sym_b = create_symbol(b, 2, NUMBER_TYPE);
+    Symbol sym_a = create_symbol(a, 1, TYPE_NUMBER);
+    Symbol sym_b = create_symbol(b, 2, TYPE_NUMBER);
 
     SCOPED_TABLE({
         scoped_symbol_insert(&table, sym_a);
@@ -327,9 +327,9 @@ static void could_open_previous_scope_and_modify_it() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName b = create_symbol_name("b", 1);
     SymbolName c = create_symbol_name("c", 1);
-    Symbol sym_a = create_symbol(a, 1, NUMBER_TYPE);
-    Symbol sym_b = create_symbol(b, 2, NUMBER_TYPE);
-    Symbol sym_c = create_symbol(c, 3, NUMBER_TYPE);
+    Symbol sym_a = create_symbol(a, 1, TYPE_NUMBER);
+    Symbol sym_b = create_symbol(b, 2, TYPE_NUMBER);
+    Symbol sym_c = create_symbol(c, 3, TYPE_NUMBER);
 
     SCOPED_TABLE({
         scoped_symbol_insert(&table, sym_a);

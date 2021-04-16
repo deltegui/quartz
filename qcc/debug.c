@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include "expr.h"
 #include "type.h"
+#include "object.h"
 
 static void symbol_table_print(SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
@@ -69,13 +70,13 @@ static const char* OpCodeStrings[] = {
     "OP_CONSTANT",
     "OP_CONSTANT_LONG",
     "OP_DEFINE_GLOBAL",
-	"OP_GET_GLOBAL",
-	"OP_SET_GLOBAL",
+    "OP_GET_GLOBAL",
+    "OP_SET_GLOBAL",
     "OP_DEFINE_GLOBAL_LONG",
-	"OP_GET_GLOBAL_LONG",
-	"OP_SET_GLOBAL_LONG",
-	"OP_GET_LOCAL",
-	"OP_SET_LOCAL",
+    "OP_GET_GLOBAL_LONG",
+    "OP_SET_GLOBAL_LONG",
+    "OP_GET_LOCAL",
+    "OP_SET_LOCAL",
 };
 
 void opcode_print(uint8_t op) {
@@ -98,6 +99,7 @@ static void chunk_value_print(Chunk* chunk, int index);
 static int chunk_opcode_print(Chunk* chunk, int i);
 static int chunk_short_print(Chunk* chunk, int i);
 static int chunk_long_print(Chunk* chunk, int i);
+static void standalone_chunk_print(Chunk* chunk);
 
 static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
     printf("[%02d;%02d]\t", i, chunk->lines[i]);
@@ -135,8 +137,8 @@ static int chunk_long_print(Chunk* chunk, int i) {
     return ++i;
 }
 
-void chunk_print(Chunk* chunk) {
-    printf("--------[ CHUNK DUMP ]--------\n\n");
+// TODO refactor.
+static void standalone_chunk_print(Chunk* chunk) {
     for (int i = 0; i < chunk->size; i++) {
         printf("[%d] %04x\n", i, chunk->code[i]);
     }
@@ -182,6 +184,23 @@ void chunk_print(Chunk* chunk) {
             i = chunk_long_print(chunk, i);
             break;
         }
+        }
+    }
+    printf("\n");
+}
+
+void chunk_print(Chunk* chunk) {
+    // TODO HUGE REFACTOR. THERE ARE CONFICTS BETWEEN MACROS (IE IS_FUNCTION(obj) and IS_FUNCTION(stmt))
+    printf("--------[ CHUNK DUMP: <GLOBAL> ]--------\n\n");
+    standalone_chunk_print(chunk);
+    for (int i = 0; i < chunk->constants.size; i++) {
+        if (IS_OBJ(chunk->constants.values[i])) {
+            Obj* obj = AS_OBJ(chunk->constants.values[i]);
+            if (obj->kind == FUNCTION_OBJ) {
+                ObjFunction* fn = AS_FUNCTION(obj);
+                printf("--------[ CHUNK DUMP: '%s' ]--------\n\n", AS_CSTRING(fn->name));
+                standalone_chunk_print(&fn->chunk);
+            }
         }
     }
 }

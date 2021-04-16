@@ -162,7 +162,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
             "in variable assignment.");
         return;
     }
-    checker->last_type = symbol->type;
+    checker->last_type = symbol->type; // TODO should we be explicit like here?
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
@@ -170,6 +170,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     ACCEPT_STMT(ctx, function->body);
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
+    assert(symbol->kind == FUNCTION_SYMBOL);
     if (symbol->function.return_type != checker->last_type) {
         error_last_type_match(
             checker,

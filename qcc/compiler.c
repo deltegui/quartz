@@ -37,6 +37,7 @@ struct IdentifierOps {
 static void error(Compiler* compiler, const char* message);
 
 static void init_compiler(Compiler* compiler, CompilerMode mode, const char* source);
+static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_identifier);
 static void free_compiler(Compiler* compiler);
 
 static Chunk* current_chunk(Compiler* compiler);
@@ -53,7 +54,7 @@ static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  u
 static uint16_t make_constant(Compiler* compiler, Value value);
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
 
-static uint16_t get_variable_index(Compiler* compiler, VarStmt* var);
+static uint16_t get_variable_index(Compiler* compiler, Token* identifier);
 static void emit_variable_declaration(Compiler* compiler, uint16_t index);
 static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops);
 
@@ -76,6 +77,7 @@ static void compile_var(void* ctx, VarStmt* var);
 static void compile_print(void* ctx, PrintStmt* print);
 static void compile_block(void* ctx, BlockStmt* block);
 static void compile_function(void* ctx, FunctionStmt* function);
+static void compile_return(void* ctx, ReturnStmt* return_);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -83,6 +85,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_print = compile_print,
     .visit_block = compile_block,
     .visit_function = compile_function,
+    .visit_return = compile_return,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -106,6 +109,18 @@ static void init_compiler(Compiler* compiler, CompilerMode mode, const char* sou
     compiler->scope_depth = 0;
     compiler->next_local_index = 0;
     memset(compiler->locals, 0, UINT8_COUNT);
+}
+
+static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_identifier) {
+    inner->parser = outer->parser;
+    inner->symbols = outer->symbols; // TODO should we create a new symbol table? If so, remember to free it.
+    inner->func = new_function(fn_identifier->start, fn_identifier->length);
+    inner->last_line = outer->last_line;
+    inner->has_error = false; // TODO is this Ok?
+    inner->scope_depth = outer->scope_depth;
+    // TODO check if this is a relative index!!
+    inner->next_local_index = 0; // TODO im supposing that a function is Ok to start with 0.
+    memset(inner->locals, 0, UINT8_COUNT);
 }
 
 static void free_compiler(Compiler* compiler) {
@@ -233,12 +248,35 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
     emit(compiler, OP_POP);
 }
 
-static void compile_function(void* ctx, FunctionStmt* function){
+static void compile_function(void* ctx, FunctionStmt* function) {
+    // TODO there is many lines of code in common with compile_var
+    Compiler* compiler = (Compiler*) ctx;
+    uint16_t fn_index = get_variable_index(compiler, &function->identifier);
+
+    Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
+    assert(symbol != NULL);
+    symbol->constant_index = fn_index;
+    symbol->global = compiler->scope_depth == 0;
+
+    Compiler inner;
+    init_inner_compiler(&inner, compiler, &function->identifier);
+    ACCEPT_STMT(&inner, function->body);
+
+    uint16_t default_value = make_constant(compiler, OBJ_VALUE(inner.func));
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
+
+    emit_variable_declaration(compiler, fn_index);
+}
+
+static void compile_return(void* ctx, ReturnStmt* return_) {
+    Compiler* compiler = (Compiler*) ctx;
+    ACCEPT_EXPR(compiler, return_->inner);
+    emit(compiler, OP_RETURN);
 }
 
 static void compile_var(void* ctx, VarStmt* var) {
     Compiler* compiler = (Compiler*) ctx;
-    uint16_t variable_index = get_variable_index(compiler, var);
+    uint16_t variable_index = get_variable_index(compiler, &var->identifier);
 
     Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
@@ -254,9 +292,9 @@ static void compile_var(void* ctx, VarStmt* var) {
     emit_variable_declaration(compiler, variable_index);
 }
 
-static uint16_t get_variable_index(Compiler* compiler, VarStmt* var) {
+static uint16_t get_variable_index(Compiler* compiler, Token* identifier) {
     if (compiler->scope_depth == 0) {
-        return identifier_constant(compiler, &var->identifier);
+        return identifier_constant(compiler, identifier);
     }
     uint16_t index = compiler->next_local_index;
     compiler->locals[compiler->scope_depth]++;

@@ -33,14 +33,14 @@ Value value_default(Type type);
 #define NIL_VALUE() ((Value){ NIL_TYPE, VALUE_NIL, { .object = NULL } })
 #define OBJ_VALUE(obj) ((Value){ UNKNOWN_TYPE, VALUE_OBJ, { .object = (Obj*) obj } })
 
-#define IS_NUMBER(val) (val.kind == VALUE_NUMBER)
-#define IS_BOOL(val) (val.kind == VALUE_BOOL)
-#define IS_NIL(val) (val.kind == VALUE_NIL)
-#define IS_OBJ(val) (val.kind == VALUE_OBJ)
+#define VALUE_IS_NUMBER(val) (val.kind == VALUE_NUMBER)
+#define VALUE_IS_BOOL(val) (val.kind == VALUE_BOOL)
+#define VALUE_IS_NIL(val) (val.kind == VALUE_NIL)
+#define VALUE_IS_OBJ(val) (val.kind == VALUE_OBJ)
 
-#define AS_NUMBER(val) val.as.number
-#define AS_BOOL(val) val.as.boolean
-#define AS_OBJ(val) ((Obj*) val.as.object)
+#define VALUE_AS_NUMBER(val) val.as.number
+#define VALUE_AS_BOOL(val) val.as.boolean
+#define VALUE_AS_OBJ(val) ((Obj*) val.as.object)
 
 typedef struct {
     int size;

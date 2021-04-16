@@ -73,13 +73,13 @@ typedef struct {
     void (*visit_return)(void* ctx, ReturnStmt* ret);
 } StmtVisitor;
 
-#define IS_VAR(stmt) (stmt.kind == VAR_STMT)
-#define IS_FUNCTION(stmt) (stmt.kind == FUNCTION_STMT)
-#define IS_EXPR(stmt) (stmt.kind == EXPR_STMT)
-#define IS_LIST(stmt) (stmt.kind == LIST_STMT)
-#define IS_PRINT(stmt) (stmt.kind == PRINT_STMT)
-#define IS_BLOCK(stmt) (stmt.kind == BLOCK_STMT)
-#define IS_RETURN(stmt) (stmt.kind == RETURN_STMT)
+#define STMT_IS_VAR(stmt) (stmt.kind == VAR_STMT)
+#define STMT_IS_FUNCTION(stmt) (stmt.kind == FUNCTION_STMT)
+#define STMT_IS_EXPR(stmt) (stmt.kind == EXPR_STMT)
+#define STMT_IS_LIST(stmt) (stmt.kind == LIST_STMT)
+#define STMT_IS_PRINT(stmt) (stmt.kind == PRINT_STMT)
+#define STMT_IS_BLOCK(stmt) (stmt.kind == BLOCK_STMT)
+#define STMT_IS_RETURN(stmt) (stmt.kind == RETURN_STMT)
 
 #define CREATE_RETURN_STMT(return_) create_stmt(RETURN_STMT, &return_)
 #define CREATE_VAR_STMT(var) create_stmt(VAR_STMT, &var)

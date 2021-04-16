@@ -38,16 +38,16 @@ typedef struct {
 void print_object(Obj* obj);
 bool is_obj_kind(Obj* obj, ObjKind kind);
 
-#define IS_STRING(obj) (is_obj_kind(obj, STRING_OBJ))
-#define AS_STRING_OBJ(obj) ((ObjString*) obj)
-#define AS_CSTRING(obj) ( ((ObjString*) obj)->chars )
+#define OBJ_IS_STRING(obj) (is_obj_kind(obj, STRING_OBJ))
+#define OBJ_AS_STRING(obj) ((ObjString*) obj)
+#define OBJ_AS_CSTRING(obj) ( ((ObjString*) obj)->chars )
 
 ObjString* copy_string(const char* str, int length);
 uint32_t hash_string(const char* chars, int length);
 ObjString* concat_string(ObjString* first, ObjString* second);
 
-#define IS_FUNTION(obj) (is_obj_kind(obj, FUNCTION_OBJ));
-#define AS_FUNCTION(obj) ((ObjFunction*) obj)
+#define OBJ_IS_FUNTION(obj) (is_obj_kind(obj, FUNCTION_OBJ));
+#define OBJ_AS_FUNCTION(obj) ((ObjFunction*) obj)
 
 ObjFunction* new_function(const char* name, int length);
 

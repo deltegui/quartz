@@ -66,12 +66,12 @@ ObjString* concat_string(ObjString* first, ObjString* second) {
 void print_object(Obj* obj) {
     switch (obj->kind) {
     case STRING_OBJ: {
-        printf("'%s'", AS_CSTRING(obj));
+        printf("'%s'", OBJ_AS_CSTRING(obj));
         break;
     }
     case FUNCTION_OBJ: {
-        ObjFunction* fn = AS_FUNCTION(obj);
-        printf("<fn '%s'>", AS_CSTRING(fn->name));
+        ObjFunction* fn = OBJ_AS_FUNCTION(obj);
+        printf("<fn '%s'>", OBJ_AS_CSTRING(fn->name));
         break;
     }
     }

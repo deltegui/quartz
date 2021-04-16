@@ -190,15 +190,14 @@ static void standalone_chunk_print(Chunk* chunk) {
 }
 
 void chunk_print(Chunk* chunk) {
-    // TODO HUGE REFACTOR. THERE ARE CONFICTS BETWEEN MACROS (IE IS_FUNCTION(obj) and IS_FUNCTION(stmt))
     printf("--------[ CHUNK DUMP: <GLOBAL> ]--------\n\n");
     standalone_chunk_print(chunk);
     for (int i = 0; i < chunk->constants.size; i++) {
-        if (IS_OBJ(chunk->constants.values[i])) {
-            Obj* obj = AS_OBJ(chunk->constants.values[i]);
-            if (obj->kind == FUNCTION_OBJ) {
-                ObjFunction* fn = AS_FUNCTION(obj);
-                printf("--------[ CHUNK DUMP: '%s' ]--------\n\n", AS_CSTRING(fn->name));
+        if (VALUE_IS_OBJ(chunk->constants.values[i])) {
+            Obj* obj = VALUE_AS_OBJ(chunk->constants.values[i]);
+            if (OBJ_IS_FUNCTION(obj)) {
+                ObjFunction* fn = OBJ_AS_FUNCTION(obj);
+                printf("--------[ CHUNK DUMP: '%s' ]--------\n\n", OBJ_AS_CSTRING(fn->name));
                 standalone_chunk_print(&fn->chunk);
             }
         }

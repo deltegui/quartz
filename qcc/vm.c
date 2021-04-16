@@ -36,18 +36,18 @@ static inline Value stack_peek(uint8_t distance) {
 }
 
 #define NUM_BINARY_OP(op)\
-    double b = AS_NUMBER(stack_pop());\
-    double a = AS_NUMBER(stack_pop());\
+    double b = VALUE_AS_NUMBER(stack_pop());\
+    double a = VALUE_AS_NUMBER(stack_pop());\
     stack_push(NUMBER_VALUE(a op b))
 
 #define BOOL_BINARY_OP(op)\
-    bool b = AS_BOOL(stack_pop());\
-    bool a = AS_BOOL(stack_pop());\
+    bool b = VALUE_AS_BOOL(stack_pop());\
+    bool a = VALUE_AS_BOOL(stack_pop());\
     stack_push(BOOL_VALUE(a op b))
 
 #define STRING_CONCAT()\
-    ObjString* b = AS_STRING_OBJ(AS_OBJ(stack_pop()));\
-    ObjString* a = AS_STRING_OBJ(AS_OBJ(stack_pop()));\
+    ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
+    ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* concat = concat_string(a, b);\
     stack_push(OBJ_VALUE(concat))
 
@@ -77,9 +77,9 @@ static void run(ObjFunction* func) {
 
 #define READ_BYTE() *(frame->pc++)
 #define READ_CONSTANT() func->chunk.constants.values[READ_BYTE()]
-#define READ_STRING() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT()))
+#define READ_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT()))
 #define READ_CONSTANT_LONG() func->chunk.constants.values[read_long(&frame->pc)]
-#define READ_STRING_LONG() AS_STRING_OBJ(AS_OBJ(READ_CONSTANT_LONG()))
+#define READ_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT_LONG()))
 
     for (;;) {
 #ifdef VM_DEBUG
@@ -110,7 +110,7 @@ static void run(ObjFunction* func) {
         }
         case OP_NEGATE: {
             Value val = *(qvm.stack_top - 1);
-            double d = AS_NUMBER(val);
+            double d = VALUE_AS_NUMBER(val);
             *(qvm.stack_top - 1) = NUMBER_VALUE(d * -1);
             break;
         }
@@ -123,13 +123,13 @@ static void run(ObjFunction* func) {
             break;
         }
         case OP_NOT: {
-            bool a = AS_BOOL(stack_pop());
+            bool a = VALUE_AS_BOOL(stack_pop());
             stack_push(BOOL_VALUE(!a));
             break;
         }
         case OP_MOD: {
-            double b = AS_NUMBER(stack_pop());
-            double a = AS_NUMBER(stack_pop());
+            double b = VALUE_AS_NUMBER(stack_pop());
+            double a = VALUE_AS_NUMBER(stack_pop());
             stack_push(NUMBER_VALUE(fmod(a, b)));
             break;
         }
@@ -152,14 +152,14 @@ static void run(ObjFunction* func) {
             break;
         }
         case OP_GREATER: {
-            double b = AS_NUMBER(stack_pop());
-            double a = AS_NUMBER(stack_pop());
+            double b = VALUE_AS_NUMBER(stack_pop());
+            double a = VALUE_AS_NUMBER(stack_pop());
             stack_push(BOOL_VALUE(a > b));
             break;
         }
         case OP_LOWER: {
-            double b = AS_NUMBER(stack_pop());
-            double a = AS_NUMBER(stack_pop());
+            double b = VALUE_AS_NUMBER(stack_pop());
+            double a = VALUE_AS_NUMBER(stack_pop());
             stack_push(BOOL_VALUE(a < b));
             break;
         }

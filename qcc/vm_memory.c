@@ -10,7 +10,7 @@ static void free_object(Obj* obj) {
         break;
     }
     case FUNCTION_OBJ: {
-        ObjFunction* func = AS_FUNCTION(obj);
+        ObjFunction* func = OBJ_AS_FUNCTION(obj);
         free_chunk(&func->chunk);
         FREE(ObjFunction, obj);
         break;

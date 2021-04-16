@@ -56,11 +56,11 @@ typedef struct {
     void (*visit_assignment)(void* ctx, AssignmentExpr* identifier);
 } ExprVisitor;
 
-#define IS_BINARY(expr) (expr.type == EXPR_BINARY)
-#define IS_LITERAL(expr) (expr.type == EXPR_LITERAL)
-#define IS_UNARY(expr) (expr.type == EXPR_LITERAL)
-#define IS_IDENTIFIER(identifier) (expr.type == EXPR_IDENTIFIER)
-#define IS_ASSIGNMENT(assignment) (expr.type == EXPR_ASSIGNMENT)
+#define EXPR_IS_BINARY(expr) (expr.type == EXPR_BINARY)
+#define EXPR_IS_LITERAL(expr) (expr.type == EXPR_LITERAL)
+#define EXPR_IS_UNARY(expr) (expr.type == EXPR_LITERAL)
+#define EXPR_IS_IDENTIFIER(identifier) (expr.type == EXPR_IDENTIFIER)
+#define EXPR_IS_ASSIGNMENT(assignment) (expr.type == EXPR_ASSIGNMENT)
 
 #define CREATE_BINARY_EXPR(binary) create_expr(EXPR_BINARY, &binary)
 #define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)

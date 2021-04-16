@@ -46,7 +46,7 @@ ObjString* copy_string(const char* str, int length);
 uint32_t hash_string(const char* chars, int length);
 ObjString* concat_string(ObjString* first, ObjString* second);
 
-#define OBJ_IS_FUNTION(obj) (is_obj_kind(obj, FUNCTION_OBJ));
+#define OBJ_IS_FUNCTION(obj) (is_obj_kind(obj, FUNCTION_OBJ))
 #define OBJ_AS_FUNCTION(obj) ((ObjFunction*) obj)
 
 ObjFunction* new_function(const char* name, int length);

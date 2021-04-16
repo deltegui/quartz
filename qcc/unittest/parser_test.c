@@ -457,9 +457,6 @@ static void should_parse_function_declarations() {
         .kind = TOKEN_FUNCTION,
     };
     fn.identifier = fn_identifier;
-    // FIXME subtitute this with symbol table calls
-    // PARAM_ARRAY_ADD_TOKEN(&fn.params, a_token);
-    // PARAM_ARRAY_ADD_TOKEN(&fn.params, b_token);
     BlockStmt fn_body = (BlockStmt){
         .stmts = CREATE_LIST_STMT(create_list_stmt()),
     };
@@ -476,9 +473,6 @@ static void should_parse_returns() {
         .kind = TOKEN_FUNCTION,
     };
     fn.identifier = fn_identifier;
-    // FIXME subtitute this with symbol table calls
-    // PARAM_ARRAY_ADD_TOKEN(&fn.params, a_token);
-    // PARAM_ARRAY_ADD_TOKEN(&fn.params, b_token);
     ListStmt* body = create_list_stmt();
     ReturnStmt return_ = (ReturnStmt){
         .inner = CREATE_LITERAL_EXPR(true_),

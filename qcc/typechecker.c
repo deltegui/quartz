@@ -24,6 +24,7 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
 static void typecheck_binary(void* ctx, BinaryExpr* binary);
 static void typecheck_unary(void* ctx, UnaryExpr* unary);
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment);
+static void typecheck_call(void* ctx, CallExpr* call);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -31,6 +32,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_unary = typecheck_unary,
     .visit_identifier = typecheck_identifier,
     .visit_assignment = typecheck_assignment,
+    .visit_call = typecheck_call,
 };
 
 static void typecheck_expr(void* ctx, ExprStmt* expr);
@@ -163,6 +165,28 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
         return;
     }
     checker->last_type = symbol->type;
+}
+
+static void typecheck_call(void* ctx, CallExpr* call) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* symbol = lookup_str(checker, call->identifier.start, call->identifier.length);
+    assert(symbol != NULL);
+
+    for (int i = 0; i < call->params.size; i++) {
+        ACCEPT_EXPR(checker, call->params.params[i].expr);
+        Type def_type = symbol->function.param_types.params[i].type;
+        Type last = checker->last_type;
+        if (last != def_type) {
+            error(checker, &call->identifier, "Type of param number %d in function call (", i);
+            type_print(last);
+            printf(") does not match with function definition (");
+            type_print(def_type);
+            printf(")\n");
+        }
+    }
+
+    checker->last_type = symbol->function.return_type;
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {

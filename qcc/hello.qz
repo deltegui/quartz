@@ -1,3 +1,6 @@
-fn pipo(hola: Number): String {
+fn pipo(hola: Number, adios: Bool): String {
     return "true";
 }
+
+var a: Bool;
+a = pipo("2", "tre");

@@ -67,6 +67,7 @@ static const char* OpCodeStrings[] = {
     "OP_PRINT",
     "OP_RETURN",
     "OP_POP",
+    "OP_CALL",
     "OP_CONSTANT",
     "OP_CONSTANT_LONG",
     "OP_DEFINE_GLOBAL",
@@ -266,6 +267,7 @@ static void print_unary(void* ctx, UnaryExpr* unary);
 static void print_literal(void* ctx, LiteralExpr* literal);
 static void print_identifier(void* ctx, IdentifierExpr* identifier);
 static void print_assignment(void* ctx, AssignmentExpr* assignment);
+static void print_call(void* ctx, CallExpr* call);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
@@ -273,6 +275,7 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_unary = print_unary,
     .visit_identifier = print_identifier,
     .visit_assignment = print_assignment,
+    .visit_call = print_call,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
@@ -405,6 +408,22 @@ static void print_assignment(void* ctx, AssignmentExpr* assignment) {
         OFFSET({
             ACCEPT_EXPR(assignment->value);
         });
+    });
+    pretty_print("]\n");
+}
+
+static void print_call(void* ctx, CallExpr* call) {
+    pretty_print("Call Expr: [\n");
+    OFFSET({
+        pretty_print("Function name: ");
+        token_print(call->identifier);
+        pretty_print("Params: [\n");
+        OFFSET({
+            for (int i = 0; i < call->params.size; i++) {
+                ACCEPT_EXPR(call->params.params[i].expr);
+            }
+        });
+        pretty_print("]\n");
     });
     pretty_print("]\n");
 }

@@ -73,6 +73,7 @@ static Expr* primary(Parser* parser, bool can_assign);
 static Expr* identifier(Parser* parser, bool can_assign);
 static Expr* unary(Parser* parser, bool can_assign);
 static Expr* binary(Parser* parser, bool can_assign, Expr* left);
+static Expr* call(Parser* parser, bool can_assign, Expr* left);
 
 ParseRule rules[] = {
     [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
@@ -83,13 +84,18 @@ ParseRule rules[] = {
     [TOKEN_STAR]          = {NULL,        binary, PREC_FACTOR},
     [TOKEN_SLASH]         = {NULL,        binary, PREC_FACTOR},
     [TOKEN_PERCENT]       = {NULL,        binary, PREC_FACTOR},
-    [TOKEN_LEFT_PAREN]    = {grouping,    NULL,   PREC_NONE},
+    [TOKEN_LEFT_PAREN]    = {grouping,    call,   PREC_CALL},
     [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_DOT]           = {NULL,        NULL,   PREC_NONE},
     [TOKEN_BANG]          = {unary,       NULL,   PREC_UNARY},
     [TOKEN_EQUAL]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_LOWER]         = {NULL,        binary, PREC_COMPARISON},
     [TOKEN_GREATER]       = {NULL,        binary, PREC_COMPARISON},
+    [TOKEN_SEMICOLON]     = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_COLON]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_LEFT_BRACE]    = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_RIGHT_BRACE]   = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_COMMA]         = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_AND]           = {NULL,        binary, PREC_AND},
     [TOKEN_OR]            = {NULL,        binary, PREC_OR},
@@ -98,6 +104,8 @@ ParseRule rules[] = {
     [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
 
+    [TOKEN_RETURN]        = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_FUNCTION]      = {NULL,        NULL,   PREC_NONE},
     [TOKEN_VAR]           = {NULL,        NULL,   PREC_NONE},
     [TOKEN_NUMBER]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_TRUE]          = {primary,     NULL,   PREC_PRIMARY},
@@ -106,6 +114,11 @@ ParseRule rules[] = {
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_PRINT]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_IDENTIFIER]    = {identifier,  NULL,   PREC_NONE},
+
+    [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_TYPE_STRING]   = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_TYPE_BOOL]     = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_TYPE_NIL]      = {NULL,        NULL,   PREC_NONE},
 };
 
 static ParseRule* get_rule(TokenKind kind) {
@@ -495,6 +508,49 @@ static Expr* binary(Parser* parser, bool can_assign, Expr* left) {
     printf("[PARSER DEBUG]: end BINARY expression\n");
 #endif
     return CREATE_BINARY_EXPR(binary);
+}
+
+static Expr* call(Parser* parser, bool can_assign, Expr* left) {
+    if (! EXPR_IS_IDENTIFIER(*left)) {
+        error(parser, "You can only call functions");
+    }
+    IdentifierExpr fn_name = left->identifier;
+
+    CallExpr call = (CallExpr){
+        .identifier = fn_name.name,
+    };
+    init_param_array(&call.params);
+
+    Symbol* fn_sym = lookup_str(parser, fn_name.name.start, fn_name.name.length);
+    assert(fn_sym != NULL);
+
+    if (parser->current.kind != TOKEN_RIGHT_PAREN) {
+        for (;;) {
+            Expr* param = expression(parser);
+            PARAM_ARRAY_ADD_EXPR(&call.params, param);
+            if (parser->current.kind != TOKEN_COMMA) {
+                break;
+            }
+            advance(parser); // consume ,
+        }
+    }
+    consume(
+        parser,
+        TOKEN_RIGHT_PAREN,
+        "Expected ')' to enclose '(' in function call");
+    
+    if (fn_sym->function.params.size != call.params.size) {
+        error(
+            parser,
+            "Function '%.*s' expects %d params, but was called with %d params",
+            call.identifier.length,
+            call.identifier.start,
+            fn_sym->function.params.size,
+            call.params.size);
+    }
+
+    free_expr(left); // We only need left identifier. We must free it.
+    return CREATE_CALL_EXPR(call);
 }
 
 static Expr* grouping(Parser* parser, bool can_assign) {

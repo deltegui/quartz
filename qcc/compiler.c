@@ -63,6 +63,7 @@ static void compile_identifier(void* ctx, IdentifierExpr* identifier);
 static void compile_literal(void* ctx, LiteralExpr* literal);
 static void compile_binary(void* ctx, BinaryExpr* binary);
 static void compile_unary(void* ctx, UnaryExpr* unary);
+static void compile_call(void* ctx, CallExpr* call);
 
 ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
@@ -70,6 +71,7 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_unary = compile_unary,
     .visit_identifier = compile_identifier,
     .visit_assignment = compile_assignment,
+    .visit_call = compile_call,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -116,10 +118,9 @@ static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_iden
     inner->symbols = outer->symbols; // TODO should we create a new symbol table? If so, remember to free it.
     inner->func = new_function(fn_identifier->start, fn_identifier->length);
     inner->last_line = outer->last_line;
-    inner->has_error = false; // TODO is this Ok?
+    inner->has_error = false;
     inner->scope_depth = outer->scope_depth;
-    // TODO check if this is a relative index!!
-    inner->next_local_index = 0; // TODO im supposing that a function is Ok to start with 0.
+    inner->next_local_index = 0;
     memset(inner->locals, 0, UINT8_COUNT);
 }
 
@@ -261,6 +262,10 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     Compiler inner;
     init_inner_compiler(&inner, compiler, &function->identifier);
     ACCEPT_STMT(&inner, function->body);
+
+    if (inner.has_error) {
+        compiler->has_error = true;
+    }
 
     uint16_t default_value = make_constant(compiler, OBJ_VALUE(inner.func));
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
@@ -433,4 +438,8 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
     }
     ACCEPT_EXPR(compiler, unary->expr);
     emit(compiler, op);
+}
+
+static void compile_call(void* ctx, CallExpr* call) {
+    
 }

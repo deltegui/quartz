@@ -85,11 +85,12 @@ static void run(ObjFunction* func) {
 #endif
 
     qvm.frame = &qvm.frames[qvm.frame_count - 1];
+    qvm.frame->func = func;
 
 #define READ_BYTE() *(qvm.frame->pc++)
-#define READ_CONSTANT() func->chunk.constants.values[READ_BYTE()]
+#define READ_CONSTANT() qvm.frame->func->chunk.constants.values[READ_BYTE()]
 #define READ_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT()))
-#define READ_CONSTANT_LONG() func->chunk.constants.values[read_long(&qvm.frame->pc)]
+#define READ_CONSTANT_LONG() qvm.frame->func->chunk.constants.values[read_long(&qvm.frame->pc)]
 #define READ_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT_LONG()))
 
     for (;;) {

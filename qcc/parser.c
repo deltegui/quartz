@@ -384,8 +384,10 @@ static Stmt* function_decl(Parser* parser) {
         advance(parser); // consume type
     }
 
-    fn.body = block_stmt(parser);
+    create_scope(parser);
     add_params_to_body(parser, &symbol.function);
+    fn.body = block_stmt(parser);
+    end_scope(parser);
 
     register_symbol(parser, symbol);
     return CREATE_STMT_FUNCTION(fn);
@@ -395,38 +397,36 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
     for (;;) {
         if (parser->current.kind != TOKEN_IDENTIFIER) {
             error(parser, "Expected to have an identifier in parameter in function declaration");
-            break;
+            return;
         }
         PARAM_ARRAY_ADD_TOKEN(&fn_sym->params, parser->current);
         advance(parser); // cosume param identifier
         if (parser->current.kind != TOKEN_COLON) {
             error(parser, "Expected function parameter to have a type in function declaration");
-            break;
+            return;
         }
         advance(parser); // cosume colon
         Type type = type_from_token_kind(parser->current.kind);
         if (type == TYPE_UNKNOWN) {
             error (parser, "Unknown type in function param in function declaration");
-            break;
+            return;
         }
         PARAM_ARRAY_ADD_TYPE(&fn_sym->param_types, type);
         advance(parser); // consume type
         if (parser->current.kind != TOKEN_COMMA) {
-            break;
+            return;
         }
         advance(parser); // consume comma
     }
 }
 
 static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym) {
-    open_prev_scope(parser);
     for (int i = 0; i < fn_sym->params.size; i++) {
         Symbol param = create_symbol_from_token(
             &fn_sym->params.params[i].identifier,
             fn_sym->param_types.params[i].type);
         register_symbol(parser, param);
     }
-    end_scope(parser);
 }
 
 static void register_symbol(Parser* parser, Symbol symbol) {

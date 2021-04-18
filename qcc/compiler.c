@@ -54,6 +54,7 @@ static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  u
 static uint16_t make_constant(Compiler* compiler, Value value);
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
 
+static void update_param_index(Compiler* compiler, Symbol* symbol);
 static uint16_t get_variable_index(Compiler* compiler, Token* identifier);
 static void emit_variable_declaration(Compiler* compiler, uint16_t index);
 static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops);
@@ -120,7 +121,7 @@ static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_iden
     inner->last_line = outer->last_line;
     inner->has_error = false;
     inner->scope_depth = outer->scope_depth;
-    inner->next_local_index = 0;
+    inner->next_local_index = 1; // We expect to always have a function in pos 0
     memset(inner->locals, 0, UINT8_COUNT);
 }
 
@@ -152,7 +153,7 @@ CompilationResult compile(const char* source, ObjFunction** result) {
     }
     symbol_reset_scopes(&compiler.symbols);
     ACCEPT_STMT(&compiler, ast);
-    emit(&compiler, OP_RETURN);
+    emit(&compiler, OP_END);
 #ifdef COMPILER_DEBUG
     scoped_symbol_table_print(&compiler.symbols);
     valuearray_print(&compiler.func->chunk.constants);
@@ -261,7 +262,10 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 
     Compiler inner;
     init_inner_compiler(&inner, compiler, &function->identifier);
+    start_scope(&inner);
+    update_param_index(&inner, symbol);
     ACCEPT_STMT(&inner, function->body);
+    end_scope(&inner);
 
     if (inner.has_error) {
         compiler->has_error = true;
@@ -271,6 +275,15 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
 
     emit_variable_declaration(compiler, fn_index);
+}
+
+static void update_param_index(Compiler* compiler, Symbol* symbol) {
+    for (int i = 0; i < symbol->function.params.size; i++) {
+        Token param = symbol->function.params.params[i].identifier;
+        Symbol* param_sym = lookup_str(compiler, param.start, param.length);
+        param_sym->constant_index = compiler->next_local_index;
+        compiler->next_local_index++;
+    }
 }
 
 static void compile_return(void* ctx, ReturnStmt* return_) {
@@ -441,5 +454,14 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 }
 
 static void compile_call(void* ctx, CallExpr* call) {
-    
+    Compiler* compiler = (Compiler*) ctx;
+    identifier_use(compiler, call->identifier, &ops_get_identifier);
+    int i = 0;
+    for (; i < call->params.size; i++) {
+        ACCEPT_EXPR(compiler, call->params.params[i].expr);
+    }
+    if (i > UINT8_MAX) {
+        error(compiler, "Parameter count exceeds the max number of parameters: 254");
+    }
+    emit_short(compiler, OP_CALL, i);
 }

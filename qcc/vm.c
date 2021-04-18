@@ -23,6 +23,17 @@ void free_qvm() {
     free_objects();
 }
 
+static void call(uint8_t param_count) {
+    qvm.frame_count++;
+    Value* fn_ptr = (qvm.stack_top - param_count - 1);
+    Value fn_value = *fn_ptr;
+    ObjFunction* fn = OBJ_AS_FUNCTION(VALUE_AS_OBJ(fn_value));
+    qvm.frame = &qvm.frames[qvm.frame_count - 1];
+    qvm.frame->func = fn;
+    qvm.frame->pc = fn->chunk.code;
+    qvm.frame->slots = fn_ptr;
+}
+
 static inline void stack_push(Value val) {
     *(qvm.stack_top++) = val;
 }
@@ -73,17 +84,17 @@ static void run(ObjFunction* func) {
     printf("--------[ EXECUTION ]--------\n\n");
 #endif
 
-    CallFrame* frame = &qvm.frames[qvm.frame_count - 1];
+    qvm.frame = &qvm.frames[qvm.frame_count - 1];
 
-#define READ_BYTE() *(frame->pc++)
+#define READ_BYTE() *(qvm.frame->pc++)
 #define READ_CONSTANT() func->chunk.constants.values[READ_BYTE()]
 #define READ_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT()))
-#define READ_CONSTANT_LONG() func->chunk.constants.values[read_long(&frame->pc)]
+#define READ_CONSTANT_LONG() func->chunk.constants.values[read_long(&qvm.frame->pc)]
 #define READ_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT_LONG()))
 
     for (;;) {
 #ifdef VM_DEBUG
-        opcode_print(*frame->pc);
+        opcode_print(*qvm.frame->pc);
 #endif
         switch (READ_BYTE()) {
         case OP_ADD: {
@@ -135,15 +146,18 @@ static void run(ObjFunction* func) {
         }
         case OP_NOP:
             break;
-        case OP_TRUE:
+        case OP_TRUE: {
             stack_push(BOOL_VALUE(true));
             break;
-        case OP_FALSE:
+        }
+        case OP_FALSE: {
             stack_push(BOOL_VALUE(false));
             break;
-        case OP_NIL:
+        }
+        case OP_NIL: {
             stack_push(NIL_VALUE());
             break;
+        }
         case OP_EQUAL: {
             Value b = stack_pop();
             Value a = stack_pop();
@@ -197,22 +211,39 @@ static void run(ObjFunction* func) {
         }
         case OP_GET_LOCAL: {
             uint8_t slot = READ_BYTE();
-            stack_push(frame->slots[slot]);
+            stack_push(qvm.frame->slots[slot]);
             break;
         }
         case OP_SET_LOCAL: {
             uint8_t slot = READ_BYTE();
-            frame->slots[slot] = stack_peek(0);
+            qvm.frame->slots[slot] = stack_peek(0);
             break;
         }
-        case OP_PRINT:
+        case OP_CALL: {
+            uint8_t param_count = READ_BYTE();
+            call(param_count);
+            break;
+        }
+        case OP_PRINT: {
             value_print(stack_pop());
             printf("\n");
             break;
-        case OP_POP:
+        }
+        case OP_POP: {
             stack_pop();
             break;
+        }
         case OP_RETURN: {
+            Value return_val = stack_pop();
+            while (qvm.stack_top != qvm.frame->slots) {
+                stack_pop();
+            }
+            stack_push(return_val);
+            qvm.frame_count--;
+            qvm.frame = &qvm.frames[qvm.frame_count - 1];
+            break;
+        }
+        case OP_END: {
             return;
         }
         }
@@ -225,7 +256,7 @@ static void run(ObjFunction* func) {
 }
 
 void qvm_execute(ObjFunction* func) {
-    // stack_push(OBJ_VALUE(func));// TODO THIS SHIT
+    stack_push(OBJ_VALUE(func));
     CallFrame* frame = &qvm.frames[qvm.frame_count++];
     frame->func = func;
     frame->pc = func->chunk.code;

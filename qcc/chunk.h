@@ -32,6 +32,7 @@ typedef enum {
     // Stack operations
     OP_POP,
     OP_CALL,
+    OP_END,
 
     // Declarations
     OP_CONSTANT,

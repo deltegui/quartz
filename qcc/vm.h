@@ -25,6 +25,7 @@ typedef struct {
 
     CallFrame frames[FRAMES_MAX];
     int frame_count;
+    CallFrame* frame;
 } QVM;
 
 void init_qvm();

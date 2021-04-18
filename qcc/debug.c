@@ -68,6 +68,7 @@ static const char* OpCodeStrings[] = {
     "OP_RETURN",
     "OP_POP",
     "OP_CALL",
+    "OP_END",
     "OP_CONSTANT",
     "OP_CONSTANT_LONG",
     "OP_DEFINE_GLOBAL",
@@ -123,8 +124,8 @@ static int chunk_opcode_print(Chunk* chunk, int i) {
 
 static int chunk_short_print(Chunk* chunk, int i) {
     i = chunk_opcode_print(chunk, i);
-    chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
-    chunk_value_print(chunk, chunk->code[i]);
+    chunk_format_print(chunk, i, "%04x\n", chunk->code[i]);
+    // chunk_value_print(chunk, chunk->code[i]);
     return ++i;
 }
 
@@ -164,7 +165,8 @@ static void standalone_chunk_print(Chunk* chunk) {
         case OP_LOWER:
         case OP_POP:
         case OP_PRINT:
-        case OP_GREATER: {
+        case OP_GREATER:
+        case OP_END: {
             i = chunk_opcode_print(chunk, i);
             break;
         }
@@ -173,7 +175,8 @@ static void standalone_chunk_print(Chunk* chunk) {
         case OP_SET_GLOBAL:
         case OP_GET_LOCAL:
         case OP_SET_LOCAL:
-        case OP_CONSTANT: {
+        case OP_CONSTANT:
+        case OP_CALL: {
             i = chunk_short_print(chunk, i);
             break;
         }

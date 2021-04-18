@@ -266,12 +266,3 @@ void scoped_symbol_insert(ScopedSymbolTable* table, Symbol entry) {
     assert(table->current != NULL);
     symbol_insert(&table->current->symbols, entry);
 }
-
-// TODO this function its not necesary anymore. Delete it.
-void symbol_open_prev_scope(ScopedSymbolTable* table) {
-    assert(table->current != NULL);
-    assert(table->current->childs != NULL);
-    assert(table->current->capacity > 0);
-    assert(table->current->size > 0);
-    table->current = &table->current->childs[table->current->size - 1];
-}

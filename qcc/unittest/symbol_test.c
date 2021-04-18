@@ -323,39 +323,8 @@ static void scoped_symbol_should_insert_locals() {
     });
 }
 
-static void could_open_previous_scope_and_modify_it() {
-    SymbolName a = create_symbol_name("a", 1);
-    SymbolName b = create_symbol_name("b", 1);
-    SymbolName c = create_symbol_name("c", 1);
-    Symbol sym_a = create_symbol(a, 1, TYPE_NUMBER);
-    Symbol sym_b = create_symbol(b, 2, TYPE_NUMBER);
-    Symbol sym_c = create_symbol(c, 3, TYPE_NUMBER);
-
-    SCOPED_TABLE({
-        scoped_symbol_insert(&table, sym_a);
-        symbol_create_scope(&table);
-            scoped_symbol_insert(&table, sym_b);
-        symbol_end_scope(&table);
-        symbol_open_prev_scope(&table);
-            scoped_symbol_insert(&table, sym_c);
-        symbol_end_scope(&table);
-
-        symbol_reset_scopes(&table);
-
-        assert_non_null(scoped_symbol_lookup(&table, &a));
-        assert_null(scoped_symbol_lookup(&table, &b));
-        assert_null(scoped_symbol_lookup(&table, &c));
-        symbol_start_scope(&table);
-            assert_non_null(scoped_symbol_lookup(&table, &a));
-            assert_non_null(scoped_symbol_lookup(&table, &b));
-            assert_non_null(scoped_symbol_lookup(&table, &c));
-        symbol_end_scope(&table);
-    });
-}
-
 int main(void) {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(could_open_previous_scope_and_modify_it),
         cmocka_unit_test(scoped_symbol_should_insert_locals),
         cmocka_unit_test(scoped_symbol_should_insert_globals),
         cmocka_unit_test(scoped_symbol_should_insert_and_lookup),

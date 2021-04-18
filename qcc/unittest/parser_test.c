@@ -74,12 +74,6 @@ static void assert_list_stmt_equals(ListStmt* first, ListStmt* second) {
     }
 }
 
-static void assert_token_str_equal(Token first, Token second) {
-    char actual[first.length + 1];
-    sprintf(actual, "%.*s", first.length, first.start);
-    assert_string_equal(actual, second.start);
-}
-
 static void assert_expr_equals(Expr* first, Expr* second) {
     assert_true(first->kind == second->kind);
     switch (first->kind) {
@@ -91,20 +85,30 @@ static void assert_expr_equals(Expr* first, Expr* second) {
     }
     case EXPR_LITERAL: {
         assert_true(first->literal.literal.kind == second->literal.literal.kind);
-        assert_token_str_equal(first->literal.literal, second->literal.literal);
+        assert_true(token_equals(&first->literal.literal, &second->literal.literal));
         break;
     }
     case EXPR_IDENTIFIER: {
-        assert_token_str_equal(first->identifier.name, second->identifier.name);
+        assert_true(token_equals(&first->identifier.name, &second->identifier.name));
         break;
     }
     case EXPR_ASSIGNMENT: {
         assert_expr_equals(first->assignment.value, second->assignment.value);
-        assert_token_str_equal(first->assignment.name, second->assignment.name);
+        assert_true(token_equals(&first->assignment.name, &second->assignment.name));
         break;
     }
     case EXPR_UNARY: {
         assert_true(first->unary.op.kind == second->unary.op.kind);
+        break;
+    }
+    case EXPR_CALL: {
+        assert_true(token_equals(&first->call.identifier, &second->call.identifier));
+        assert_int_equal(first->call.params.size, second->call.params.size);
+        for (int i = 0; i < first->call.params.size; i++) {
+            assert_expr_equals(
+                first->call.params.params[i].expr,
+                second->call.params.params[i].expr);
+        }
         break;
     }
     }
@@ -364,7 +368,7 @@ static void should_parse_reserved_words_as_literals() {
         CREATE_LITERAL_EXPR(true_)
     );
     assert_expr_ast(
-        " \n    false;  ",
+        "     false;  ",
         CREATE_LITERAL_EXPR(false_)
     );
     assert_expr_ast(

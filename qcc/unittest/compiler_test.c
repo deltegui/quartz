@@ -10,7 +10,7 @@
     init_qvm();\
     init_chunk(&my);\
     __VA_ARGS__\
-    chunk_write(&my, OP_RETURN, -1);\
+    chunk_write(&my, OP_END, -1);\
     assert_compiled_chunk(code, &my);\
     free_chunk(&my);\
     free_qvm();\

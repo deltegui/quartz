@@ -23,6 +23,7 @@ static bool is_string_quote(Lexer* lexer);
 static Token scan_number(Lexer* lexer);
 static Token scan_string(Lexer* lexer);
 static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len);
+static bool match_token(Lexer* lexer, const char* subpart, int start, int len);
 static Token scan_identifier(Lexer* lexer);
 static inline Token scan_token(Lexer* lexer);
 Token next_token(Lexer* lexer);
@@ -201,61 +202,78 @@ static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len
 #undef END_OVERFLOWS
 }
 
+static bool match_token(Lexer* lexer, const char* subpart, int start, int len) {
+    int readed_length = lexer->current - lexer->start;
+    if (readed_length != len) {
+        return false;
+    }
+    return match_subtoken(lexer, subpart, start, len);
+}
+
 static Token scan_identifier(Lexer* lexer) {
     while (is_numeric(lexer) || is_alpha(lexer)) {
         advance(lexer);
     }
     switch (*lexer->start) {
     case 't': {
-        if (match_subtoken(lexer, "rue", 1, 4)) {
+        if (match_token(lexer, "rue", 1, 4)) {
             return create_token(lexer, TOKEN_TRUE);
         }
+        break;
     }
     case 'f': {
-        if (match_subtoken(lexer, "alse", 1, 5)) {
+        if (match_token(lexer, "alse", 1, 5)) {
             return create_token(lexer, TOKEN_FALSE);
         }
-        if (match_subtoken(lexer, "n", 1, 2)) {
+        if (match_token(lexer, "n", 1, 2)) {
             return create_token(lexer, TOKEN_FUNCTION);
         }
+        break;
     }
     case 'n': {
-        if (match_subtoken(lexer, "il", 1, 3)) {
+        if (match_token(lexer, "il", 1, 3)) {
             return create_token(lexer, TOKEN_NIL);
         }
+        break;
     }
     case 'v': {
-        if (match_subtoken(lexer, "ar", 1, 3)) {
+        if (match_token(lexer, "ar", 1, 3)) {
             return create_token(lexer, TOKEN_VAR);
         }
+        break;
     }
     case 'r': {
-        if (match_subtoken(lexer, "eturn", 1, 6)) {
+        if (match_token(lexer, "eturn", 1, 6)) {
             return create_token(lexer, TOKEN_RETURN);
         }
+        break;
     }
     case 'p': {
-        if (match_subtoken(lexer, "rint", 1, 5)) {
+        if (match_token(lexer, "rint", 1, 5)) {
             return create_token(lexer, TOKEN_PRINT);
         }
+        break;
     }
     case 'N': {
-        if (match_subtoken(lexer, "umber", 1, 6)) {
+        if (match_token(lexer, "umber", 1, 6)) {
             return create_token(lexer, TOKEN_TYPE_NUMBER);
         }
-        if (match_subtoken(lexer, "il", 1, 3)) {
+        if (match_token(lexer, "il", 1, 3)) {
             return create_token(lexer, TOKEN_TYPE_NIL);
         }
+        break;
     }
     case 'S': {
-        if (match_subtoken(lexer, "tring", 1, 6)) {
+        if (match_token(lexer, "tring", 1, 6)) {
             return create_token(lexer, TOKEN_TYPE_STRING);
         }
+        break;
     }
     case 'B': {
-        if (match_subtoken(lexer, "ool", 1, 4)) {
+        if (match_token(lexer, "ool", 1, 4)) {
             return create_token(lexer, TOKEN_TYPE_BOOL);
         }
+        break;
     }
     }
     return create_token(lexer, TOKEN_IDENTIFIER);

@@ -355,8 +355,21 @@ static void should_tokenize_returns() {
     );
 }
 
+static void should_tokenize_print_correctly() {
+    assert_types(
+        " print_ast(ast); ",
+        5,
+        TOKEN_IDENTIFIER,
+        TOKEN_LEFT_PAREN,
+        TOKEN_IDENTIFIER,
+        TOKEN_RIGHT_PAREN,
+        TOKEN_SEMICOLON
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_tokenize_print_correctly),
         cmocka_unit_test(should_tokenize_returns),
         cmocka_unit_test(should_tokenize_function_declarations),
         cmocka_unit_test(should_scan_braces),

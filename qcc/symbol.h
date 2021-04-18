@@ -78,7 +78,6 @@ void symbol_create_scope(ScopedSymbolTable* table);
 void symbol_end_scope(ScopedSymbolTable* table);
 void symbol_start_scope(ScopedSymbolTable* table);
 void symbol_reset_scopes(ScopedSymbolTable* table);
-void symbol_open_prev_scope(ScopedSymbolTable* table);
 
 Symbol* scoped_symbol_lookup(ScopedSymbolTable* table, SymbolName* name);
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* table, const char* name, int length);

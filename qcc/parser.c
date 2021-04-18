@@ -41,7 +41,6 @@ static void error_at(Parser* parser, Token* token, const char* message, va_list 
 static void syncronize(Parser* parser);
 
 static void create_scope(Parser* parser);
-static void open_prev_scope(Parser* parser);
 static void end_scope(Parser* parser);
 static Symbol* current_scope_lookup(Parser* parser, SymbolName* name);
 static Symbol* lookup_str(Parser* parser, const char* name, int length);
@@ -209,10 +208,6 @@ static void syncronize(Parser* parser) {
 
 static void create_scope(Parser* parser){
     symbol_create_scope(parser->symbols);
-}
-
-static void open_prev_scope(Parser* parser) {
-    symbol_open_prev_scope(parser->symbols);
 }
 
 static void end_scope(Parser* parser){
@@ -397,24 +392,21 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
     for (;;) {
         if (parser->current.kind != TOKEN_IDENTIFIER) {
             error(parser, "Expected to have an identifier in parameter in function declaration");
-            return;
         }
         PARAM_ARRAY_ADD_TOKEN(&fn_sym->params, parser->current);
         advance(parser); // cosume param identifier
         if (parser->current.kind != TOKEN_COLON) {
             error(parser, "Expected function parameter to have a type in function declaration");
-            return;
         }
         advance(parser); // cosume colon
         Type type = type_from_token_kind(parser->current.kind);
         if (type == TYPE_UNKNOWN) {
             error (parser, "Unknown type in function param in function declaration");
-            return;
         }
         PARAM_ARRAY_ADD_TYPE(&fn_sym->param_types, type);
         advance(parser); // consume type
         if (parser->current.kind != TOKEN_COMMA) {
-            return;
+            break;
         }
         advance(parser); // consume comma
     }

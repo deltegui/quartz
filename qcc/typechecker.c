@@ -191,7 +191,9 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
     Typechecker* checker = (Typechecker*) ctx;
+    start_scope(checker);
     ACCEPT_STMT(ctx, function->body);
+    end_scope(checker);
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);

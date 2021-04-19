@@ -13,7 +13,6 @@
 #include "table.h"  // for table_print
 
 void table_print(Table* table);
-void symbol_table_print(SymbolTable* table);
 void scoped_symbol_table_print(ScopedSymbolTable* table);
 void chunk_print(Chunk* chunk);
 void token_print(Token token);

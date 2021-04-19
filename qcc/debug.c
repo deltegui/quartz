@@ -17,7 +17,7 @@ void table_print(Table* table) {
     printf("\n\n");
 }
 
-void symbol_table_print(SymbolTable* table) {
+static void symbol_table_print(SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
     printf("| Name\t| Line\t| Type\n");
     printf("|-------|-------|------------\n");
@@ -125,9 +125,6 @@ static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
 }
 
 static void chunk_value_print(Chunk* chunk, int index) {
-    if (index >= chunk->constants.size) {
-        return;
-    }
     Value val = chunk->constants.values[index];
     value_print(val);
     printf("\n");
@@ -141,7 +138,11 @@ static int chunk_opcode_print(Chunk* chunk, int i) {
 static int chunk_short_print(Chunk* chunk, int i) {
     i = chunk_opcode_print(chunk, i);
     chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
-    chunk_value_print(chunk, chunk->code[i]);
+    if (chunk->code[i] < chunk->constants.size) {
+        chunk_value_print(chunk, chunk->code[i]);
+    } else {
+        printf("\n");
+    }
     return ++i;
 }
 

@@ -1,16 +1,9 @@
-print "GLOBAL!";
-var a = "a global";
-var e = "e global";
-{
-    print "FIRST!";
-    var a = "a first local";
-    {
-        print "SECOND!";
-        var a = "a second local";
-        print "END SECOND!";
-    }
-    print "END FIRST!";
+var b = 1;
+
+fn hola(): Nil {
+    var c = 1;
+    print c;
+    return nil;
 }
-print a;
-print e;
-print "END GLOBAL!";
+
+hola();

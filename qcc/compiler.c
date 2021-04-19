@@ -16,6 +16,7 @@ typedef enum {
 typedef struct {
     Parser parser;
     ScopedSymbolTable symbols;
+    SymbolTable constant_symbols;
 
     ObjFunction* func;
     CompilerMode mode;
@@ -37,14 +38,18 @@ struct IdentifierOps {
 static void error(Compiler* compiler, const char* message);
 
 static void init_compiler(Compiler* compiler, CompilerMode mode, const char* source);
-static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_identifier);
 static void free_compiler(Compiler* compiler);
+static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_identifier);
+static void free_inner_compiler(Compiler* inner);
 
 static Chunk* current_chunk(Compiler* compiler);
 
 static void start_scope(Compiler* compiler);
 static void end_scope(Compiler* compiler);
 static Symbol* lookup_str(Compiler* compiler, const char* name, int length);
+
+static Symbol* lookup_const_index(Compiler* compiler, const char* name, int length);
+static void insert_const(Compiler* compiler, const char* name, int length, uint16_t index);
 
 static void emit(Compiler* compiler, uint8_t bytecode);
 static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param);
@@ -101,6 +106,7 @@ static void error(Compiler* compiler, const char* message) {
 
 static void init_compiler(Compiler* compiler, CompilerMode mode, const char* source) {
     init_scoped_symbol_table(&compiler->symbols);
+    init_symbol_table(&compiler->constant_symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
 
     compiler->func = new_function("<GLOBAL>", 8);
@@ -110,13 +116,19 @@ static void init_compiler(Compiler* compiler, CompilerMode mode, const char* sou
     compiler->has_error = false;
 
     compiler->scope_depth = 0;
-    compiler->next_local_index = 0;
+    compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
 }
 
+static void free_compiler(Compiler* compiler) {
+    free_scoped_symbol_table(&compiler->symbols);
+    free_symbol_table(&compiler->constant_symbols);
+}
+
 static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_identifier) {
+    init_symbol_table(&inner->constant_symbols);
     inner->parser = outer->parser;
-    inner->symbols = outer->symbols; // TODO should we create a new symbol table? If so, remember to free it.
+    inner->symbols = outer->symbols;
     inner->func = new_function(fn_identifier->start, fn_identifier->length);
     inner->last_line = outer->last_line;
     inner->has_error = false;
@@ -125,8 +137,8 @@ static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_iden
     memset(inner->locals, 0, UINT8_COUNT);
 }
 
-static void free_compiler(Compiler* compiler) {
-    free_scoped_symbol_table(&compiler->symbols);
+static void free_inner_compiler(Compiler* inner) {
+    free_symbol_table(&inner->constant_symbols);
 }
 
 static Chunk* current_chunk(Compiler* compiler) {
@@ -156,7 +168,6 @@ CompilationResult compile(const char* source, ObjFunction** result) {
     emit(&compiler, OP_END);
 #ifdef COMPILER_DEBUG
     scoped_symbol_table_print(&compiler.symbols);
-    valuearray_print(&compiler.func->chunk.constants);
     if (!compiler.has_error) {
         chunk_print(&compiler.func->chunk);
     }
@@ -187,6 +198,19 @@ static void end_scope(Compiler* compiler) {
 
 static Symbol* lookup_str(Compiler* compiler, const char* name, int length) {
     return scoped_symbol_lookup_str(&compiler->symbols, name, length);
+}
+
+static Symbol* lookup_const_index(Compiler* compiler, const char* name, int length) {
+    return symbol_lookup_str(&compiler->constant_symbols, name, length);
+}
+
+static void insert_const(Compiler* compiler, const char* name, int length, uint16_t index) {
+    SymbolName key = create_symbol_name(name, length);
+    Symbol entry = (Symbol) {
+        .name = key,
+        .constant_index = index,
+    };
+    symbol_insert(&compiler->constant_symbols, entry);
 }
 
 static void emit(Compiler* compiler, uint8_t bytecode) {
@@ -224,7 +248,9 @@ static uint16_t make_constant(Compiler* compiler, Value value) {
 }
 
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier) {
-    return make_constant(compiler, OBJ_VALUE(copy_string(identifier->start, identifier->length)));
+    Value value = OBJ_VALUE(copy_string(identifier->start, identifier->length));
+    value.type = TYPE_STRING;
+    return make_constant(compiler, value);
 }
 
 static void compile_print(void* ctx, PrintStmt* print) {
@@ -257,8 +283,8 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 
     Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
-    symbol->constant_index = fn_index;
     symbol->global = compiler->scope_depth == 0;
+    insert_const(compiler, function->identifier.start, function->identifier.length, fn_index);
 
     Compiler inner;
     init_inner_compiler(&inner, compiler, &function->identifier);
@@ -271,17 +297,23 @@ static void compile_function(void* ctx, FunctionStmt* function) {
         compiler->has_error = true;
     }
 
-    uint16_t default_value = make_constant(compiler, OBJ_VALUE(inner.func));
+    Value fn_value = OBJ_VALUE(inner.func);
+    fn_value.type = TYPE_FUNCTION; // TODO A better and less error prone way to give types at runtime?
+    uint16_t default_value = make_constant(compiler, fn_value);
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
 
     emit_variable_declaration(compiler, fn_index);
+    free_inner_compiler(&inner);
 }
 
 static void update_param_index(Compiler* compiler, Symbol* symbol) {
     for (int i = 0; i < symbol->function.params.size; i++) {
         Token param = symbol->function.params.params[i].identifier;
-        Symbol* param_sym = lookup_str(compiler, param.start, param.length);
+        /*
+        Symbol* param_sym = lookup_const_index(compiler, param.start, param.length);
         param_sym->constant_index = compiler->next_local_index;
+        */
+        insert_const(compiler, param.start, param.length, compiler->next_local_index);
         compiler->next_local_index++;
     }
 }
@@ -298,8 +330,10 @@ static void compile_var(void* ctx, VarStmt* var) {
 
     Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
-    symbol->constant_index = variable_index;
     symbol->global = compiler->scope_depth == 0;
+    if (! lookup_const_index(compiler, var->identifier.start, var->identifier.length)) {
+        insert_const(compiler, var->identifier.start, var->identifier.length, variable_index);
+    }
 
     if (var->definition == NULL) {
         uint16_t default_value = make_constant(compiler, value_default(symbol->type));
@@ -352,12 +386,14 @@ static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
 static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops) {
     Symbol* symbol = lookup_str(compiler, identifier.start, identifier.length);
     assert(symbol != NULL);
-    assert(symbol->constant_index < UINT16_MAX);
+    Symbol* cte = lookup_const_index(compiler, identifier.start, identifier.length);
+    assert(cte != NULL);
+    assert(cte->constant_index < UINT16_MAX);
     if (symbol->global) {
-        emit_param(compiler, ops->op_global, ops->op_global_long, symbol->constant_index);
+        emit_param(compiler, ops->op_global, ops->op_global_long, cte->constant_index);
     } else {
-        assert(symbol->constant_index < UINT8_MAX);
-        emit_short(compiler, ops->op_local, symbol->constant_index);
+        assert(cte->constant_index < UINT8_MAX);
+        emit_short(compiler, ops->op_local, cte->constant_index);
     }
 }
 
@@ -455,6 +491,10 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 
 static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
+    if (! lookup_const_index(compiler, call->identifier.start, call->identifier.length)) {
+        uint16_t index = make_constant(compiler, OBJ_VALUE(copy_string(call->identifier.start, call->identifier.length)));
+        insert_const(compiler, call->identifier.start, call->identifier.length, index);
+    }
     identifier_use(compiler, call->identifier, &ops_get_identifier);
     int i = 0;
     for (; i < call->params.size; i++) {

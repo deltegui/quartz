@@ -5,7 +5,6 @@
 #define LOAD_FACTOR 0.75
 
 #define TABLE_SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
-#define IS_ENTRY_EMPTY(table, index) (table->entries[index].key == NULL && table->entries[index].distance != -1)
 #define SHOULD_INTERCHANGE_ENTRY(table, index, dist) (table->entries[index].distance < dist)
 #define KEY_EQUALS(table, index, other_key) (table->entries[index].key == other_key)
 #define IS_TOMBSTONE(table, index) (table->entries[index].distance == -1)

@@ -1,0 +1,14 @@
+fn print_age(age: Number): Nil {
+    print age;
+    return nil;
+}
+
+fn say_hi_to(name: String, age: Number): Nil {
+    print "Hi to: " + name;
+    print_age(age);
+    print_age(age);
+    return nil;
+}
+
+say_hi_to("Diego", 23);
+say_hi_to("Javier", 16);

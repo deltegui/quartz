@@ -338,13 +338,13 @@ static Stmt* variable_decl(Parser* parser) {
         advance(parser); // consume type
     }
 
-    register_symbol(parser, create_symbol_from_token(&var.identifier, var_type));
-
     var.definition = NULL;
     if (parser->current.kind == TOKEN_EQUAL) {
         advance(parser); // consume =
         var.definition = expression(parser);
     }
+
+    register_symbol(parser, create_symbol_from_token(&var.identifier, var_type));
 
     consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
     return CREATE_STMT_VAR(var);

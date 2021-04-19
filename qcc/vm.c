@@ -23,7 +23,7 @@ void free_qvm() {
     free_objects();
 }
 
-static void call(uint8_t param_count) {
+static inline void call(uint8_t param_count) {
     qvm.frame_count++;
     Value* fn_ptr = (qvm.stack_top - param_count - 1);
     Value fn_value = *fn_ptr;
@@ -60,7 +60,9 @@ static inline Value stack_peek(uint8_t distance) {
     ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* concat = concat_string(a, b);\
-    stack_push(OBJ_VALUE(concat))
+    Value val = OBJ_VALUE(concat);\
+    val.type = TYPE_STRING;\
+    stack_push(val)
 
 #define CONSTANT_OP(read)\
     Value val = read();\
@@ -79,6 +81,12 @@ static inline Value stack_peek(uint8_t distance) {
     ObjString* identifier = str_read();\
     stack_push(table_find(&qvm.globals, identifier))
 
+#define READ_BYTE() *(qvm.frame->pc++)
+#define READ_CONSTANT() qvm.frame->func->chunk.constants.values[READ_BYTE()]
+#define READ_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT()))
+#define READ_CONSTANT_LONG() qvm.frame->func->chunk.constants.values[read_long(&qvm.frame->pc)]
+#define READ_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT_LONG()))
+
 static void run(ObjFunction* func) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
@@ -86,12 +94,6 @@ static void run(ObjFunction* func) {
 
     qvm.frame = &qvm.frames[qvm.frame_count - 1];
     qvm.frame->func = func;
-
-#define READ_BYTE() *(qvm.frame->pc++)
-#define READ_CONSTANT() qvm.frame->func->chunk.constants.values[READ_BYTE()]
-#define READ_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT()))
-#define READ_CONSTANT_LONG() qvm.frame->func->chunk.constants.values[read_long(&qvm.frame->pc)]
-#define READ_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT_LONG()))
 
     for (;;) {
 #ifdef VM_DEBUG
@@ -249,8 +251,10 @@ static void run(ObjFunction* func) {
         }
         }
 #ifdef VM_DEBUG
+        printf("\t");
         stack_print(qvm.stack_top, qvm.stack);
         printf("\n\n");
+        table_print(&qvm.globals);
 #endif
     }
 #undef READ_BYTE

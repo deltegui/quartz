@@ -18,7 +18,11 @@ Value value_default(Type type) {
     switch (type) {
     case TYPE_NUMBER: return NUMBER_VALUE(0);
     case TYPE_BOOL: return BOOL_VALUE(false);
-    case TYPE_STRING: return OBJ_VALUE(copy_string("", 0));
+    case TYPE_STRING: {
+        Value str = OBJ_VALUE(copy_string("", 0));
+        str.type = TYPE_STRING;
+        return str;
+    }
     case TYPE_NIL:
     default:
         return NIL_VALUE();

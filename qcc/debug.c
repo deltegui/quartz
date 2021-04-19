@@ -4,7 +4,20 @@
 #include "type.h"
 #include "object.h"
 
-static void symbol_table_print(SymbolTable* table) {
+void table_print(Table* table) {
+    printf("\t| Key\t\t| Value\n");
+    printf("\t|---------------|-----------------\n");
+    for (int i = 0; i < table->capacity; i++) {
+        if (! IS_ENTRY_EMPTY(table, i)) {
+            printf("\t|%s\t\t|", OBJ_AS_CSTRING(table->entries[i].key));
+            value_print(table->entries[i].value);
+            printf("\n");
+        }
+    }
+    printf("\n\n");
+}
+
+void symbol_table_print(SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
     printf("| Name\t| Line\t| Type\n");
     printf("|-------|-------|------------\n");
@@ -112,6 +125,9 @@ static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
 }
 
 static void chunk_value_print(Chunk* chunk, int index) {
+    if (index >= chunk->constants.size) {
+        return;
+    }
     Value val = chunk->constants.values[index];
     value_print(val);
     printf("\n");
@@ -124,8 +140,8 @@ static int chunk_opcode_print(Chunk* chunk, int i) {
 
 static int chunk_short_print(Chunk* chunk, int i) {
     i = chunk_opcode_print(chunk, i);
-    chunk_format_print(chunk, i, "%04x\n", chunk->code[i]);
-    // chunk_value_print(chunk, chunk->code[i]);
+    chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
+    chunk_value_print(chunk, chunk->code[i]);
     return ++i;
 }
 
@@ -194,6 +210,7 @@ static void standalone_chunk_print(Chunk* chunk) {
 
 void chunk_print(Chunk* chunk) {
     printf("--------[ CHUNK DUMP: <GLOBAL> ]--------\n\n");
+    valuearray_print(&chunk->constants);
     standalone_chunk_print(chunk);
     for (int i = 0; i < chunk->constants.size; i++) {
         if (VALUE_IS_OBJ(chunk->constants.values[i])) {
@@ -201,6 +218,7 @@ void chunk_print(Chunk* chunk) {
             if (OBJ_IS_FUNCTION(obj)) {
                 ObjFunction* fn = OBJ_AS_FUNCTION(obj);
                 printf("--------[ CHUNK DUMP: '%s' ]--------\n\n", OBJ_AS_CSTRING(fn->name));
+                valuearray_print(&fn->chunk.constants);
                 standalone_chunk_print(&fn->chunk);
             }
         }

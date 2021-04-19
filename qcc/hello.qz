@@ -1,13 +1,16 @@
-fn print_age(): Nil {
-    // print age;
-    return nil;
+print "GLOBAL!";
+var a = "a global";
+var e = "e global";
+{
+    print "FIRST!";
+    var a = "a first local";
+    {
+        print "SECOND!";
+        var a = "a second local";
+        print "END SECOND!";
+    }
+    print "END FIRST!";
 }
-
-fn say_hi_to(name: String, age: Number): Nil {
-    print "Hi to: " + name;
-    //print_age(age);
-    return nil;
-}
-
-say_hi_to("Diego", 23);
-say_hi_to("Javier", 16);
+print a;
+print e;
+print "END GLOBAL!";

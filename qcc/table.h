@@ -17,6 +17,8 @@ typedef struct {
     int max_distance;
 } Table;
 
+#define IS_ENTRY_EMPTY(table, index) (table->entries[index].key == NULL && table->entries[index].distance != -1)
+
 void init_table(Table* table);
 void free_table(Table* table);
 void table_set(Table* table, ObjString* key, Value value);

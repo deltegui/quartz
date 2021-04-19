@@ -4,3 +4,4 @@ qcc
 /.idea/
 /a.out/
 /qcc.dSYM/
+vgcore.*

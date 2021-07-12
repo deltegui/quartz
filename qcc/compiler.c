@@ -356,8 +356,10 @@ static void identifier_use(Compiler* compiler, Token identifier, struct Identifi
     Symbol* symbol = lookup_str(compiler, identifier.start, identifier.length);
     assert(symbol != NULL);
     assert(symbol->constant_index < UINT16_MAX);
+#ifdef COMPILER_DEBUG
     token_print(identifier);
     printf("Index %d\n", symbol->constant_index);
+#endif
     if (symbol->global) {
         emit_param(compiler, ops->op_global, ops->op_global_long, symbol->constant_index);
     } else {

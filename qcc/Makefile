@@ -9,7 +9,7 @@ ifneq ($(OS),Windows_NT)
 endif
 
 release:
-	$(CC) $(LIBS) ./*.c -o ./qcc
+	$(CC) $(LIBS) -Wall ./*.c -o ./qcc
 
 debug:
-	$(CC) $(LIBS) -g -D DEBUG ./*.c -o ./qcc
+	$(CC) $(LIBS) -Wall -g -D DEBUG ./*.c -o ./qcc

@@ -35,7 +35,7 @@ static void insert(Table* table, ObjString* key, Value value) {
         .value = value,
         .distance = 0,
     };
-    int current_index = index;
+    uint32_t current_index = index;
     for (;;) {
         if (IS_ENTRY_EMPTY(table, current_index) || IS_TOMBSTONE(table, current_index)) {
             table->entries[current_index] = entry_insert;

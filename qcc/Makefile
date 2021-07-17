@@ -12,4 +12,4 @@ release:
 	$(CC) $(LIBS) -Wall ./*.c -o ./qcc
 
 debug:
-	$(CC) $(LIBS) -Wall -g -D DEBUG ./*.c -o ./qcc
+	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG ./*.c -o ./qcc

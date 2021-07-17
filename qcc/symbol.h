@@ -27,7 +27,7 @@ typedef struct {
 typedef struct {
     SymbolKind kind;
     SymbolName name;
-    int declaration_line;
+    uint32_t declaration_line;
     Type type;
     uint16_t constant_index;
     bool global;

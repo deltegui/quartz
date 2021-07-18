@@ -34,7 +34,7 @@ sub clean_entry {
 
 my $prog_dir = "../programs";
 my $test_dir = "./cases";
-my $clox_bin = "../qcc";
+my $clox_bin = "../quartz";
 
 my %prog = read_files_as_hash($prog_dir);
 my %tests = read_files_as_hash($test_dir);
@@ -53,7 +53,7 @@ my $have_err = 0;
 while(my ($key, $value) = each(%tests)) {
 	if($prog{$key}) {
 		print("RUNNING TEST: $key... ");
-		my $result = `$clox_bin $prog{$key}`;
+		my $result = `$clox_bin $prog{$key} 2>&1`;
 		if(!$result) {
 			$result = '';
 		}

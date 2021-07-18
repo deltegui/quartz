@@ -50,6 +50,5 @@ int chunk_add_constant(Chunk* chunk, Value value) {
 uint16_t read_long(uint8_t** pc) {
     uint8_t high = *((*pc)++);
     uint8_t low = *((*pc)++);
-    uint16_t num = high << 0x8;
-    return num + low;
+    return high << 8 | low;
 }

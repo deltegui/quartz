@@ -1,0 +1,7 @@
+fn saluda(other: String): String {
+    return 'hola ' + other;
+}
+
+var old = saluda('Manola');
+old = saluda(old);
+print old;

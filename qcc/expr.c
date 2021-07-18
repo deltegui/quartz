@@ -23,6 +23,10 @@ Expr* create_expr(ExprKind kind, void* expr_node) {
         expr->kind = EXPR_ASSIGNMENT;
         expr->assignment = *(AssignmentExpr*)expr_node;
         break;
+    case EXPR_CALL:
+        expr->kind = EXPR_CALL;
+        expr->call = *(CallExpr*)expr_node;
+        break;
     }
     return expr;
 }
@@ -51,6 +55,12 @@ void free_expr(Expr* expr) {
     case EXPR_UNARY:
         free_expr(expr->unary.expr);
         break;
+    case EXPR_CALL:
+        for (int i = 0; i < expr->call.params.size; i++) {
+            free_expr(expr->call.params.params[i].expr);
+        }
+        free_param_array(&expr->call.params);
+        break;
     }
     free(expr);
 }
@@ -74,6 +84,7 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     case EXPR_UNARY: DISPATCH(visit_unary, unary); break;
     case EXPR_IDENTIFIER: DISPATCH(visit_identifier, identifier); break;
     case EXPR_ASSIGNMENT: DISPATCH(visit_assignment, assignment); break;
+    case EXPR_CALL: DISPATCH(visit_call, call); break;
     }
 #undef DISPATCH
 }

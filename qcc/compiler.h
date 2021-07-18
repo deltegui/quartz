@@ -2,6 +2,7 @@
 #define QUARTZ_COMPILER_H
 
 #include "chunk.h"
+#include "object.h"
 #include "parser.h"
 #include "expr.h"
 #include "stmt.h"
@@ -13,8 +14,6 @@ typedef enum {
     COMPILATION_OK,
 } CompilationResult;
 
-// Compile a source a let the result into a already created
-// chunk. While compiling, errors may occur.
-CompilationResult compile(const char* source, Chunk* output_chunk);
+CompilationResult compile(const char* source, ObjFunction** result);
 
 #endif

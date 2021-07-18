@@ -1,6 +1,5 @@
 #include <stdarg.h>
 #include "./common.h"
-
 #include "../lexer.h"
 
 #define ASSERT_TOKEN_TYPE(tkn, t) assert_true(tkn.kind == t)
@@ -78,6 +77,15 @@ static void should_scan_arithmetic_operators() {
         TOKEN_RIGHT_PAREN,
         TOKEN_LEFT_PAREN,
         TOKEN_DOT
+    );
+}
+
+static void should_scan_braces() {
+    assert_types(
+        " {   }   ",
+        2,
+        TOKEN_LEFT_BRACE,
+        TOKEN_RIGHT_BRACE
     );
 }
 
@@ -283,7 +291,7 @@ static void should_scan_global_declarations_with_types() {
             .length = 6,
             .line = 1,
             .start = "Number",
-            .kind = TOKEN_NUMBER_TYPE
+            .kind = TOKEN_TYPE_NUMBER
         },
         (Token){
             .length = 1,
@@ -310,15 +318,61 @@ static void should_tokenize_type_names() {
     assert_types(
         "  Number String   Bool Nil ",
         4,
-        TOKEN_NUMBER_TYPE,
-        TOKEN_STRING_TYPE,
-        TOKEN_BOOL_TYPE,
-        TOKEN_NIL_TYPE
+        TOKEN_TYPE_NUMBER,
+        TOKEN_TYPE_STRING,
+        TOKEN_TYPE_BOOL,
+        TOKEN_TYPE_NIL
+    );
+}
+
+static void should_tokenize_function_declarations() {
+    assert_types(
+        " fn hello(a: String, b: Number) {} ",
+        13,
+        TOKEN_FUNCTION,
+        TOKEN_IDENTIFIER,
+        TOKEN_LEFT_PAREN,
+        TOKEN_IDENTIFIER,
+        TOKEN_COLON,
+        TOKEN_TYPE_STRING,
+        TOKEN_COMMA,
+        TOKEN_IDENTIFIER,
+        TOKEN_COLON,
+        TOKEN_TYPE_NUMBER,
+        TOKEN_RIGHT_PAREN,
+        TOKEN_LEFT_BRACE,
+        TOKEN_RIGHT_BRACE
+    );
+}
+
+static void should_tokenize_returns() {
+    assert_types(
+        " return 22; ",
+        3,
+        TOKEN_RETURN,
+        TOKEN_NUMBER,
+        TOKEN_SEMICOLON
+    );
+}
+
+static void should_tokenize_print_correctly() {
+    assert_types(
+        " print_ast(ast); ",
+        5,
+        TOKEN_IDENTIFIER,
+        TOKEN_LEFT_PAREN,
+        TOKEN_IDENTIFIER,
+        TOKEN_RIGHT_PAREN,
+        TOKEN_SEMICOLON
     );
 }
 
 int main(void) {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(should_tokenize_print_correctly),
+        cmocka_unit_test(should_tokenize_returns),
+        cmocka_unit_test(should_tokenize_function_declarations),
+        cmocka_unit_test(should_scan_braces),
         cmocka_unit_test(should_tokenize_type_names),
         cmocka_unit_test(should_scan_global_declarations_with_types),
         cmocka_unit_test(should_scan_global_declarations),

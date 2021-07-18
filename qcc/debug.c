@@ -2,8 +2,22 @@
 #include <stdarg.h>
 #include "expr.h"
 #include "type.h"
+#include "object.h"
 
-void symbol_table_print(SymbolTable* table) {
+void table_print(Table* table) {
+    printf("\t| Key\t\t| Value\n");
+    printf("\t|---------------|-----------------\n");
+    for (int i = 0; i < table->capacity; i++) {
+        if (! IS_ENTRY_EMPTY(table, i)) {
+            printf("\t|%s\t\t|", OBJ_AS_CSTRING(table->entries[i].key));
+            value_print(table->entries[i].value);
+            printf("\n");
+        }
+    }
+    printf("\n\n");
+}
+
+static void symbol_table_print(SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
     printf("| Name\t| Line\t| Type\n");
     printf("|-------|-------|------------\n");
@@ -21,6 +35,17 @@ void symbol_table_print(SymbolTable* table) {
         printf("\n");
     }
     printf("\n\n");
+}
+
+static void symbol_node_print(SymbolNode* node) {
+    symbol_table_print(&node->symbols);
+    for (int i = 0; i < node->size; i++) {
+        symbol_node_print(&node->childs[i]);
+    }
+}
+
+void scoped_symbol_table_print(ScopedSymbolTable* table) {
+    symbol_node_print(&table->global);
 }
 
 void valuearray_print(ValueArray* values) {
@@ -55,14 +80,18 @@ static const char* OpCodeStrings[] = {
     "OP_PRINT",
     "OP_RETURN",
     "OP_POP",
+    "OP_CALL",
+    "OP_END",
     "OP_CONSTANT",
     "OP_CONSTANT_LONG",
     "OP_DEFINE_GLOBAL",
-	"OP_GET_GLOBAL",
-	"OP_SET_GLOBAL",
+    "OP_GET_GLOBAL",
+    "OP_SET_GLOBAL",
     "OP_DEFINE_GLOBAL_LONG",
-	"OP_GET_GLOBAL_LONG",
-	"OP_SET_GLOBAL_LONG",
+    "OP_GET_GLOBAL_LONG",
+    "OP_SET_GLOBAL_LONG",
+    "OP_GET_LOCAL",
+    "OP_SET_LOCAL",
 };
 
 void opcode_print(uint8_t op) {
@@ -85,6 +114,7 @@ static void chunk_value_print(Chunk* chunk, int index);
 static int chunk_opcode_print(Chunk* chunk, int i);
 static int chunk_short_print(Chunk* chunk, int i);
 static int chunk_long_print(Chunk* chunk, int i);
+static void standalone_chunk_print(Chunk* chunk);
 
 static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
     printf("[%02d;%02d]\t", i, chunk->lines[i]);
@@ -108,7 +138,11 @@ static int chunk_opcode_print(Chunk* chunk, int i) {
 static int chunk_short_print(Chunk* chunk, int i) {
     i = chunk_opcode_print(chunk, i);
     chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
-    chunk_value_print(chunk, chunk->code[i]);
+    if (chunk->code[i] < chunk->constants.size) {
+        chunk_value_print(chunk, chunk->code[i]);
+    } else {
+        printf("\n");
+    }
     return ++i;
 }
 
@@ -122,8 +156,7 @@ static int chunk_long_print(Chunk* chunk, int i) {
     return ++i;
 }
 
-void chunk_print(Chunk* chunk) {
-    printf("--------[ CHUNK DUMP ]--------\n\n");
+static void standalone_chunk_print(Chunk* chunk) {
     for (int i = 0; i < chunk->size; i++) {
         printf("[%d] %04x\n", i, chunk->code[i]);
     }
@@ -149,14 +182,18 @@ void chunk_print(Chunk* chunk) {
         case OP_LOWER:
         case OP_POP:
         case OP_PRINT:
-        case OP_GREATER: {
+        case OP_GREATER:
+        case OP_END: {
             i = chunk_opcode_print(chunk, i);
             break;
         }
+        case OP_DEFINE_GLOBAL:
         case OP_GET_GLOBAL:
         case OP_SET_GLOBAL:
-        case OP_DEFINE_GLOBAL:
-        case OP_CONSTANT: {
+        case OP_GET_LOCAL:
+        case OP_SET_LOCAL:
+        case OP_CONSTANT:
+        case OP_CALL: {
             i = chunk_short_print(chunk, i);
             break;
         }
@@ -167,6 +204,24 @@ void chunk_print(Chunk* chunk) {
             i = chunk_long_print(chunk, i);
             break;
         }
+        }
+    }
+    printf("\n");
+}
+
+void chunk_print(Chunk* chunk) {
+    printf("--------[ CHUNK DUMP: <GLOBAL> ]--------\n\n");
+    valuearray_print(&chunk->constants);
+    standalone_chunk_print(chunk);
+    for (int i = 0; i < chunk->constants.size; i++) {
+        if (VALUE_IS_OBJ(chunk->constants.values[i])) {
+            Obj* obj = VALUE_AS_OBJ(chunk->constants.values[i]);
+            if (OBJ_IS_FUNCTION(obj)) {
+                ObjFunction* fn = OBJ_AS_FUNCTION(obj);
+                printf("--------[ CHUNK DUMP: '%s' ]--------\n\n", OBJ_AS_CSTRING(fn->name));
+                valuearray_print(&fn->chunk.constants);
+                standalone_chunk_print(&fn->chunk);
+            }
         }
     }
 }
@@ -182,11 +237,14 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_PERCENT: return "TokenPercent";
     case TOKEN_LEFT_PAREN: return "TokenLeftParen";
     case TOKEN_RIGHT_PAREN: return "TokenRightParen";
+    case TOKEN_LEFT_BRACE: return "TokenLeftBrace";
+    case TOKEN_RIGHT_BRACE: return "TokenRightBrace";
     case TOKEN_DOT: return "TokenDot";
     case TOKEN_EQUAL: return "TokenEqual";
     case TOKEN_BANG: return "TokenBang";
     case TOKEN_AND: return "TokenAnd";
     case TOKEN_OR: return "TokenOr";
+    case TOKEN_FUNCTION: return "TokenFunction";
     case TOKEN_VAR: return "TokenVar";
     case TOKEN_NUMBER: return "TokenNumber";
     case TOKEN_TRUE: return "TokenTrue";
@@ -203,10 +261,12 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_PRINT: return "TokenPrint";
     case TOKEN_SEMICOLON: return "TokenSemicolon";
     case TOKEN_COLON: return "TokenColon";
-    case TOKEN_NUMBER_TYPE: return "TokenNumberType";
-    case TOKEN_STRING_TYPE: return "TokenStringType";
-    case TOKEN_BOOL_TYPE: return "TokenBoolType";
-    case TOKEN_NIL_TYPE: return "TokenNilType";
+    case TOKEN_TYPE_NUMBER: return "TokenNumberType";
+    case TOKEN_TYPE_STRING: return "TokenStringType";
+    case TOKEN_TYPE_BOOL: return "TokenBoolType";
+    case TOKEN_TYPE_NIL: return "TokenNilType";
+    case TOKEN_COMMA: return "TokenComma";
+    case TOKEN_RETURN: return "TokenReturn";
     default: return "Unknown";
     }
 }
@@ -229,6 +289,7 @@ static void print_unary(void* ctx, UnaryExpr* unary);
 static void print_literal(void* ctx, LiteralExpr* literal);
 static void print_identifier(void* ctx, IdentifierExpr* identifier);
 static void print_assignment(void* ctx, AssignmentExpr* assignment);
+static void print_call(void* ctx, CallExpr* call);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
@@ -236,16 +297,23 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_unary = print_unary,
     .visit_identifier = print_identifier,
     .visit_assignment = print_assignment,
+    .visit_call = print_call,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
 static void print_var(void* ctx, VarStmt* var);
 static void print_print(void* ctx, PrintStmt* var);
+static void print_block(void* ctx, BlockStmt* block);
+static void print_function(void* ctx, FunctionStmt* function);
+static void print_return(void* ctx, ReturnStmt* return_);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
     .visit_var = print_var,
     .visit_print = print_print,
+    .visit_block = print_block,
+    .visit_function = print_function,
+    .visit_return = print_return,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -271,6 +339,14 @@ static void pretty_print(const char *msg, ...) {
     printf("%s", msg);
 }
 
+static void print_block(void* ctx, BlockStmt* block) {
+    pretty_print("Block: {\n");
+    OFFSET({
+        ACCEPT_STMT(block->stmts);
+    });
+    pretty_print("}\n");
+}
+
 static void print_print(void* ctx, PrintStmt* print) {
     pretty_print("Print: [\n");
     OFFSET({
@@ -283,6 +359,14 @@ static void print_expr(void* ctx, ExprStmt* expr) {
     pretty_print("Expr Stmt: [\n");
     OFFSET({
         ACCEPT_EXPR(expr->inner);
+    });
+    pretty_print("]\n");
+}
+
+static void print_return(void* ctx, ReturnStmt* return_) {
+    pretty_print("Return Stmt: [\n");
+    OFFSET({
+        ACCEPT_EXPR(return_->inner);
     });
     pretty_print("]\n");
 }
@@ -350,6 +434,22 @@ static void print_assignment(void* ctx, AssignmentExpr* assignment) {
     pretty_print("]\n");
 }
 
+static void print_call(void* ctx, CallExpr* call) {
+    pretty_print("Call Expr: [\n");
+    OFFSET({
+        pretty_print("Function name: ");
+        token_print(call->identifier);
+        pretty_print("Params: [\n");
+        OFFSET({
+            for (int i = 0; i < call->params.size; i++) {
+                ACCEPT_EXPR(call->params.params[i].expr);
+            }
+        });
+        pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
 static void print_unary(void* ctx, UnaryExpr* unary) {
     pretty_print("Unary: [\n");
     OFFSET({
@@ -358,6 +458,18 @@ static void print_unary(void* ctx, UnaryExpr* unary) {
         pretty_print("Expr: \n");
         OFFSET({
             ACCEPT_EXPR(unary->expr);
+        });
+    });
+    pretty_print("]\n");
+}
+
+static void print_function(void* ctx, FunctionStmt* function) {
+    pretty_print("Function '");
+    printf("%.*s' [\n", function->identifier.length, function->identifier.start);
+    OFFSET({
+        pretty_print("Body: \n");
+        OFFSET({
+            ACCEPT_STMT(function->body);
         });
     });
     pretty_print("]\n");

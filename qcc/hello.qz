@@ -1,6 +1,31 @@
-var hola: Number = 10 * 3;
+fn sum(a: Number, b: Number): Number {
+    return a + b;
+}
 
-print hola;
+fn sub(a: Number, b: Number): Number {
+    return a - b;
+}
 
-hola = 23.34;
-print hola;
+/*
+fn do_operations(): Void {
+    print sum(sub(2, 3), sum(5, 3));
+}
+*/
+
+var times_executed = 0;
+
+fn do_operations(): Nil {
+    print sum(sub(2, 3), sum(5, 3));
+    times_executed = times_executed + 1;
+    return nil;
+}
+
+do_operations(); // 1
+do_operations(); // 2
+do_operations(); // 3
+do_operations(); // 4
+do_operations(); // 5
+do_operations(); // 6
+
+print "Times executed";
+print times_executed;

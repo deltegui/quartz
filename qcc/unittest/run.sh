@@ -5,7 +5,7 @@ if [ "$1" = "--help" ]; then
     exit 0
 fi
 
-CC="clang"
+CC="clang -g"
 LIBS=-lcmocka
 BIN="./a.out"
 AND_EXEC="&& $BIN"
@@ -23,19 +23,19 @@ fi
 SOURCES=`find ../*.c -maxdepth 1 ! -name qcc.c | tr '\n' ' '`
 echo $SOURCES
 
-echo "\n\n-------- [LEXER TESTS] --------"
+printf "\n\n-------- [LEXER TESTS] --------\n"
 sh -c "$CC $MACROS ./lexer_test.c $SOURCES $LIBS $AND_EXEC"
 
-echo "\n\n-------- [PARSER TESTS] --------"
+printf "\n\n-------- [PARSER TESTS] --------\n"
 sh -c "$CC $MACROS ./parser_test.c $SOURCES $LIBS $AND_EXEC"
 
-echo "\n\n-------- [COMPILER TESTS] --------"
+printf "\n\n-------- [COMPILER TESTS] --------\n"
 sh -c "$CC $MACROS ./compiler_test.c $SOURCES $LIBS $AND_EXEC"
 
-echo "\n\n-------- [TABLE TESTS] --------"
+printf "\n\n-------- [TABLE TESTS] --------\n"
 sh -c "$CC $MACROS ./table_test.c $SOURCES $LIBS $AND_EXEC"
 
-echo "\n\n-------- [SYMBOL TESTS] --------"
+printf "\n\n-------- [SYMBOL TESTS] --------\n"
 sh -c "$CC $MACROS ./symbol_test.c $SOURCES $LIBS $AND_EXEC"
 
 rm $BIN

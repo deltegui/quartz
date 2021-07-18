@@ -16,3 +16,6 @@ win64:
 
 debug:
 	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG ./*.c -o ./quartz
+
+win64-debug:
+	x86_64-w64-mingw32-gcc -lm -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG ./*.c -o ./quartz

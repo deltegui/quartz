@@ -52,6 +52,7 @@ bool value_equals(Value first, Value second) {
         return VALUE_AS_OBJ(first) == VALUE_AS_OBJ(second);
     }
     }
+    assert(false); // We should not reach this line
 }
 
 void init_valuearray(ValueArray* arr) {

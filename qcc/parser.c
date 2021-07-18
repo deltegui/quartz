@@ -530,7 +530,7 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
         parser,
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in function call");
-    
+
     if (fn_sym->function.params.size != call.params.size) {
         error(
             parser,

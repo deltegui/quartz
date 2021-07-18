@@ -462,10 +462,6 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 
 static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
-    /*if (! lookup_const_index(compiler, call->identifier.start, call->identifier.length)) {
-        uint16_t index = make_constant(compiler, OBJ_VALUE(copy_string(call->identifier.start, call->identifier.length)));
-        insert_const(compiler, call->identifier.start, call->identifier.length, index);
-    }*/
     identifier_use(compiler, call->identifier, &ops_get_identifier);
     int i = 0;
     for (; i < call->params.size; i++) {

@@ -12,3 +12,4 @@ fn say_hi_to(name: String, age: Number): Nil {
 
 say_hi_to("Diego", 23);
 say_hi_to("Javier", 16);
+print_age(22);

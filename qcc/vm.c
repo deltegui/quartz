@@ -82,10 +82,18 @@ static inline Value stack_peek(uint8_t distance) {
     stack_push(table_find(&qvm.globals, identifier))
 
 #define READ_BYTE() *(qvm.frame->pc++)
+
 #define READ_CONSTANT() qvm.frame->func->chunk.constants.values[READ_BYTE()]
 #define READ_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT()))
+
 #define READ_CONSTANT_LONG() qvm.frame->func->chunk.constants.values[read_long(&qvm.frame->pc)]
 #define READ_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT_LONG()))
+
+#define READ_GLOBAL_CONSTANT() qvm.frames[0].func->chunk.constants.values[READ_BYTE()]
+#define READ_GLOBAL_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_GLOBAL_CONSTANT()))
+
+#define READ_GLOBAL_CONSTANT_LONG() qvm.frames[0].func->chunk.constants.values[read_long(&qvm.frame->pc)]
+#define READ_GLOBAL_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_GLOBAL_CONSTANT_LONG()))
 
 static void run(ObjFunction* func) {
 #ifdef VM_DEBUG
@@ -197,19 +205,19 @@ static void run(ObjFunction* func) {
             break;
         }
         case OP_SET_GLOBAL: {
-            SET_GLOBAL_OP(READ_STRING);
+            SET_GLOBAL_OP(READ_GLOBAL_STRING);
             break;
         }
         case OP_SET_GLOBAL_LONG: {
-            SET_GLOBAL_OP(READ_STRING_LONG);
+            SET_GLOBAL_OP(READ_GLOBAL_STRING_LONG);
             break;
         }
         case OP_GET_GLOBAL: {
-            GET_GLOBAL_OP(READ_STRING);
+            GET_GLOBAL_OP(READ_GLOBAL_STRING);
             break;
         }
         case OP_GET_GLOBAL_LONG: {
-            GET_GLOBAL_OP(READ_STRING_LONG);
+            GET_GLOBAL_OP(READ_GLOBAL_STRING_LONG);
             break;
         }
         case OP_GET_LOCAL: {

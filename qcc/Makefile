@@ -9,7 +9,7 @@ ifneq ($(OS),Windows_NT)
 endif
 
 release:
-	$(CC) $(LIBS) -Wall ./*.c -o ./qcc
+	$(CC) $(LIBS) -Wall -O1 ./*.c -o ./quartz
 
 debug:
-	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG ./*.c -o ./qcc
+	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG ./*.c -o ./quartz

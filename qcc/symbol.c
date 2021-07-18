@@ -8,19 +8,10 @@
 #define S_GROW_CAPACITY(cap) (cap < 8 ? 8 : cap * 2)
 #define SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
 
+static FunctionSymbol create_function_symbol();
 static Symbol* find(SymbolTable* table, SymbolName* name);
 static void grow_symbol_table(SymbolTable* table);
-
-void init_symbol_table(SymbolTable* table) {
-    table->size = 0;
-    table->capacity = 0;
-    table->entries = NULL;
-}
-
-void free_symbol_table(SymbolTable* table) {
-    free(table->entries);
-    init_symbol_table(table);
-}
+static SymbolKind kind_from_type(Type type);
 
 SymbolName create_symbol_name(const char* str, int length) {
     assert(length != 0);
@@ -33,9 +24,70 @@ SymbolName create_symbol_name(const char* str, int length) {
     return name;
 }
 
-Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length) {
-    SymbolName symbol_name = create_symbol_name(name, length);
-    return symbol_lookup(table, &symbol_name);
+Symbol create_symbol_from_token(Token* token, Type type) {
+    return create_symbol(
+        create_symbol_name(token->start, token->length),
+        token->line,
+        type);
+}
+
+Symbol create_symbol(SymbolName name, int line, Type type) {
+    Symbol symbol = (Symbol){
+        .kind = kind_from_type(type),
+        .name = name,
+        .declaration_line = line,
+        .type = type,
+        .constant_index = UINT16_MAX,
+        .global = false, // we dont know
+    };
+    if (symbol.kind == SYMBOL_FUNCTION) {
+        symbol.function = create_function_symbol();
+    }
+    return symbol;
+}
+
+static SymbolKind kind_from_type(Type type) {
+    switch (type) {
+    case TYPE_FUNCTION: return SYMBOL_FUNCTION;
+    default: return SYMBOL_VAR;
+    }
+}
+
+static FunctionSymbol create_function_symbol() {
+    FunctionSymbol fn_sym = (FunctionSymbol) {
+        .return_type = TYPE_NIL
+    };
+    init_param_array(&fn_sym.params);
+    init_param_array(&fn_sym.param_types);
+    return fn_sym;
+}
+
+void free_symbol(Symbol* symbol) {
+    switch (symbol->kind) {
+    case SYMBOL_FUNCTION: {
+        free_param_array(&symbol->function.params);
+        free_param_array(&symbol->function.param_types);
+        break;
+    }
+    case SYMBOL_VAR:
+        break;
+    }
+}
+
+void init_symbol_table(SymbolTable* table) {
+    table->size = 0;
+    table->capacity = 0;
+    table->entries = NULL;
+}
+
+void free_symbol_table(SymbolTable* table) {
+    for (int i = 0; i < table->capacity; i++) {
+        if (! IS_EMPTY(&table->entries[i])) {
+            free_symbol(&table->entries[i]);
+        }
+    }
+    free(table->entries);
+    init_symbol_table(table);
 }
 
 Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {
@@ -47,6 +99,11 @@ Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {
         return NULL;
     }
     return symbol;
+}
+
+Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return symbol_lookup(table, &symbol_name);
 }
 
 void symbol_insert(SymbolTable* table, Symbol symbol) {
@@ -68,7 +125,7 @@ static void grow_symbol_table(SymbolTable* table) {
     for (int i = 0; i < table->capacity; i++) {
         Symbol* symbol = &table->entries[i];
         symbol->declaration_line = 0;
-        symbol->type = UNKNOWN_TYPE;
+        symbol->type = TYPE_UNKNOWN;
         symbol->name.str = NULL;
         symbol->name.length = 0;
         symbol->name.hash = 0;

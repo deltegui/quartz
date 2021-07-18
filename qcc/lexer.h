@@ -25,6 +25,7 @@ typedef enum {
     TOKEN_COLON,
     TOKEN_LEFT_BRACE,
     TOKEN_RIGHT_BRACE,
+    TOKEN_COMMA,
 
     // Two character tokens
     TOKEN_AND,
@@ -35,6 +36,8 @@ typedef enum {
     TOKEN_GREATER_EQUAL,
 
     // Multi-character tokens
+    TOKEN_RETURN,
+    TOKEN_FUNCTION,
     TOKEN_VAR,
     TOKEN_NUMBER,
     TOKEN_TRUE,
@@ -44,10 +47,10 @@ typedef enum {
     TOKEN_PRINT,
     TOKEN_IDENTIFIER,
 
-    TOKEN_NUMBER_TYPE,
-    TOKEN_STRING_TYPE,
-    TOKEN_BOOL_TYPE,
-    TOKEN_NIL_TYPE
+    TOKEN_TYPE_NUMBER,
+    TOKEN_TYPE_STRING,
+    TOKEN_TYPE_BOOL,
+    TOKEN_TYPE_NIL
 } TokenKind;
 
 typedef struct {

@@ -45,14 +45,12 @@ int compile_file(const char* file) {
     if (source == NULL) {
         return EX_OSFILE;
     }
-    Chunk chunk;
-    init_chunk(&chunk);
+    ObjFunction* main_func;
     init_qvm();
-    if (compile(source, &chunk) == COMPILATION_OK) {
-        qvm_execute(&chunk);
+    if (compile(source, &main_func) == COMPILATION_OK) {
+        qvm_execute(main_func);
     }
     free_qvm();
-    free_chunk(&chunk);
     free((char*) source);
     return 0;
 }
@@ -64,7 +62,7 @@ static inline bool strempty(const char* str) {
 void repl() {
 #define BUFFER_SIZE 256
     char input_buffer[BUFFER_SIZE];
-    Chunk chunk;
+    ObjFunction* main_func;
     for (;;) {
         printf("<qz> ");
         if (!fgets(input_buffer, BUFFER_SIZE, stdin)) {
@@ -74,13 +72,11 @@ void repl() {
         if (strempty(input_buffer)) {
             continue;
         }
-        init_chunk(&chunk);
         init_qvm();
-        if (compile(input_buffer, &chunk) == COMPILATION_OK) {
-            qvm_execute(&chunk);
+        if (compile(input_buffer, &main_func) == COMPILATION_OK) {
+            qvm_execute(main_func);
         }
         free_qvm();
-        free_chunk(&chunk);
     }
 #undef BUFFER_SIZE
 }

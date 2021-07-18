@@ -1,6 +1,7 @@
 **/build/
-qcc
+quartz
 /cmake-build-debug/
 /.idea/
 /a.out/
 /qcc.dSYM/
+vgcore.*

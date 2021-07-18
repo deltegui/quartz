@@ -2,6 +2,7 @@
 #define QUARTZ_SYMBOL_H
 
 #include "type.h"
+#include "fnparams.h"
 
 typedef struct {
     const char* str;
@@ -11,13 +12,33 @@ typedef struct {
 
 SymbolName create_symbol_name(const char* str, int length);
 
+typedef enum {
+    SYMBOL_FUNCTION,
+    SYMBOL_VAR
+} SymbolKind;
+
 typedef struct {
+    // TODO Should we unified params and params types?
+    ParamArray params;
+    ParamArray param_types;
+    Type return_type;
+} FunctionSymbol;
+
+typedef struct {
+    SymbolKind kind;
     SymbolName name;
-    int declaration_line;
+    uint32_t declaration_line;
     Type type;
     uint16_t constant_index;
     bool global;
+    union {
+        FunctionSymbol function;
+    };
 } Symbol;
+
+Symbol create_symbol_from_token(Token* token, Type type);
+Symbol create_symbol(SymbolName name, int line, Type type);
+void free_symbol(Symbol* symbol);
 
 typedef struct {
     Symbol* entries;

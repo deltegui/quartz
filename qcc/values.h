@@ -2,8 +2,10 @@
 #define QUARTZ_VALUES_H
 
 #include "common.h"
-#include "object.h"
 #include "type.h"
+
+typedef struct s_obj Obj;
+typedef struct s_obj_string ObjString;
 
 typedef enum {
     VALUE_NUMBER,
@@ -26,19 +28,19 @@ void value_print(Value val);
 bool value_equals(Value first, Value second);
 Value value_default(Type type);
 
-#define NUMBER_VALUE(i) ((Value){ NUMBER_TYPE, VALUE_NUMBER, { .number = i } })
-#define BOOL_VALUE(b) ((Value){ BOOL_TYPE, VALUE_BOOL, { .boolean = b } })
-#define NIL_VALUE() ((Value){ NIL_TYPE, VALUE_NIL, { .object = NULL } })
-#define OBJ_VALUE(obj) ((Value){ UNKNOWN_TYPE, VALUE_OBJ, { .object = (Obj*) obj } })
+#define NUMBER_VALUE(i) ((Value){ TYPE_NUMBER, VALUE_NUMBER, { .number = i } })
+#define BOOL_VALUE(b) ((Value){ TYPE_BOOL, VALUE_BOOL, { .boolean = b } })
+#define NIL_VALUE() ((Value){ TYPE_NIL, VALUE_NIL, { .object = NULL } })
+#define OBJ_VALUE(obj) ((Value){ TYPE_UNKNOWN, VALUE_OBJ, { .object = (Obj*) obj } })
 
-#define IS_NUMBER(val) (val.kind == VALUE_NUMBER)
-#define IS_BOOL(val) (val.kind == VALUE_BOOL)
-#define IS_NIL(val) (val.kind == VALUE_NIL)
-#define IS_OBJ(val) (val.kind == VALUE_OBJ)
+#define VALUE_IS_NUMBER(val) (val.kind == VALUE_NUMBER)
+#define VALUE_IS_BOOL(val) (val.kind == VALUE_BOOL)
+#define VALUE_IS_NIL(val) (val.kind == VALUE_NIL)
+#define VALUE_IS_OBJ(val) (val.kind == VALUE_OBJ)
 
-#define AS_NUMBER(val) val.as.number
-#define AS_BOOL(val) val.as.boolean
-#define AS_OBJ(val) ((Obj*) val.as.object)
+#define VALUE_AS_NUMBER(val) val.as.number
+#define VALUE_AS_BOOL(val) val.as.boolean
+#define VALUE_AS_OBJ(val) ((Obj*) val.as.object)
 
 typedef struct {
     int size;

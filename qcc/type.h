@@ -4,11 +4,12 @@
 #include "lexer.h"
 
 typedef enum {
-    NUMBER_TYPE,
-    BOOL_TYPE,
-    NIL_TYPE,
-    STRING_TYPE,
-    UNKNOWN_TYPE,
+    TYPE_NUMBER,
+    TYPE_BOOL,
+    TYPE_NIL,
+    TYPE_STRING,
+    TYPE_FUNCTION,
+    TYPE_UNKNOWN,
 } Type;
 
 Type type_from_token_kind(TokenKind kind);

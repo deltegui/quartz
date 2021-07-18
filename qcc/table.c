@@ -5,7 +5,6 @@
 #define LOAD_FACTOR 0.75
 
 #define TABLE_SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
-#define IS_ENTRY_EMPTY(table, index) (table->entries[index].key == NULL && table->entries[index].distance != -1)
 #define SHOULD_INTERCHANGE_ENTRY(table, index, dist) (table->entries[index].distance < dist)
 #define KEY_EQUALS(table, index, other_key) (table->entries[index].key == other_key)
 #define IS_TOMBSTONE(table, index) (table->entries[index].distance == -1)
@@ -36,7 +35,7 @@ static void insert(Table* table, ObjString* key, Value value) {
         .value = value,
         .distance = 0,
     };
-    int current_index = index;
+    uint32_t current_index = index;
     for (;;) {
         if (IS_ENTRY_EMPTY(table, current_index) || IS_TOMBSTONE(table, current_index)) {
             table->entries[current_index] = entry_insert;

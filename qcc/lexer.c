@@ -82,7 +82,7 @@ static Token create_token(Lexer* lexer, TokenKind kind) {
     token.start = lexer->start;
     token.kind = kind;
 #ifdef LEXER_DEBUG
-    printf("[LEXER DEBUG]: Readed ");
+    printf("[LEXER DEBUG]: Read ");
     token_print(token);
 #endif
     return token;

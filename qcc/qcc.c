@@ -39,7 +39,7 @@ int compile_file(const char* file) {
     const char* source = read_file(file);
 
 #ifdef DEBUG
-    printf("Readed buffer:\n%s\n", source);
+    printf("Read buffer:\n%s\n", source);
 #endif
 
     if (source == NULL) {

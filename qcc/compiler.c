@@ -50,6 +50,7 @@ static void emit(Compiler* compiler, uint8_t bytecode);
 static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param);
 static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param);
 static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
+static bool last_emitted_byte_equals(Compiler* compiler, uint8_t byte);
 
 static uint16_t make_constant(Compiler* compiler, Value value);
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
@@ -214,6 +215,10 @@ static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  u
     }
 }
 
+static bool last_emitted_byte_equals(Compiler* compiler, uint8_t byte) {
+    return chunk_check_last_byte(current_chunk(compiler), byte);
+}
+
 static uint16_t make_constant(Compiler* compiler, Value value) {
     int constant_index = chunk_add_constant(current_chunk(compiler), value);
     if (constant_index > UINT16_COUNT) {
@@ -283,6 +288,9 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 }
 
 static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
+    if (last_emitted_byte_equals(compiler, OP_RETURN)) {
+        return;
+    }
     if (fn_sym->function.return_type == TYPE_VOID) {
         emit(compiler, OP_NIL);
         emit(compiler, OP_RETURN);
@@ -300,7 +308,11 @@ static void update_param_index(Compiler* compiler, Symbol* symbol) {
 
 static void compile_return(void* ctx, ReturnStmt* return_) {
     Compiler* compiler = (Compiler*) ctx;
-    ACCEPT_EXPR(compiler, return_->inner);
+    if (return_->inner != NULL) {
+        ACCEPT_EXPR(compiler, return_->inner);
+    } else {
+        emit(compiler, OP_NIL);
+    }
     emit(compiler, OP_RETURN);
 }
 

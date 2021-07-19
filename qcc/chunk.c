@@ -47,6 +47,13 @@ int chunk_add_constant(Chunk* chunk, Value value) {
     return valuearray_write(&chunk->constants, value);
 }
 
+bool chunk_check_last_byte(Chunk* chunk, uint8_t bytecode) {
+    if (chunk->size <= 0) {
+        return false;
+    }
+    return chunk->code[chunk->size - 1] == bytecode;
+}
+
 uint16_t read_long(uint8_t** pc) {
     uint8_t high = *((*pc)++);
     uint8_t low = *((*pc)++);

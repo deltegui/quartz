@@ -460,11 +460,14 @@ static Stmt* return_stmt(Parser* parser) {
         error(parser, "Cannot use return outside a function!");
     }
     advance(parser); // consume return
-    Expr* expr = expression(parser);
-    ReturnStmt return_stmt = (ReturnStmt){
-        .inner = expr,
-    };
-    consume(parser, TOKEN_SEMICOLON, "Expected return statment to end with ';'");
+    ReturnStmt return_stmt;
+    if (parser->current.kind == TOKEN_SEMICOLON) {
+        advance(parser); // consume semicolon
+        return_stmt.inner = NULL;
+    } else {
+        return_stmt.inner = expression(parser);
+        consume(parser, TOKEN_SEMICOLON, "Expected return statment to end with ';'");
+    }
     return CREATE_STMT_RETURN(return_stmt);
 }
 

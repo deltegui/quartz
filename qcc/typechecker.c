@@ -10,7 +10,7 @@ typedef struct {
     ScopedSymbolTable* symbols;
     Type last_type;
     bool has_error;
-    bool had_return;
+    Token func_identifier;
 } Typechecker;
 
 static void error_last_type_match(Typechecker* checker, Token* where, Type first, const char* message);
@@ -91,7 +91,6 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
-    checker.had_return = false;
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
     return !checker.has_error;
@@ -216,9 +215,9 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
     Typechecker* checker = (Typechecker*) ctx;
+    checker->func_identifier = function->identifier;
 
     start_scope(checker);
-    checker->had_return = false;
     ACCEPT_STMT(ctx, function->body);
     end_scope(checker);
 
@@ -226,21 +225,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     typecheck_params_arent_void(checker, symbol);
-    if ((! checker->had_return) && symbol->function.return_type != TYPE_VOID) {
-        error(
-            checker,
-            &function->identifier,
-            "Expected function to return ");
-        type_print(symbol->function.return_type);
-        printf(" but returns Void\n");
-    }
-    if (checker->had_return && symbol->function.return_type != checker->last_type) {
-        error_last_type_match(
-            checker,
-            &function->identifier,
-            symbol->function.return_type,
-            "in function return");
-    }
+
     checker->last_type = symbol->function.return_type;
 }
 
@@ -263,8 +248,20 @@ static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol) {
 
 static void typecheck_return(void* ctx, ReturnStmt* return_) {
     Typechecker* checker = (Typechecker*) ctx;
-    checker->had_return = true;
     ACCEPT_EXPR(ctx, return_->inner);
+    if (return_->inner == NULL) {
+        checker->last_type = TYPE_VOID;
+    }
+    Symbol* symbol = lookup_str(checker, checker->func_identifier.start, checker->func_identifier.length);
+    assert(symbol != NULL);
+    assert(symbol->kind == SYMBOL_FUNCTION);
+    if (symbol->function.return_type != checker->last_type) {
+        error_last_type_match(
+            checker,
+            &checker->func_identifier,
+            symbol->function.return_type,
+            "in function return");
+    }
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

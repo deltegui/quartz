@@ -323,7 +323,7 @@ static void should_parse_grouping() {
         .right = CREATE_LITERAL_EXPR(five)
     };
     assert_expr_ast(
-        " ( 2 + 2 ) * 5 ",
+        " ( 2 + 2 ) * 5; ",
         CREATE_BINARY_EXPR(mul)
     );
 }
@@ -507,6 +507,12 @@ static void should_fail_if_return_is_not_inside_a_function() {
     assert_has_errors("return 1;");
 }
 
+static void should_fail_if_you_use_reserved_words_as_identifiers() {
+    assert_has_errors(" var var = 1; ");
+    assert_has_errors(" var fn = 5; ");
+    assert_has_errors(" fn {} () {} ");
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_returns),
@@ -523,6 +529,7 @@ int main(void) {
         cmocka_unit_test(should_parse_strings),
         cmocka_unit_test(should_parse_reserved_words_as_literals),
         cmocka_unit_test(should_parse_equality),
+        cmocka_unit_test(should_fail_if_you_use_reserved_words_as_identifiers),
         cmocka_unit_test(should_fail_if_return_is_not_inside_a_function)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);

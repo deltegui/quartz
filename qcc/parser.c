@@ -289,11 +289,12 @@ Stmt* parse(Parser* parser) {
 
 static Stmt* declaration_block(Parser* parser, TokenKind limit_token) {
     ListStmt* list = create_stmt_list();
-    while (parser->current.kind != limit_token) {
+    while (parser->current.kind != limit_token && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
-        stmt_list_add(list, stmt);
         if (parser->panic_mode) {
             syncronize(parser);
+        } else {
+            stmt_list_add(list, stmt);
         }
     }
     return CREATE_STMT_LIST(list);
@@ -335,6 +336,9 @@ static Stmt* block_stmt(Parser* parser) {
 
 static Stmt* variable_decl(Parser* parser) {
     advance(parser); // consume var
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        error(parser, "Expected identifier to be var name");
+    }
     VarStmt var;
     var.identifier = parser->current;
     advance(parser); // consume identifier
@@ -364,6 +368,9 @@ static Stmt* variable_decl(Parser* parser) {
 static Stmt* function_decl(Parser* parser) {
     advance(parser); // consume fn
 
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        error(parser, "Expected identifier to be function name");
+    }
     FunctionStmt fn = (FunctionStmt){
         .identifier = parser->current,
     };

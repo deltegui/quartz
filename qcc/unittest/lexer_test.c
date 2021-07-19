@@ -316,12 +316,13 @@ static void should_scan_global_declarations_with_types() {
 
 static void should_tokenize_type_names() {
     assert_types(
-        "  Number String   Bool Nil ",
-        4,
+        "  Number String   Bool Nil   Void",
+        5,
         TOKEN_TYPE_NUMBER,
         TOKEN_TYPE_STRING,
         TOKEN_TYPE_BOOL,
-        TOKEN_TYPE_NIL
+        TOKEN_TYPE_NIL,
+        TOKEN_TYPE_VOID
     );
 }
 

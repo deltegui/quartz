@@ -1,0 +1,6 @@
+fn imvoid(): Void {
+    print "This should work!";
+    return;
+}
+
+imvoid();

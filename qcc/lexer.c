@@ -275,6 +275,12 @@ static Token scan_identifier(Lexer* lexer) {
         }
         break;
     }
+    case 'V': {
+        if (match_token(lexer, "oid", 1, 4)) {
+            return create_token(lexer, TOKEN_TYPE_VOID);
+        }
+        break;
+    }
     }
     return create_token(lexer, TOKEN_IDENTIFIER);
 }

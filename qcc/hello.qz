@@ -1,1 +1,16 @@
-print (2+2) * 5;
+/*
+fn hello(): Void {
+    print "Hola";
+}
+
+var a: Void;
+a = hello();
+print a;
+*/
+
+fn pussy(): Void {
+    print "Hello";
+}
+
+pussy();
+var a : Void;

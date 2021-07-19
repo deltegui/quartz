@@ -50,6 +50,7 @@ typedef enum {
     TOKEN_TYPE_NUMBER,
     TOKEN_TYPE_STRING,
     TOKEN_TYPE_BOOL,
+    TOKEN_TYPE_VOID,
     TOKEN_TYPE_NIL
 } TokenKind;
 

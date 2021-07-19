@@ -58,6 +58,7 @@ static void update_param_index(Compiler* compiler, Symbol* symbol);
 static uint16_t get_variable_index(Compiler* compiler, Token* identifier);
 static void emit_variable_declaration(Compiler* compiler, uint16_t index);
 static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops);
+static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -266,6 +267,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     start_scope(&inner);
     update_param_index(&inner, symbol);
     ACCEPT_STMT(&inner, function->body);
+    ensure_function_returns_value(&inner, symbol);
     end_scope(&inner);
 
     if (inner.has_error) {
@@ -278,6 +280,13 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
 
     emit_variable_declaration(compiler, fn_index);
+}
+
+static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
+    if (fn_sym->function.return_type == TYPE_VOID) {
+        emit(compiler, OP_NIL);
+        emit(compiler, OP_RETURN);
+    }
 }
 
 static void update_param_index(Compiler* compiler, Symbol* symbol) {

@@ -45,20 +45,21 @@ static void end_scope(Parser* parser);
 static Symbol* current_scope_lookup(Parser* parser, SymbolName* name);
 static Symbol* lookup_str(Parser* parser, const char* name, int length);
 static void insert(Parser* parser, Symbol entry);
+static void register_symbol(Parser* parser, Symbol symbol);
 
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenKind expected, const char* msg);
 
 static Symbol* get_identifier_symbol(Parser* parser, Token identifier);
 
-static Stmt* declaration_block(Parser* parser);
+static Stmt* declaration_block(Parser* parser, TokenKind limit_token);
 
 static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
 static Stmt* function_decl(Parser* parser);
+static void parse_function_body(Parser* parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn_sym);
 static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym);
-static void register_symbol(Parser* parser, Symbol symbol);
 
 static Stmt* statement(Parser* parser);
 static Stmt* block_stmt(Parser* parser);
@@ -154,6 +155,7 @@ void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols)
     init_lexer(&parser->lexer, source);
     parser->panic_mode = false;
     parser->has_error = false;
+    parser->function_deep_count = 0;
 }
 
 static void error(Parser* parser, const char* message, ...) {
@@ -226,6 +228,15 @@ static void insert(Parser* parser, Symbol entry){
     scoped_symbol_insert(parser->symbols, entry);
 }
 
+static void register_symbol(Parser* parser, Symbol symbol) {
+    Symbol* exsting = current_scope_lookup(parser, &symbol.name);
+    if (exsting) {
+        error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
+        return;
+    }
+    insert(parser, symbol);
+}
+
 static void advance(Parser* parser) {
     if (parser->current.kind == TOKEN_END) {
         return;
@@ -269,16 +280,16 @@ Stmt* parse(Parser* parser) {
     if (parser->current.kind == TOKEN_END) {
         return NULL;
     }
-    Stmt* ast = declaration_block(parser);
+    Stmt* ast = declaration_block(parser, TOKEN_END);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
     return ast;
 }
 
-static Stmt* declaration_block(Parser* parser) {
+static Stmt* declaration_block(Parser* parser, TokenKind limit_token) {
     ListStmt* list = create_stmt_list();
-    while (parser->current.kind != TOKEN_RIGHT_BRACE && parser->current.kind != TOKEN_END) {
+    while (parser->current.kind != limit_token) {
         Stmt* stmt = declaration(parser);
         stmt_list_add(list, stmt);
         if (parser->panic_mode) {
@@ -316,7 +327,7 @@ static Stmt* block_stmt(Parser* parser) {
     advance(parser); // consume {
     BlockStmt block;
     create_scope(parser);
-    block.stmts = declaration_block(parser);
+    block.stmts = declaration_block(parser, TOKEN_RIGHT_BRACE);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected block to end with '}'");
     end_scope(parser);
     return CREATE_STMT_BLOCK(block);
@@ -379,13 +390,19 @@ static Stmt* function_decl(Parser* parser) {
         advance(parser); // consume type
     }
 
-    create_scope(parser);
-    add_params_to_body(parser, &symbol.function);
-    fn.body = block_stmt(parser);
-    end_scope(parser);
+    parse_function_body(parser, &fn, &symbol);
 
     register_symbol(parser, symbol);
     return CREATE_STMT_FUNCTION(fn);
+}
+
+static void parse_function_body(Parser* parser, FunctionStmt* fn, Symbol* fn_sym) {
+    create_scope(parser);
+    add_params_to_body(parser, &fn_sym->function);
+    parser->function_deep_count++;
+    fn->body = block_stmt(parser);
+    parser->function_deep_count--;
+    end_scope(parser);
 }
 
 static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn_sym) {
@@ -421,15 +438,6 @@ static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym) {
     }
 }
 
-static void register_symbol(Parser* parser, Symbol symbol) {
-    Symbol* exsting = current_scope_lookup(parser, &symbol.name);
-    if (exsting) {
-        error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
-        return;
-    }
-    insert(parser, symbol);
-}
-
 static Stmt* print_stmt(Parser* parser) {
     advance(parser); // consume print
     Expr* expr = expression(parser);
@@ -441,6 +449,9 @@ static Stmt* print_stmt(Parser* parser) {
 }
 
 static Stmt* return_stmt(Parser* parser) {
+    if (parser->function_deep_count == 0) {
+        error(parser, "Cannot use return outside a function!");
+    }
     advance(parser); // consume return
     Expr* expr = expression(parser);
     ReturnStmt return_stmt = (ReturnStmt){

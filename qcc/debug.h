@@ -1,5 +1,5 @@
-#ifndef QUARTZ_DEBUG_H
-#define QUARTZ_DEBUG_H
+#ifndef QUARTZ_DEBUG_H_
+#define QUARTZ_DEBUG_H_
 
 // General debug functions, for all parts of the compiler.
 // Include this around a ifdef DEBUG / endif.

@@ -1,5 +1,5 @@
-#ifndef QUARTZ_PARSER_H
-#define QUARTZ_PARSER_H
+#ifndef QUARTZ_PARSER_H_
+#define QUARTZ_PARSER_H_
 
 #include "common.h"
 #include "lexer.h"

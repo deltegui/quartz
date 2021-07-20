@@ -1,5 +1,5 @@
-#ifndef QUARTZ_LEXER_H
-#define QUARTZ_LEXER_H
+#ifndef QUARTZ_LEXER_H_
+#define QUARTZ_LEXER_H_
 
 #include "common.h"
 

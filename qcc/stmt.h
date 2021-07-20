@@ -1,8 +1,8 @@
-#ifndef QUARTZ_STMT_H
-#define QUARTZ_STMT_H
+#ifndef QUARTZ_STMT_H_
+#define QUARTZ_STMT_H_
 
 #include "expr.h"
-#include "fnparams.h"
+// #include "vector.h"
 
 typedef enum {
     STMT_EXPR,

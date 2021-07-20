@@ -1,5 +1,5 @@
-#ifndef QUARTZ_TYPECHECKER_H
-#define QUARTZ_TYPECHECKER_H
+#ifndef QUARTZ_TYPECHECKER_H_
+#define QUARTZ_TYPECHECKER_H_
 
 #include "stmt.h"
 #include "symbol.h"

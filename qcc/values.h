@@ -1,5 +1,5 @@
-#ifndef QUARTZ_VALUES_H
-#define QUARTZ_VALUES_H
+#ifndef QUARTZ_VALUES_H_
+#define QUARTZ_VALUES_H_
 
 #include "common.h"
 #include "type.h"
@@ -31,7 +31,7 @@ Value value_default(Type type);
 #define NUMBER_VALUE(i) ((Value){ TYPE_NUMBER, VALUE_NUMBER, { .number = i } })
 #define BOOL_VALUE(b) ((Value){ TYPE_BOOL, VALUE_BOOL, { .boolean = b } })
 #define NIL_VALUE() ((Value){ TYPE_NIL, VALUE_NIL, { .object = NULL } })
-#define OBJ_VALUE(obj) ((Value){ TYPE_UNKNOWN, VALUE_OBJ, { .object = (Obj*) obj } })
+#define OBJ_VALUE(ob) ((Value){ type_from_obj_kind(ob->obj.kind), VALUE_OBJ, { .object = (Obj*) ob } })
 
 #define VALUE_IS_NUMBER(val) (val.kind == VALUE_NUMBER)
 #define VALUE_IS_BOOL(val) (val.kind == VALUE_BOOL)

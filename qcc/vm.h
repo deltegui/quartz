@@ -1,5 +1,5 @@
-#ifndef QUARTZ_VM_H
-#define QUARTZ_VM_H
+#ifndef QUARTZ_VM_H_
+#define QUARTZ_VM_H_
 
 #include "chunk.h"
 #include "object.h"

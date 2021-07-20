@@ -1,6 +1,14 @@
 #include "type.h"
 #include <stdio.h>
 
+Type type_from_obj_kind(ObjKind kind) {
+    switch (kind) {
+    case OBJ_STRING: return TYPE_STRING;
+    case OBJ_FUNCTION: return TYPE_FUNCTION;
+    default: return TYPE_UNKNOWN;
+    }
+}
+
 Type type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return TYPE_NUMBER;

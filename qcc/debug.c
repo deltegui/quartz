@@ -442,7 +442,7 @@ static void print_call(void* ctx, CallExpr* call) {
         pretty_print("Params: [\n");
         OFFSET({
             for (int i = 0; i < call->params.size; i++) {
-                ACCEPT_EXPR(call->params.params[i].expr);
+                ACCEPT_EXPR(call->params.elements[i].expr);
             }
         });
         pretty_print("]\n");

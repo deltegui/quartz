@@ -56,6 +56,7 @@ static uint16_t make_constant(Compiler* compiler, Value value);
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
 
 static void update_param_index(Compiler* compiler, Symbol* symbol);
+static void update_symbol_variable_info(Compiler* compiler, Symbol* var_sym, uint16_t var_index);
 static uint16_t get_variable_index(Compiler* compiler, Token* identifier);
 static void emit_variable_declaration(Compiler* compiler, uint16_t index);
 static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops);
@@ -258,14 +259,12 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
 }
 
 static void compile_function(void* ctx, FunctionStmt* function) {
-    // TODO there is many lines of code in common with compile_var
     Compiler* compiler = (Compiler*) ctx;
     uint16_t fn_index = get_variable_index(compiler, &function->identifier);
 
     Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
-    symbol->global = compiler->scope_depth == 0;
-    symbol->constant_index = fn_index;
+    update_symbol_variable_info(compiler, symbol, fn_index);
 
     Compiler inner;
     init_inner_compiler(&inner, compiler, &function->identifier);
@@ -298,8 +297,8 @@ static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
 }
 
 static void update_param_index(Compiler* compiler, Symbol* symbol) {
-    for (int i = 0; i < symbol->function.params.size; i++) {
-        Token param = symbol->function.params.params[i].identifier;
+    for (int i = 0; i < symbol->function.param_names.size; i++) {
+        Token param = symbol->function.param_names.elements[i].identifier;
         Symbol* param_sym = lookup_str(compiler, param.start, param.length);
         param_sym->constant_index = compiler->next_local_index;
         compiler->next_local_index++;
@@ -322,8 +321,7 @@ static void compile_var(void* ctx, VarStmt* var) {
 
     Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
-    symbol->global = compiler->scope_depth == 0;
-    symbol->constant_index = variable_index;
+    update_symbol_variable_info(compiler, symbol, variable_index);
 
     if (var->definition == NULL) {
         uint16_t default_value = make_constant(compiler, value_default(symbol->type));
@@ -332,6 +330,11 @@ static void compile_var(void* ctx, VarStmt* var) {
         ACCEPT_EXPR(compiler, var->definition);
     }
     emit_variable_declaration(compiler, variable_index);
+}
+
+static void update_symbol_variable_info(Compiler* compiler, Symbol* var_sym, uint16_t var_index) {
+    var_sym->global = compiler->scope_depth == 0;
+    var_sym->constant_index = var_index;
 }
 
 static uint16_t get_variable_index(Compiler* compiler, Token* identifier) {
@@ -486,7 +489,7 @@ static void compile_call(void* ctx, CallExpr* call) {
     identifier_use(compiler, call->identifier, &ops_get_identifier);
     int i = 0;
     for (; i < call->params.size; i++) {
-        ACCEPT_EXPR(compiler, call->params.params[i].expr);
+        ACCEPT_EXPR(compiler, call->params.elements[i].expr);
     }
     if (i > UINT8_MAX) {
         error(compiler, "Parameter count exceeds the max number of parameters: 254");

@@ -1,5 +1,5 @@
-#ifndef QUARTZ_COMMON_H
-#define QUARTZ_COMMON_H
+#ifndef QUARTZ_COMMON_H_
+#define QUARTZ_COMMON_H_
 
 #ifndef DEBUG
 #define NDEBUG // disables assertions

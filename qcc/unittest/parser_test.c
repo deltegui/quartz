@@ -106,8 +106,8 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         assert_int_equal(first->call.params.size, second->call.params.size);
         for (int i = 0; i < first->call.params.size; i++) {
             assert_expr_equals(
-                first->call.params.params[i].expr,
-                second->call.params.params[i].expr);
+                first->call.params.elements[i].expr,
+                second->call.params.elements[i].expr);
         }
         break;
     }

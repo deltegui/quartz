@@ -1,5 +1,5 @@
-#ifndef QUARTZ_CHUNK_H
-#define QUARTZ_CHUNK_H
+#ifndef QUARTZ_CHUNK_H_
+#define QUARTZ_CHUNK_H_
 
 #include "common.h"
 #include "values.h"

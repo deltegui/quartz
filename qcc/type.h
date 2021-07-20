@@ -1,7 +1,8 @@
-#ifndef QUARTZ_TYPES_H
-#define QUARTZ_TYPES_H
+#ifndef QUARTZ_TYPES_H_
+#define QUARTZ_TYPES_H_
 
 #include "lexer.h"
+#include "obj_kind.h"
 
 typedef enum {
     TYPE_NUMBER,
@@ -13,6 +14,7 @@ typedef enum {
     TYPE_UNKNOWN,
 } Type;
 
+Type type_from_obj_kind(ObjKind kind);
 Type type_from_token_kind(TokenKind kind);
 void type_print(Type type);
 

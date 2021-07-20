@@ -57,9 +57,9 @@ void free_expr(Expr* expr) {
         break;
     case EXPR_CALL:
         for (int i = 0; i < expr->call.params.size; i++) {
-            free_expr(expr->call.params.params[i].expr);
+            free_expr(expr->call.params.elements[i].expr);
         }
-        free_param_array(&expr->call.params);
+        free_vector(&expr->call.params);
         break;
     }
     free(expr);

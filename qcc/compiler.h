@@ -1,5 +1,5 @@
-#ifndef QUARTZ_COMPILER_H
-#define QUARTZ_COMPILER_H
+#ifndef QUARTZ_COMPILER_H_
+#define QUARTZ_COMPILER_H_
 
 #include "chunk.h"
 #include "object.h"

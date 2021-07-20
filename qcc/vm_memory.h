@@ -1,5 +1,5 @@
-#ifndef QUARTZ_MEMORY_H
-#define QUARTZ_MEMORY_H
+#ifndef QUARTZ_MEMORY_H_
+#define QUARTZ_MEMORY_H_
 
 #include "common.h"
 

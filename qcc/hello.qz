@@ -8,9 +8,12 @@ a = hello();
 print a;
 */
 
+/*
 fn pussy(): Void {
     print "Hello";
 }
 
 pussy();
 var a : Void;
+*/
+print 5.5.5;

@@ -1,7 +1,7 @@
 #include "parser.h"
 #include <stdarg.h>
 #include "common.h"
-#include "fnparams.h"
+#include "vector.h"
 #include "symbol.h"
 #include "type.h"
 
@@ -417,7 +417,7 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
         if (parser->current.kind != TOKEN_IDENTIFIER) {
             error(parser, "Expected to have an identifier in parameter in function declaration");
         }
-        PARAM_ARRAY_ADD_TOKEN(&fn_sym->params, parser->current);
+        VECTOR_ADD_TOKEN(&fn_sym->param_names, parser->current);
         advance(parser); // cosume param identifier
         if (parser->current.kind != TOKEN_COLON) {
             error(parser, "Expected function parameter to have a type in function declaration");
@@ -427,7 +427,7 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
         if (type == TYPE_UNKNOWN) {
             error (parser, "Unknown type in function param in function declaration");
         }
-        PARAM_ARRAY_ADD_TYPE(&fn_sym->param_types, type);
+        VECTOR_ADD_TYPE(&fn_sym->param_types, type);
         advance(parser); // consume type
         if (parser->current.kind != TOKEN_COMMA) {
             break;
@@ -437,10 +437,10 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
 }
 
 static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym) {
-    for (int i = 0; i < fn_sym->params.size; i++) {
+    for (int i = 0; i < fn_sym->param_names.size; i++) {
         Symbol param = create_symbol_from_token(
-            &fn_sym->params.params[i].identifier,
-            fn_sym->param_types.params[i].type);
+            &fn_sym->param_names.elements[i].identifier,
+            fn_sym->param_types.elements[i].type);
         register_symbol(parser, param);
     }
 }
@@ -532,7 +532,7 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
     CallExpr call = (CallExpr){
         .identifier = fn_name.name,
     };
-    init_param_array(&call.params);
+    init_vector(&call.params);
 
     Symbol* fn_sym = lookup_str(parser, fn_name.name.start, fn_name.name.length);
     assert(fn_sym != NULL);
@@ -540,7 +540,7 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
         for (;;) {
             Expr* param = expression(parser);
-            PARAM_ARRAY_ADD_EXPR(&call.params, param);
+            VECTOR_ADD_EXPR(&call.params, param);
             if (parser->current.kind != TOKEN_COMMA) {
                 break;
             }
@@ -552,13 +552,13 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in function call");
 
-    if (fn_sym->function.params.size != call.params.size) {
+    if (fn_sym->function.param_names.size != call.params.size) {
         error(
             parser,
             "Function '%.*s' expects %d params, but was called with %d params",
             call.identifier.length,
             call.identifier.start,
-            fn_sym->function.params.size,
+            fn_sym->function.param_names.size,
             call.params.size);
     }
 

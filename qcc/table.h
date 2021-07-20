@@ -1,5 +1,5 @@
-#ifndef QUARTZ_TABLE_H
-#define QUARTZ_TABLE_H
+#ifndef QUARTZ_TABLE_H_
+#define QUARTZ_TABLE_H_
 
 #include "values.h"
 #include "object.h"

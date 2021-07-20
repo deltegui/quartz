@@ -1,7 +1,7 @@
 #include "parser.h"
 #include <stdarg.h>
 #include "common.h"
-#include "fnparams.h"
+#include "vector.h"
 #include "symbol.h"
 #include "type.h"
 
@@ -45,20 +45,21 @@ static void end_scope(Parser* parser);
 static Symbol* current_scope_lookup(Parser* parser, SymbolName* name);
 static Symbol* lookup_str(Parser* parser, const char* name, int length);
 static void insert(Parser* parser, Symbol entry);
+static void register_symbol(Parser* parser, Symbol symbol);
 
 static void advance(Parser* parser);
 static bool consume(Parser* parser, TokenKind expected, const char* msg);
 
 static Symbol* get_identifier_symbol(Parser* parser, Token identifier);
 
-static Stmt* declaration_block(Parser* parser);
+static Stmt* declaration_block(Parser* parser, TokenKind limit_token);
 
 static Stmt* declaration(Parser* parser);
 static Stmt* variable_decl(Parser* parser);
 static Stmt* function_decl(Parser* parser);
+static void parse_function_body(Parser* parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn_sym);
 static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym);
-static void register_symbol(Parser* parser, Symbol symbol);
 
 static Stmt* statement(Parser* parser);
 static Stmt* block_stmt(Parser* parser);
@@ -154,6 +155,7 @@ void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols)
     init_lexer(&parser->lexer, source);
     parser->panic_mode = false;
     parser->has_error = false;
+    parser->function_deep_count = 0;
 }
 
 static void error(Parser* parser, const char* message, ...) {
@@ -226,6 +228,15 @@ static void insert(Parser* parser, Symbol entry){
     scoped_symbol_insert(parser->symbols, entry);
 }
 
+static void register_symbol(Parser* parser, Symbol symbol) {
+    Symbol* exsting = current_scope_lookup(parser, &symbol.name);
+    if (exsting) {
+        error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
+        return;
+    }
+    insert(parser, symbol);
+}
+
 static void advance(Parser* parser) {
     if (parser->current.kind == TOKEN_END) {
         return;
@@ -269,20 +280,21 @@ Stmt* parse(Parser* parser) {
     if (parser->current.kind == TOKEN_END) {
         return NULL;
     }
-    Stmt* ast = declaration_block(parser);
+    Stmt* ast = declaration_block(parser, TOKEN_END);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
     return ast;
 }
 
-static Stmt* declaration_block(Parser* parser) {
+static Stmt* declaration_block(Parser* parser, TokenKind limit_token) {
     ListStmt* list = create_stmt_list();
-    while (parser->current.kind != TOKEN_RIGHT_BRACE && parser->current.kind != TOKEN_END) {
+    while (parser->current.kind != limit_token && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
-        stmt_list_add(list, stmt);
         if (parser->panic_mode) {
             syncronize(parser);
+        } else {
+            stmt_list_add(list, stmt);
         }
     }
     return CREATE_STMT_LIST(list);
@@ -316,7 +328,7 @@ static Stmt* block_stmt(Parser* parser) {
     advance(parser); // consume {
     BlockStmt block;
     create_scope(parser);
-    block.stmts = declaration_block(parser);
+    block.stmts = declaration_block(parser, TOKEN_RIGHT_BRACE);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected block to end with '}'");
     end_scope(parser);
     return CREATE_STMT_BLOCK(block);
@@ -324,6 +336,9 @@ static Stmt* block_stmt(Parser* parser) {
 
 static Stmt* variable_decl(Parser* parser) {
     advance(parser); // consume var
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        error(parser, "Expected identifier to be var name");
+    }
     VarStmt var;
     var.identifier = parser->current;
     advance(parser); // consume identifier
@@ -353,6 +368,9 @@ static Stmt* variable_decl(Parser* parser) {
 static Stmt* function_decl(Parser* parser) {
     advance(parser); // consume fn
 
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        error(parser, "Expected identifier to be function name");
+    }
     FunctionStmt fn = (FunctionStmt){
         .identifier = parser->current,
     };
@@ -379,13 +397,19 @@ static Stmt* function_decl(Parser* parser) {
         advance(parser); // consume type
     }
 
-    create_scope(parser);
-    add_params_to_body(parser, &symbol.function);
-    fn.body = block_stmt(parser);
-    end_scope(parser);
+    parse_function_body(parser, &fn, &symbol);
 
     register_symbol(parser, symbol);
     return CREATE_STMT_FUNCTION(fn);
+}
+
+static void parse_function_body(Parser* parser, FunctionStmt* fn, Symbol* fn_sym) {
+    create_scope(parser);
+    add_params_to_body(parser, &fn_sym->function);
+    parser->function_deep_count++;
+    fn->body = block_stmt(parser);
+    parser->function_deep_count--;
+    end_scope(parser);
 }
 
 static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn_sym) {
@@ -393,7 +417,7 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
         if (parser->current.kind != TOKEN_IDENTIFIER) {
             error(parser, "Expected to have an identifier in parameter in function declaration");
         }
-        PARAM_ARRAY_ADD_TOKEN(&fn_sym->params, parser->current);
+        VECTOR_ADD_TOKEN(&fn_sym->param_names, parser->current);
         advance(parser); // cosume param identifier
         if (parser->current.kind != TOKEN_COLON) {
             error(parser, "Expected function parameter to have a type in function declaration");
@@ -403,7 +427,7 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
         if (type == TYPE_UNKNOWN) {
             error (parser, "Unknown type in function param in function declaration");
         }
-        PARAM_ARRAY_ADD_TYPE(&fn_sym->param_types, type);
+        VECTOR_ADD_TYPE(&fn_sym->param_types, type);
         advance(parser); // consume type
         if (parser->current.kind != TOKEN_COMMA) {
             break;
@@ -413,21 +437,12 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
 }
 
 static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym) {
-    for (int i = 0; i < fn_sym->params.size; i++) {
+    for (int i = 0; i < fn_sym->param_names.size; i++) {
         Symbol param = create_symbol_from_token(
-            &fn_sym->params.params[i].identifier,
-            fn_sym->param_types.params[i].type);
+            &fn_sym->param_names.elements[i].identifier,
+            fn_sym->param_types.elements[i].type);
         register_symbol(parser, param);
     }
-}
-
-static void register_symbol(Parser* parser, Symbol symbol) {
-    Symbol* exsting = current_scope_lookup(parser, &symbol.name);
-    if (exsting) {
-        error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
-        return;
-    }
-    insert(parser, symbol);
 }
 
 static Stmt* print_stmt(Parser* parser) {
@@ -441,12 +456,18 @@ static Stmt* print_stmt(Parser* parser) {
 }
 
 static Stmt* return_stmt(Parser* parser) {
+    if (parser->function_deep_count == 0) {
+        error(parser, "Cannot use return outside a function!");
+    }
     advance(parser); // consume return
-    Expr* expr = expression(parser);
-    ReturnStmt return_stmt = (ReturnStmt){
-        .inner = expr,
-    };
-    consume(parser, TOKEN_SEMICOLON, "Expected return statment to end with ';'");
+    ReturnStmt return_stmt;
+    if (parser->current.kind == TOKEN_SEMICOLON) {
+        advance(parser); // consume semicolon
+        return_stmt.inner = NULL;
+    } else {
+        return_stmt.inner = expression(parser);
+        consume(parser, TOKEN_SEMICOLON, "Expected return statment to end with ';'");
+    }
     return CREATE_STMT_RETURN(return_stmt);
 }
 
@@ -511,7 +532,7 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
     CallExpr call = (CallExpr){
         .identifier = fn_name.name,
     };
-    init_param_array(&call.params);
+    init_vector(&call.params);
 
     Symbol* fn_sym = lookup_str(parser, fn_name.name.start, fn_name.name.length);
     assert(fn_sym != NULL);
@@ -519,7 +540,7 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
         for (;;) {
             Expr* param = expression(parser);
-            PARAM_ARRAY_ADD_EXPR(&call.params, param);
+            VECTOR_ADD_EXPR(&call.params, param);
             if (parser->current.kind != TOKEN_COMMA) {
                 break;
             }
@@ -531,13 +552,13 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in function call");
 
-    if (fn_sym->function.params.size != call.params.size) {
+    if (fn_sym->function.param_names.size != call.params.size) {
         error(
             parser,
             "Function '%.*s' expects %d params, but was called with %d params",
             call.identifier.length,
             call.identifier.start,
-            fn_sym->function.params.size,
+            fn_sym->function.param_names.size,
             call.params.size);
     }
 

@@ -1,13 +1,9 @@
-#ifndef QUARTZ_OBJECT_H
-#define QUARTZ_OBJECT_H
+#ifndef QUARTZ_OBJECT_H_
+#define QUARTZ_OBJECT_H_
 
 #include "lexer.h"
 #include "chunk.h"
-
-typedef enum {
-    OBJ_STRING,
-    OBJ_FUNCTION,
-} ObjKind;
+#include "obj_kind.h"
 
 typedef struct s_obj {
     ObjKind kind;

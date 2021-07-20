@@ -1,8 +1,8 @@
-#ifndef QUARTZ_SYMBOL_H
-#define QUARTZ_SYMBOL_H
+#ifndef QUARTZ_SYMBOL_H_
+#define QUARTZ_SYMBOL_H_
 
 #include "type.h"
-#include "fnparams.h"
+#include "vector.h"
 
 typedef struct {
     const char* str;
@@ -18,9 +18,8 @@ typedef enum {
 } SymbolKind;
 
 typedef struct {
-    // TODO Should we unified params and params types?
-    ParamArray params;
-    ParamArray param_types;
+    Vector param_names;
+    Vector param_types;
     Type return_type;
 } FunctionSymbol;
 

@@ -106,8 +106,8 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         assert_int_equal(first->call.params.size, second->call.params.size);
         for (int i = 0; i < first->call.params.size; i++) {
             assert_expr_equals(
-                first->call.params.params[i].expr,
-                second->call.params.params[i].expr);
+                first->call.params.elements[i].expr,
+                second->call.params.elements[i].expr);
         }
         break;
     }
@@ -323,12 +323,12 @@ static void should_parse_grouping() {
         .right = CREATE_LITERAL_EXPR(five)
     };
     assert_expr_ast(
-        " ( 2 + 2 ) * 5 ",
+        " ( 2 + 2 ) * 5; ",
         CREATE_BINARY_EXPR(mul)
     );
 }
 
-static void should_fail() {
+static void should_fail_parsing_malformed_expr() {
     assert_has_errors(" ) 2 + 2 (; ");
     assert_has_errors(" 2 *; ");
     assert_has_errors(" 2 +; ");
@@ -503,6 +503,16 @@ static void should_parse_empty_blocks() {
     assert_stmt_ast("{   } ", stmt);
 }
 
+static void should_fail_if_return_is_not_inside_a_function() {
+    assert_has_errors("return 1;");
+}
+
+static void should_fail_if_you_use_reserved_words_as_identifiers() {
+    assert_has_errors(" var var = 1; ");
+    assert_has_errors(" var fn = 5; ");
+    assert_has_errors(" fn {} () {} ");
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_returns),
@@ -515,10 +525,12 @@ int main(void) {
         cmocka_unit_test(should_parse_additions),
         cmocka_unit_test(should_parse_precedence),
         cmocka_unit_test(should_parse_grouping),
-        cmocka_unit_test(should_fail),
+        cmocka_unit_test(should_fail_parsing_malformed_expr),
         cmocka_unit_test(should_parse_strings),
         cmocka_unit_test(should_parse_reserved_words_as_literals),
-        cmocka_unit_test(should_parse_equality)
+        cmocka_unit_test(should_parse_equality),
+        cmocka_unit_test(should_fail_if_you_use_reserved_words_as_identifiers),
+        cmocka_unit_test(should_fail_if_return_is_not_inside_a_function)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

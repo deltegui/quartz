@@ -1,5 +1,5 @@
-#ifndef QUARTZ_CHUNK_H
-#define QUARTZ_CHUNK_H
+#ifndef QUARTZ_CHUNK_H_
+#define QUARTZ_CHUNK_H_
 
 #include "common.h"
 #include "values.h"
@@ -58,6 +58,7 @@ typedef struct {
 void init_chunk(Chunk* chunk);
 void free_chunk(Chunk* chunk);
 void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
+bool chunk_check_last_byte(Chunk* chunk, uint8_t bytecode);
 int chunk_add_constant(Chunk* chunk, Value value);
 
 uint16_t read_long(uint8_t** pc);

@@ -1,8 +1,8 @@
-#ifndef QUARTZ_EXPR_H
-#define QUARTZ_EXPR_H
+#ifndef QUARTZ_EXPR_H_
+#define QUARTZ_EXPR_H_
 
 #include "lexer.h"
-#include "fnparams.h"
+#include "vector.h"
 
 typedef enum {
     EXPR_UNARY,
@@ -40,7 +40,7 @@ typedef struct {
 } UnaryExpr;
 
 typedef struct {
-    ParamArray params;
+    Vector params;
     Token identifier;
 } CallExpr;
 
@@ -65,7 +65,6 @@ typedef struct {
     void (*visit_call)(void* ctx, CallExpr* call);
 } ExprVisitor;
 
-// TODO search for all access to kind and substitute with these calls
 #define EXPR_IS_BINARY(expr) ((expr).kind == EXPR_BINARY)
 #define EXPR_IS_LITERAL(expr) ((expr).kind == EXPR_LITERAL)
 #define EXPR_IS_UNARY(expr) ((expr).kind == EXPR_LITERAL)

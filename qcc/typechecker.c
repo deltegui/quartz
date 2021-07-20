@@ -10,6 +10,7 @@ typedef struct {
     ScopedSymbolTable* symbols;
     Type last_type;
     bool has_error;
+    Token func_identifier;
 } Typechecker;
 
 static void error_last_type_match(Typechecker* checker, Token* where, Type first, const char* message);
@@ -18,6 +19,7 @@ static void error(Typechecker* checker, Token* token, const char* message, ...);
 static void start_scope(Typechecker* checker);
 static void end_scope(Typechecker* checker);
 static Symbol* lookup_str(Typechecker* checker, const char* name, int length);
+static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -123,9 +125,24 @@ static void typecheck_var(void* ctx, VarStmt* var) {
                 var->identifier.length,
                 var->identifier.start);
         }
+        if (symbol->type == TYPE_VOID) {
+            error(
+                checker,
+                &var->identifier,
+                "Variables cannot be of type Void. Invalid type for variable '%.*s'\n",
+                var->identifier.length,
+                var->identifier.start);
+        }
         return;
     }
     ACCEPT_EXPR(ctx, var->definition);
+    if (checker->last_type == TYPE_VOID) {
+        error(
+            checker,
+            &var->identifier,
+            "Cannot declare Void variable\n");
+        return;
+    }
     if (symbol->type == checker->last_type) {
         return;
     }
@@ -156,6 +173,13 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
 
     ACCEPT_EXPR(checker, assignment->value);
 
+    if (checker->last_type == TYPE_VOID) {
+        error(
+            checker,
+            &assignment->name,
+            "Cannot assign variable to Void\n");
+        return;
+    }
     if (symbol->type != checker->last_type) {
         error_last_type_match(
             checker,
@@ -174,8 +198,8 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     assert(symbol != NULL);
 
     for (int i = 0; i < call->params.size; i++) {
-        ACCEPT_EXPR(checker, call->params.params[i].expr);
-        Type def_type = symbol->function.param_types.params[i].type;
+        ACCEPT_EXPR(checker, call->params.elements[i].expr);
+        Type def_type = symbol->function.param_types.elements[i].type;
         Type last = checker->last_type;
         if (last != def_type) {
             error(checker, &call->identifier, "Type of param number %d in function call (", i);
@@ -191,25 +215,53 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
     Typechecker* checker = (Typechecker*) ctx;
+    checker->func_identifier = function->identifier;
+
     start_scope(checker);
     ACCEPT_STMT(ctx, function->body);
     end_scope(checker);
+
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
+    assert(symbol != NULL);
+    assert(symbol->kind == SYMBOL_FUNCTION);
+    typecheck_params_arent_void(checker, symbol);
+
+    checker->last_type = symbol->function.return_type;
+}
+
+static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol) {
+    Vector* param_types = &symbol->function.param_types;
+    Vector* param_names = &symbol->function.param_names;
+    assert(param_types->size == param_names->size);
+    for (int i = 0; i < param_types->size; i++) {
+        assert(param_names->elements[i].identifier.length > 0);
+        if (param_types->elements[i].type == TYPE_VOID) {
+            error(
+                checker,
+                &param_names->elements[i].identifier,
+                "Function param '%.*s' cannot be Void\n",
+                param_names->elements[i].identifier.length,
+                param_names->elements[i].identifier.start);
+        }
+    }
+}
+
+static void typecheck_return(void* ctx, ReturnStmt* return_) {
+    Typechecker* checker = (Typechecker*) ctx;
+    ACCEPT_EXPR(ctx, return_->inner);
+    if (return_->inner == NULL) {
+        checker->last_type = TYPE_VOID;
+    }
+    Symbol* symbol = lookup_str(checker, checker->func_identifier.start, checker->func_identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     if (symbol->function.return_type != checker->last_type) {
         error_last_type_match(
             checker,
-            &function->identifier,
+            &checker->func_identifier,
             symbol->function.return_type,
             "in function return");
     }
-    checker->last_type = symbol->function.return_type;
-}
-
-static void typecheck_return(void* ctx, ReturnStmt* return_) {
-    // TODO what happends if other stmts alters checker->last_type after a return?
-    ACCEPT_EXPR(ctx, return_->inner);
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

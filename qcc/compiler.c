@@ -50,14 +50,17 @@ static void emit(Compiler* compiler, uint8_t bytecode);
 static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param);
 static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param);
 static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
+static bool last_emitted_byte_equals(Compiler* compiler, uint8_t byte);
 
 static uint16_t make_constant(Compiler* compiler, Value value);
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
 
 static void update_param_index(Compiler* compiler, Symbol* symbol);
+static void update_symbol_variable_info(Compiler* compiler, Symbol* var_sym, uint16_t var_index);
 static uint16_t get_variable_index(Compiler* compiler, Token* identifier);
 static void emit_variable_declaration(Compiler* compiler, uint16_t index);
 static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops);
+static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -213,6 +216,10 @@ static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  u
     }
 }
 
+static bool last_emitted_byte_equals(Compiler* compiler, uint8_t byte) {
+    return chunk_check_last_byte(current_chunk(compiler), byte);
+}
+
 static uint16_t make_constant(Compiler* compiler, Value value) {
     int constant_index = chunk_add_constant(current_chunk(compiler), value);
     if (constant_index > UINT16_COUNT) {
@@ -252,20 +259,19 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
 }
 
 static void compile_function(void* ctx, FunctionStmt* function) {
-    // TODO there is many lines of code in common with compile_var
     Compiler* compiler = (Compiler*) ctx;
     uint16_t fn_index = get_variable_index(compiler, &function->identifier);
 
     Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
-    symbol->global = compiler->scope_depth == 0;
-    symbol->constant_index = fn_index;
+    update_symbol_variable_info(compiler, symbol, fn_index);
 
     Compiler inner;
     init_inner_compiler(&inner, compiler, &function->identifier);
     start_scope(&inner);
     update_param_index(&inner, symbol);
     ACCEPT_STMT(&inner, function->body);
+    ensure_function_returns_value(&inner, symbol);
     end_scope(&inner);
 
     if (inner.has_error) {
@@ -280,9 +286,19 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_variable_declaration(compiler, fn_index);
 }
 
+static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
+    if (last_emitted_byte_equals(compiler, OP_RETURN)) {
+        return;
+    }
+    if (fn_sym->function.return_type == TYPE_VOID) {
+        emit(compiler, OP_NIL);
+        emit(compiler, OP_RETURN);
+    }
+}
+
 static void update_param_index(Compiler* compiler, Symbol* symbol) {
-    for (int i = 0; i < symbol->function.params.size; i++) {
-        Token param = symbol->function.params.params[i].identifier;
+    for (int i = 0; i < symbol->function.param_names.size; i++) {
+        Token param = symbol->function.param_names.elements[i].identifier;
         Symbol* param_sym = lookup_str(compiler, param.start, param.length);
         param_sym->constant_index = compiler->next_local_index;
         compiler->next_local_index++;
@@ -291,7 +307,11 @@ static void update_param_index(Compiler* compiler, Symbol* symbol) {
 
 static void compile_return(void* ctx, ReturnStmt* return_) {
     Compiler* compiler = (Compiler*) ctx;
-    ACCEPT_EXPR(compiler, return_->inner);
+    if (return_->inner != NULL) {
+        ACCEPT_EXPR(compiler, return_->inner);
+    } else {
+        emit(compiler, OP_NIL);
+    }
     emit(compiler, OP_RETURN);
 }
 
@@ -301,8 +321,7 @@ static void compile_var(void* ctx, VarStmt* var) {
 
     Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
-    symbol->global = compiler->scope_depth == 0;
-    symbol->constant_index = variable_index;
+    update_symbol_variable_info(compiler, symbol, variable_index);
 
     if (var->definition == NULL) {
         uint16_t default_value = make_constant(compiler, value_default(symbol->type));
@@ -311,6 +330,11 @@ static void compile_var(void* ctx, VarStmt* var) {
         ACCEPT_EXPR(compiler, var->definition);
     }
     emit_variable_declaration(compiler, variable_index);
+}
+
+static void update_symbol_variable_info(Compiler* compiler, Symbol* var_sym, uint16_t var_index) {
+    var_sym->global = compiler->scope_depth == 0;
+    var_sym->constant_index = var_index;
 }
 
 static uint16_t get_variable_index(Compiler* compiler, Token* identifier) {
@@ -465,7 +489,7 @@ static void compile_call(void* ctx, CallExpr* call) {
     identifier_use(compiler, call->identifier, &ops_get_identifier);
     int i = 0;
     for (; i < call->params.size; i++) {
-        ACCEPT_EXPR(compiler, call->params.params[i].expr);
+        ACCEPT_EXPR(compiler, call->params.elements[i].expr);
     }
     if (i > UINT8_MAX) {
         error(compiler, "Parameter count exceeds the max number of parameters: 254");

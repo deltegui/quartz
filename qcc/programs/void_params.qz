@@ -1,0 +1,3 @@
+fn hola(t: Void, b: Void) {
+    print t;
+}

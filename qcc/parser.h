@@ -1,5 +1,5 @@
-#ifndef QUARTZ_PARSER_H
-#define QUARTZ_PARSER_H
+#ifndef QUARTZ_PARSER_H_
+#define QUARTZ_PARSER_H_
 
 #include "common.h"
 #include "lexer.h"
@@ -14,6 +14,7 @@ typedef struct {
     Token prev;
     bool panic_mode;
     bool has_error;
+    int function_deep_count;
 } Parser;
 
 void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols);

@@ -55,18 +55,18 @@ static SymbolKind kind_from_type(Type type) {
 
 static FunctionSymbol create_function_symbol() {
     FunctionSymbol fn_sym = (FunctionSymbol) {
-        .return_type = TYPE_NIL
+        .return_type = TYPE_VOID
     };
-    init_param_array(&fn_sym.params);
-    init_param_array(&fn_sym.param_types);
+    init_vector(&fn_sym.param_names);
+    init_vector(&fn_sym.param_types);
     return fn_sym;
 }
 
 void free_symbol(Symbol* symbol) {
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
-        free_param_array(&symbol->function.params);
-        free_param_array(&symbol->function.param_types);
+        free_vector(&symbol->function.param_names);
+        free_vector(&symbol->function.param_types);
         break;
     }
     case SYMBOL_VAR:

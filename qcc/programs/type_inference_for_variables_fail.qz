@@ -1,0 +1,5 @@
+fn do_something(): Void {
+    print "aaa";
+}
+
+var a = do_something();

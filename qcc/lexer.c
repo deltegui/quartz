@@ -82,7 +82,7 @@ static Token create_token(Lexer* lexer, TokenKind kind) {
     token.start = lexer->start;
     token.kind = kind;
 #ifdef LEXER_DEBUG
-    printf("[LEXER DEBUG]: Readed ");
+    printf("[LEXER DEBUG]: Read ");
     token_print(token);
 #endif
     return token;
@@ -272,6 +272,12 @@ static Token scan_identifier(Lexer* lexer) {
     case 'B': {
         if (match_token(lexer, "ool", 1, 4)) {
             return create_token(lexer, TOKEN_TYPE_BOOL);
+        }
+        break;
+    }
+    case 'V': {
+        if (match_token(lexer, "oid", 1, 4)) {
+            return create_token(lexer, TOKEN_TYPE_VOID);
         }
         break;
     }

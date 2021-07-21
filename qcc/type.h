@@ -18,4 +18,7 @@ Type type_from_obj_kind(ObjKind kind);
 Type type_from_token_kind(TokenKind kind);
 void type_print(Type type);
 
+#define VECTOR_AS_TYPES(vect) VECTOR_AS(vect, Type)
+#define VECTOR_ADD_TYPE(vect, type) VECTOR_ADD(vect, type, Type)
+
 #endif

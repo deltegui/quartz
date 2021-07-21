@@ -1,11 +1,12 @@
 #include "vector.h"
 #include <stdlib.h>
 
-#define VECTOR_GROW_CAPACITY(params) (params->capacity == 0 ? 2 : params->capacity + 2)
+#define VECTOR_GROW_CAPACITY(cap) ((cap < 8) ? 8 : cap * 2)
 
-void init_vector(Vector* vect) {
+void init_vector(Vector* vect, size_t element_size) {
     vect->size = 0;
     vect->capacity = 0;
+    vect->element_size = element_size;
     vect->elements = NULL;
 }
 
@@ -14,15 +15,18 @@ void free_vector(Vector* vect) {
         return;
     }
     free(vect->elements);
+    init_vector(vect, vect->element_size);
 }
 
-void vector_add(Vector* vect, VElement element) {
+uint32_t vector_next_add_position(Vector* vect) {
     if (vect->size + 1 > vect->capacity) {
-        vect->capacity = VECTOR_GROW_CAPACITY(vect);
-        vect->elements = (VElement*) realloc(vect->elements, sizeof(VElement) * vect->capacity);
+        vect->capacity = VECTOR_GROW_CAPACITY(vect->capacity);
+        vect->elements = (void*) realloc(
+            vect->elements,
+            vect->element_size * vect->capacity);
     }
     assert(vect->capacity > 0);
     assert(vect->elements != NULL);
-    vect->elements[vect->size] = element;
-    vect->size++;
+    // vect->elements[vect->size] = element;
+    return vect->size++;
 }

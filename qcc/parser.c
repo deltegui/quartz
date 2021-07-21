@@ -437,10 +437,12 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
 }
 
 static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym) {
+    Token* param_names = VECTOR_AS_TOKENS(&fn_sym->param_names);
+    Type* param_types = VECTOR_AS_TYPES(&fn_sym->param_types);
     for (int i = 0; i < fn_sym->param_names.size; i++) {
         Symbol param = create_symbol_from_token(
-            &fn_sym->param_names.elements[i].identifier,
-            fn_sym->param_types.elements[i].type);
+            &param_names[i],
+            param_types[i]);
         register_symbol(parser, param);
     }
 }
@@ -532,7 +534,7 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
     CallExpr call = (CallExpr){
         .identifier = fn_name.name,
     };
-    init_vector(&call.params);
+    init_vector(&call.params, sizeof(Expr*));
 
     Symbol* fn_sym = lookup_str(parser, fn_name.name.start, fn_name.name.length);
     assert(fn_sym != NULL);

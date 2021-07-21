@@ -197,9 +197,11 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     Symbol* symbol = lookup_str(checker, call->identifier.start, call->identifier.length);
     assert(symbol != NULL);
 
+    Expr** exprs = VECTOR_AS_EXPRS(&call->params);
+    Type* param_types = VECTOR_AS_TYPES(&symbol->function.param_types);
     for (int i = 0; i < call->params.size; i++) {
-        ACCEPT_EXPR(checker, call->params.elements[i].expr);
-        Type def_type = symbol->function.param_types.elements[i].type;
+        ACCEPT_EXPR(checker, exprs[i]);
+        Type def_type = param_types[i];
         Type last = checker->last_type;
         if (last != def_type) {
             error(checker, &call->identifier, "Type of param number %d in function call (", i);
@@ -230,18 +232,22 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
 }
 
 static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol) {
-    Vector* param_types = &symbol->function.param_types;
-    Vector* param_names = &symbol->function.param_names;
-    assert(param_types->size == param_names->size);
-    for (int i = 0; i < param_types->size; i++) {
-        assert(param_names->elements[i].identifier.length > 0);
-        if (param_types->elements[i].type == TYPE_VOID) {
+    Vector* vector_types = &symbol->function.param_types;
+    Vector* vector_names = &symbol->function.param_names;
+    assert(vector_types->size == vector_names->size);
+
+    Type* param_types = VECTOR_AS_TYPES(vector_types);
+    Token* param_names = VECTOR_AS_TOKENS(vector_names);
+
+    for (int i = 0; i < vector_types->size; i++) {
+        assert(param_names[i].length > 0);
+        if (param_types[i] == TYPE_VOID) {
             error(
                 checker,
-                &param_names->elements[i].identifier,
+                &param_names[i],
                 "Function param '%.*s' cannot be Void\n",
-                param_names->elements[i].identifier.length,
-                param_names->elements[i].identifier.start);
+                param_names[i].length,
+                param_names[i].start);
         }
     }
 }

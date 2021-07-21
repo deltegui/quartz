@@ -57,8 +57,8 @@ static FunctionSymbol create_function_symbol() {
     FunctionSymbol fn_sym = (FunctionSymbol) {
         .return_type = TYPE_VOID
     };
-    init_vector(&fn_sym.param_names);
-    init_vector(&fn_sym.param_types);
+    init_vector(&fn_sym.param_names, sizeof(Token));
+    init_vector(&fn_sym.param_types, sizeof(Type));
     return fn_sym;
 }
 

@@ -83,4 +83,7 @@ Expr* create_expr(ExprKind type, void* expr_node);
 void free_expr(Expr* expr);
 void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr);
 
+#define VECTOR_AS_EXPRS(vect) VECTOR_AS(vect, Expr*)
+#define VECTOR_ADD_EXPR(vect, expr_ptr) VECTOR_ADD(vect, expr_ptr, Expr*)
+
 #endif

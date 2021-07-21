@@ -435,6 +435,7 @@ static void print_assignment(void* ctx, AssignmentExpr* assignment) {
 }
 
 static void print_call(void* ctx, CallExpr* call) {
+    Expr** exprs = VECTOR_AS_EXPRS(&call->params);
     pretty_print("Call Expr: [\n");
     OFFSET({
         pretty_print("Function name: ");
@@ -442,7 +443,7 @@ static void print_call(void* ctx, CallExpr* call) {
         pretty_print("Params: [\n");
         OFFSET({
             for (int i = 0; i < call->params.size; i++) {
-                ACCEPT_EXPR(call->params.elements[i].expr);
+                ACCEPT_EXPR(exprs[i]);
             }
         });
         pretty_print("]\n");

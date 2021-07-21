@@ -55,12 +55,14 @@ void free_expr(Expr* expr) {
     case EXPR_UNARY:
         free_expr(expr->unary.expr);
         break;
-    case EXPR_CALL:
+    case EXPR_CALL: {
+        Expr** exprs = VECTOR_AS_EXPRS(&expr->call.params);
         for (int i = 0; i < expr->call.params.size; i++) {
-            free_expr(expr->call.params.elements[i].expr);
+            free_expr(exprs[i]);
         }
         free_vector(&expr->call.params);
         break;
+    }
     }
     free(expr);
 }

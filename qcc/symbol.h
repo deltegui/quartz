@@ -18,8 +18,8 @@ typedef enum {
 } SymbolKind;
 
 typedef struct {
-    Vector param_names;
-    Vector param_types;
+    Vector param_names; // Vector<Token>
+    Vector param_types; // Vector<Type>
     Type return_type;
 } FunctionSymbol;
 

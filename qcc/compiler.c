@@ -297,8 +297,9 @@ static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
 }
 
 static void update_param_index(Compiler* compiler, Symbol* symbol) {
+    Token* param_names = VECTOR_AS_TOKENS(&symbol->function.param_names);
     for (int i = 0; i < symbol->function.param_names.size; i++) {
-        Token param = symbol->function.param_names.elements[i].identifier;
+        Token param = param_names[i];
         Symbol* param_sym = lookup_str(compiler, param.start, param.length);
         param_sym->constant_index = compiler->next_local_index;
         compiler->next_local_index++;
@@ -487,9 +488,10 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
     identifier_use(compiler, call->identifier, &ops_get_identifier);
+    Expr** exprs = VECTOR_AS_EXPRS(&call->params);
     int i = 0;
     for (; i < call->params.size; i++) {
-        ACCEPT_EXPR(compiler, call->params.elements[i].expr);
+        ACCEPT_EXPR(compiler, exprs[i]);
     }
     if (i > UINT8_MAX) {
         error(compiler, "Parameter count exceeds the max number of parameters: 254");

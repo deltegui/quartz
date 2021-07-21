@@ -104,10 +104,10 @@ static void assert_expr_equals(Expr* first, Expr* second) {
     case EXPR_CALL: {
         assert_true(token_equals(&first->call.identifier, &second->call.identifier));
         assert_int_equal(first->call.params.size, second->call.params.size);
+        Expr** first_expr = VECTOR_AS_EXPRS(&first->call.params);
+        Expr** second_expr = VECTOR_AS_EXPRS(&second->call.params);
         for (int i = 0; i < first->call.params.size; i++) {
-            assert_expr_equals(
-                first->call.params.elements[i].expr,
-                second->call.params.elements[i].expr);
+            assert_expr_equals(first_expr[i], second_expr[i]);
         }
         break;
     }

@@ -15,7 +15,7 @@ typedef enum {
 } ValueKind;
 
 typedef struct {
-    Type type;
+    Type* type;
     ValueKind kind;
     union {
         double number;
@@ -26,12 +26,12 @@ typedef struct {
 
 void value_print(Value val);
 bool value_equals(Value first, Value second);
-Value value_default(Type type);
+Value value_default(Type* type);
 
-#define NUMBER_VALUE(i) ((Value){ SIMPLE_TYPE(TYPE_NUMBER), VALUE_NUMBER, { .number = i } })
-#define BOOL_VALUE(b) ((Value){ SIMPLE_TYPE(TYPE_BOOL), VALUE_BOOL, { .boolean = b } })
-#define NIL_VALUE() ((Value){ SIMPLE_TYPE(TYPE_NIL), VALUE_NIL, { .object = NULL } })
-#define OBJ_VALUE(ob) ((Value){ type_from_obj_kind(ob->obj.kind), VALUE_OBJ, { .object = (Obj*) ob } })
+#define NUMBER_VALUE(i) ((Value){ CREATE_TYPE_NUMBER(), VALUE_NUMBER, { .number = i } })
+#define BOOL_VALUE(b) ((Value){ CREATE_TYPE_BOOL(), VALUE_BOOL, { .boolean = b } })
+#define NIL_VALUE() ((Value){ CREATE_TYPE_NIL(), VALUE_NIL, { .object = NULL } })
+#define OBJ_VALUE(ob, obj_type) ((Value){ obj_type, VALUE_OBJ, { .object = (Obj*) ob } })
 
 #define VALUE_IS_NUMBER(val) (val.kind == VALUE_NUMBER)
 #define VALUE_IS_BOOL(val) (val.kind == VALUE_BOOL)

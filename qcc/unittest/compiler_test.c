@@ -85,7 +85,7 @@ static void should_emit_comparisions() {
 
 static void should_compile_globals() {
     ASSERT_CHUNK("var esto = 5*2;", {
-        uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4)));
+        uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4), CREATE_TYPE_STRING()));
         emit_constant(&my, NUMBER_VALUE(5), 1);
         emit_constant(&my, NUMBER_VALUE(2), 1);
         chunk_write(&my, OP_MUL, 1);
@@ -97,7 +97,7 @@ static void should_compile_globals() {
 static void should_compile_globals_with_default_values() {
 #define DEFAULT_VALUE(code, default_val) do {\
     ASSERT_CHUNK(code, {\
-        uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4)));\
+        uint8_t index = valuearray_write(&my.constants, OBJ_VALUE(copy_string("esto", 4), CREATE_TYPE_STRING()));\
         emit_constant(&my, default_val, 1);\
         chunk_write(&my, OP_DEFINE_GLOBAL, 1);\
         chunk_write(&my, index, 1);\
@@ -106,7 +106,7 @@ static void should_compile_globals_with_default_values() {
 
     DEFAULT_VALUE("var esto: Number;", NUMBER_VALUE(0));
     DEFAULT_VALUE("var esto: Bool;", BOOL_VALUE(false));
-    DEFAULT_VALUE("var esto: String;", OBJ_VALUE(copy_string("", 0)));
+    DEFAULT_VALUE("var esto: String;", OBJ_VALUE(copy_string("", 0), CREATE_TYPE_STRING()));
 
 #undef DEFAULT_VALUE
 }

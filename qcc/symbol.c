@@ -8,10 +8,10 @@
 #define S_GROW_CAPACITY(cap) (cap < 8 ? 8 : cap * 2)
 #define SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
 
-static FunctionSymbol create_function_symbol();
+static void create_function_symbol(Symbol* symbol);
 static Symbol* find(SymbolTable* table, SymbolName* name);
 static void grow_symbol_table(SymbolTable* table);
-static SymbolKind kind_from_type(Type type);
+static SymbolKind kind_from_type(Type* type);
 
 SymbolName create_symbol_name(const char* str, int length) {
     assert(length != 0);
@@ -24,14 +24,14 @@ SymbolName create_symbol_name(const char* str, int length) {
     return name;
 }
 
-Symbol create_symbol_from_token(Token* token, Type type) {
+Symbol create_symbol_from_token(Token* token, Type* type) {
     return create_symbol(
         create_symbol_name(token->start, token->length),
         token->line,
         type);
 }
 
-Symbol create_symbol(SymbolName name, int line, Type type) {
+Symbol create_symbol(SymbolName name, int line, Type* type) {
     Symbol symbol = (Symbol){
         .kind = kind_from_type(type),
         .name = name,
@@ -41,32 +41,29 @@ Symbol create_symbol(SymbolName name, int line, Type type) {
         .global = false, // we dont know
     };
     if (symbol.kind == SYMBOL_FUNCTION) {
-        symbol.function = create_function_symbol();
+        create_function_symbol(&symbol);
     }
     return symbol;
 }
 
-static SymbolKind kind_from_type(Type type) {
-    switch (type.kind) {
+static SymbolKind kind_from_type(Type* type) {
+    switch (type->kind) {
     case TYPE_FUNCTION: return SYMBOL_FUNCTION;
     default: return SYMBOL_VAR;
     }
 }
 
-static FunctionSymbol create_function_symbol() {
-    FunctionSymbol fn_sym = (FunctionSymbol) {
-        .return_type = SIMPLE_TYPE(TYPE_VOID),
-    };
+static void create_function_symbol(Symbol* symbol) {
+    FunctionSymbol fn_sym;
     init_vector(&fn_sym.param_names, sizeof(Token));
-    init_vector(&fn_sym.param_types, sizeof(Type));
-    return fn_sym;
+    symbol->function = fn_sym;
 }
 
 void free_symbol(Symbol* symbol) {
+    // Notice we dont own Type*. Please DO NOT FREE Type*.
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
         free_vector(&symbol->function.param_names);
-        free_vector(&symbol->function.param_types);
         break;
     }
     case SYMBOL_VAR:
@@ -122,10 +119,11 @@ static void grow_symbol_table(SymbolTable* table) {
     table->capacity = S_GROW_CAPACITY(old_capacity);
     table->entries = (Symbol*) malloc(sizeof(Symbol) * table->capacity);
 
+    // TODO is this really necessary?
     for (int i = 0; i < table->capacity; i++) {
         Symbol* symbol = &table->entries[i];
         symbol->declaration_line = 0;
-        symbol->type = SIMPLE_TYPE(TYPE_UNKNOWN);
+        symbol->type = CREATE_TYPE_UNKNOWN();
         symbol->name.str = NULL;
         symbol->name.length = 0;
         symbol->name.hash = 0;

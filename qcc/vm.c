@@ -2,6 +2,7 @@
 #include "values.h"
 #include "math.h"
 #include "vm_memory.h"
+#include "type.h" // to init and free type_pool
 
 #ifdef VM_DEBUG
 #include "debug.h"
@@ -10,6 +11,7 @@
 QVM qvm;
 
 void init_qvm() {
+    init_type_pool();
     init_table(&qvm.strings);
     init_table(&qvm.globals);
     qvm.stack_top = qvm.stack;
@@ -18,6 +20,7 @@ void init_qvm() {
 }
 
 void free_qvm() {
+    free_type_pool();
     free_table(&qvm.strings);
     free_table(&qvm.globals);
     free_objects();
@@ -60,8 +63,7 @@ static inline Value stack_peek(uint8_t distance) {
     ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* concat = concat_string(a, b);\
-    Value val = OBJ_VALUE(concat);\
-    val.type = SIMPLE_TYPE(TYPE_STRING);\
+    Value val = OBJ_VALUE(concat, CREATE_TYPE_STRING());\
     stack_push(val)
 
 #define CONSTANT_OP(read)\
@@ -269,7 +271,7 @@ static void run(ObjFunction* func) {
 }
 
 void qvm_execute(ObjFunction* func) {
-    stack_push(OBJ_VALUE(func));
+    stack_push(OBJ_VALUE(func, create_type_function()));
     CallFrame* frame = &qvm.frames[qvm.frame_count++];
     frame->func = func;
     frame->pc = func->chunk.code;

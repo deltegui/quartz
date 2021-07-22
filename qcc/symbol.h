@@ -19,15 +19,14 @@ typedef enum {
 
 typedef struct {
     Vector param_names; // Vector<Token>
-    Vector param_types; // Vector<Type>
-    Type return_type;
+    // Function type information is stored in Type* type inside Symbol struct
 } FunctionSymbol;
 
 typedef struct {
     SymbolKind kind;
     SymbolName name;
+    Type* type;
     uint32_t declaration_line;
-    Type type;
     uint16_t constant_index;
     bool global;
     union {
@@ -35,8 +34,8 @@ typedef struct {
     };
 } Symbol;
 
-Symbol create_symbol_from_token(Token* token, Type type);
-Symbol create_symbol(SymbolName name, int line, Type type);
+Symbol create_symbol_from_token(Token* token, Type* type);
+Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* symbol);
 
 typedef struct {

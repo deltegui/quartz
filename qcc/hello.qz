@@ -1,6 +1,1 @@
-fn calc_lines_of_code() {
-    print "Lines of code in Quartz: ";
-    print 4742 + 662 + 46 + 16 + 525+ 158 + 22 + 21;
-}
-
-calc_lines_of_code();
+var a: String = "Hola";

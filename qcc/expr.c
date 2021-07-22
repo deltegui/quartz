@@ -57,7 +57,7 @@ void free_expr(Expr* expr) {
         break;
     case EXPR_CALL: {
         Expr** exprs = VECTOR_AS_EXPRS(&expr->call.params);
-        for (int i = 0; i < expr->call.params.size; i++) {
+        for (uint32_t i = 0; i < expr->call.params.size; i++) {
             free_expr(exprs[i]);
         }
         free_vector(&expr->call.params);

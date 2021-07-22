@@ -231,7 +231,7 @@ static uint16_t make_constant(Compiler* compiler, Value value) {
 
 static uint16_t identifier_constant(Compiler* compiler, Token* identifier) {
     Value value = OBJ_VALUE(copy_string(identifier->start, identifier->length));
-    value.type = TYPE_STRING;
+    value.type = SIMPLE_TYPE(TYPE_STRING);
     return make_constant(compiler, value);
 }
 
@@ -279,7 +279,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     }
 
     Value fn_value = OBJ_VALUE(inner.func);
-    fn_value.type = TYPE_FUNCTION; // TODO A better and less error prone way to give types at runtime?
+    fn_value.type = SIMPLE_TYPE(TYPE_FUNCTION); // TODO A better and less error prone way to give types at runtime?
     uint16_t default_value = make_constant(compiler, fn_value);
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
 
@@ -290,7 +290,7 @@ static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
     if (last_emitted_byte_equals(compiler, OP_RETURN)) {
         return;
     }
-    if (fn_sym->function.return_type == TYPE_VOID) {
+    if (TYPE_IS_KIND(fn_sym->function.return_type, TYPE_VOID)) {
         emit(compiler, OP_NIL);
         emit(compiler, OP_RETURN);
     }
@@ -298,7 +298,7 @@ static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
 
 static void update_param_index(Compiler* compiler, Symbol* symbol) {
     Token* param_names = VECTOR_AS_TOKENS(&symbol->function.param_names);
-    for (int i = 0; i < symbol->function.param_names.size; i++) {
+    for (uint32_t i = 0; i < symbol->function.param_names.size; i++) {
         Token param = param_names[i];
         Symbol* param_sym = lookup_str(compiler, param.start, param.length);
         param_sym->constant_index = compiler->next_local_index;
@@ -418,7 +418,7 @@ static void compile_literal(void* ctx, LiteralExpr* literal) {
     case TOKEN_STRING: {
         ObjString* str = copy_string(literal->literal.start, literal->literal.length);
         value = OBJ_VALUE(str);
-        value.type = TYPE_STRING;
+        value.type = SIMPLE_TYPE(TYPE_STRING);
         break;
     }
     default:
@@ -489,7 +489,7 @@ static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
     identifier_use(compiler, call->identifier, &ops_get_identifier);
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
-    int i = 0;
+    uint32_t i = 0;
     for (; i < call->params.size; i++) {
         ACCEPT_EXPR(compiler, exprs[i]);
     }

@@ -343,11 +343,11 @@ static Stmt* variable_decl(Parser* parser) {
     var.identifier = parser->current;
     advance(parser); // consume identifier
 
-    Type var_type = TYPE_UNKNOWN;
+    Type var_type = SIMPLE_TYPE(TYPE_UNKNOWN);
     if (parser->current.kind == TOKEN_COLON) {
         advance(parser); // consume :
         var_type = type_from_token_kind(parser->current.kind);
-        if (var_type == TYPE_UNKNOWN) {
+        if (TYPE_IS_KIND(var_type, TYPE_UNKNOWN)) {
             error(parser, "Unkown type in variable declaration");
         }
         advance(parser); // consume type
@@ -374,7 +374,7 @@ static Stmt* function_decl(Parser* parser) {
     FunctionStmt fn = (FunctionStmt){
         .identifier = parser->current,
     };
-    Symbol symbol = create_symbol_from_token(&fn.identifier, TYPE_FUNCTION);
+    Symbol symbol = create_symbol_from_token(&fn.identifier, SIMPLE_TYPE(TYPE_FUNCTION));
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
@@ -386,7 +386,7 @@ static Stmt* function_decl(Parser* parser) {
     if (parser->current.kind == TOKEN_COLON) {
         advance(parser); // consume colon
         Type return_type = type_from_token_kind(parser->current.kind);
-        if (return_type == TYPE_UNKNOWN) {
+        if (TYPE_IS_KIND(return_type, TYPE_UNKNOWN)) {
             error(
                 parser,
                 "Unknown return type in function '%.*s'",
@@ -424,7 +424,7 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
         }
         advance(parser); // cosume colon
         Type type = type_from_token_kind(parser->current.kind);
-        if (type == TYPE_UNKNOWN) {
+        if (TYPE_IS_KIND(type, TYPE_UNKNOWN)) {
             error (parser, "Unknown type in function param in function declaration");
         }
         VECTOR_ADD_TYPE(&fn_sym->param_types, type);
@@ -439,7 +439,7 @@ static void parse_function_params_declaration(Parser* parser, FunctionSymbol* fn
 static void add_params_to_body(Parser* parser, FunctionSymbol* fn_sym) {
     Token* param_names = VECTOR_AS_TOKENS(&fn_sym->param_names);
     Type* param_types = VECTOR_AS_TYPES(&fn_sym->param_types);
-    for (int i = 0; i < fn_sym->param_names.size; i++) {
+    for (uint32_t i = 0; i < fn_sym->param_names.size; i++) {
         Symbol param = create_symbol_from_token(
             &param_names[i],
             param_types[i]);

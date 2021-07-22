@@ -47,7 +47,7 @@ Symbol create_symbol(SymbolName name, int line, Type type) {
 }
 
 static SymbolKind kind_from_type(Type type) {
-    switch (type) {
+    switch (type.kind) {
     case TYPE_FUNCTION: return SYMBOL_FUNCTION;
     default: return SYMBOL_VAR;
     }
@@ -55,7 +55,7 @@ static SymbolKind kind_from_type(Type type) {
 
 static FunctionSymbol create_function_symbol() {
     FunctionSymbol fn_sym = (FunctionSymbol) {
-        .return_type = TYPE_VOID
+        .return_type = SIMPLE_TYPE(TYPE_VOID),
     };
     init_vector(&fn_sym.param_names, sizeof(Token));
     init_vector(&fn_sym.param_types, sizeof(Type));
@@ -125,7 +125,7 @@ static void grow_symbol_table(SymbolTable* table) {
     for (int i = 0; i < table->capacity; i++) {
         Symbol* symbol = &table->entries[i];
         symbol->declaration_line = 0;
-        symbol->type = TYPE_UNKNOWN;
+        symbol->type = SIMPLE_TYPE(TYPE_UNKNOWN);
         symbol->name.str = NULL;
         symbol->name.length = 0;
         symbol->name.hash = 0;

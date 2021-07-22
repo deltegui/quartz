@@ -28,9 +28,9 @@ void value_print(Value val);
 bool value_equals(Value first, Value second);
 Value value_default(Type type);
 
-#define NUMBER_VALUE(i) ((Value){ TYPE_NUMBER, VALUE_NUMBER, { .number = i } })
-#define BOOL_VALUE(b) ((Value){ TYPE_BOOL, VALUE_BOOL, { .boolean = b } })
-#define NIL_VALUE() ((Value){ TYPE_NIL, VALUE_NIL, { .object = NULL } })
+#define NUMBER_VALUE(i) ((Value){ SIMPLE_TYPE(TYPE_NUMBER), VALUE_NUMBER, { .number = i } })
+#define BOOL_VALUE(b) ((Value){ SIMPLE_TYPE(TYPE_BOOL), VALUE_BOOL, { .boolean = b } })
+#define NIL_VALUE() ((Value){ SIMPLE_TYPE(TYPE_NIL), VALUE_NIL, { .object = NULL } })
 #define OBJ_VALUE(ob) ((Value){ type_from_obj_kind(ob->obj.kind), VALUE_OBJ, { .object = (Obj*) ob } })
 
 #define VALUE_IS_NUMBER(val) (val.kind == VALUE_NUMBER)

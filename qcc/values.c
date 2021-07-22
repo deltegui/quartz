@@ -14,13 +14,13 @@ void value_print(Value val) {
 }
 
 Value value_default(Type type) {
-    assert(type != TYPE_UNKNOWN);
-    switch (type) {
+    assert(! TYPE_IS_KIND(type, TYPE_UNKNOWN));
+    switch (type.kind) {
     case TYPE_NUMBER: return NUMBER_VALUE(0);
     case TYPE_BOOL: return BOOL_VALUE(false);
     case TYPE_STRING: {
         Value str = OBJ_VALUE(copy_string("", 0));
-        str.type = TYPE_STRING;
+        str.type = SIMPLE_TYPE(TYPE_STRING);
         return str;
     }
     case TYPE_NIL:

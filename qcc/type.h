@@ -3,6 +3,7 @@
 
 #include "lexer.h"
 #include "obj_kind.h"
+#include "vector.h"
 
 typedef enum {
     TYPE_NUMBER,
@@ -12,7 +13,25 @@ typedef enum {
     TYPE_FUNCTION,
     TYPE_VOID,
     TYPE_UNKNOWN,
+} TypeKind;
+
+struct s_func_type;
+
+typedef struct {
+    TypeKind kind;
+    union {
+        struct s_func_type* function;
+    };
 } Type;
+
+typedef struct s_func_type {
+    Vector* param_types;
+    Type return_type;
+} FunctionType;
+
+#define SIMPLE_TYPE(knd) ((Type){ .kind = knd })
+#define TYPE_IS_KIND(type, knd) (type.kind == knd)
+#define TYPE_EQUALS(first, second) (first.kind == second.kind)
 
 Type type_from_obj_kind(ObjKind kind);
 Type type_from_token_kind(TokenKind kind);

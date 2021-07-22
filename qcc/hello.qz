@@ -1,19 +1,6 @@
-/*
-fn hello(): Void {
-    print "Hola";
+fn calc_lines_of_code() {
+    print "Lines of code in Quartz: ";
+    print 4742 + 662 + 46 + 16 + 525+ 158 + 22 + 21;
 }
 
-var a: Void;
-a = hello();
-print a;
-*/
-
-/*
-fn pussy(): Void {
-    print "Hello";
-}
-
-pussy();
-var a : Void;
-*/
-print 5.5.5;
+calc_lines_of_code();

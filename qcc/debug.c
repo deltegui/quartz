@@ -442,7 +442,7 @@ static void print_call(void* ctx, CallExpr* call) {
         token_print(call->identifier);
         pretty_print("Params: [\n");
         OFFSET({
-            for (int i = 0; i < call->params.size; i++) {
+            for (uint32_t i = 0; i < call->params.size; i++) {
                 ACCEPT_EXPR(exprs[i]);
             }
         });

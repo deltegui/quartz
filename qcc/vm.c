@@ -61,7 +61,7 @@ static inline Value stack_peek(uint8_t distance) {
     ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* concat = concat_string(a, b);\
     Value val = OBJ_VALUE(concat);\
-    val.type = TYPE_STRING;\
+    val.type = SIMPLE_TYPE(TYPE_STRING);\
     stack_push(val)
 
 #define CONSTANT_OP(read)\
@@ -111,7 +111,7 @@ static void run(ObjFunction* func) {
         case OP_ADD: {
             Value second = stack_peek(0);
             Value first = stack_peek(1);
-            if (first.type == TYPE_STRING && second.type == TYPE_STRING) {
+            if (TYPE_IS_KIND(first.type, TYPE_STRING) && TYPE_IS_KIND(second.type, TYPE_STRING)) {
                 STRING_CONCAT();
                 break;
             }

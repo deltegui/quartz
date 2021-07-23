@@ -1,18 +1,36 @@
 #include "type.h"
 #include <stdio.h>
 
-static void free_type(Type* type);
-static Type* type_pool_add(Type type);
-static Type* alloc_type(Type type);
-
-Type* type_pool = NULL;
-
 Type number_type;
 Type bool_type;
 Type nil_type;
 Type string_type;
 Type void_type;
 Type unknown_type;
+
+typedef struct s_pool_node {
+    struct s_pool_node* next;
+    uint32_t size;
+    uint32_t capacity;
+    Type types[];
+} PoolNode;
+
+uint32_t last_capacity = 0;
+PoolNode* type_pool = NULL;
+PoolNode* current_node = NULL;
+
+#define GROW_CAPACITY ((last_capacity < 8) ? 8 : last_capacity * 2)
+
+inline static uint32_t next_capacity();
+static void free_pool_node(PoolNode* node);
+static void free_type(Type* type);
+static Type* type_pool_add(Type type);
+static PoolNode* alloc_node();
+
+inline static uint32_t next_capacity() {
+    last_capacity = ((last_capacity < 8) ? 8 : last_capacity * 2);
+    return last_capacity;
+}
 
 void init_type_pool() {
     number_type.kind = TYPE_NUMBER;
@@ -24,12 +42,19 @@ void init_type_pool() {
 }
 
 void free_type_pool() {
-    Type* current = type_pool;
+    PoolNode* current = type_pool;
     while (current != NULL) {
-        Type* next = current->next;
-        free_type(current);
+        PoolNode* next = current->next;
+        free_pool_node(current);
         current = next;
     }
+}
+
+static void free_pool_node(PoolNode* node) {
+    for (uint32_t i = 0; i < node->size; i++) {
+        free_type(&node->types[i]);
+    }
+    free(node);
 }
 
 static void free_type(Type* type) {
@@ -43,26 +68,29 @@ static void free_type(Type* type) {
         // Simple types do not have anything to free
         break;
     }
-    free(type);
 }
 
 static Type* type_pool_add(Type type) {
     if (type_pool == NULL) {
-        type_pool = alloc_type(type);
-        return type_pool;
+        type_pool = alloc_node();
+        current_node = type_pool;
     }
-    Type* current = type_pool;
-    while (current->next != NULL) {
-        current = current->next;
+    if (current_node->capacity <= current_node->size + 1) {
+        current_node->next = alloc_node();
+        current_node = current_node->next;
     }
-    current->next = alloc_type(type);
-    return current->next;
+    Type* bucket = &current_node->types[current_node->size++];
+    *bucket = type;
+    return bucket;
 }
 
-static Type* alloc_type(Type type) {
-    Type* ptr = (Type*) malloc(sizeof(Type));
-    *ptr = type;
-    return ptr;
+static PoolNode* alloc_node() {
+    uint32_t cap = next_capacity();
+    PoolNode* node = (PoolNode*) malloc(sizeof(PoolNode) + sizeof(Type) * cap);
+    node->capacity = cap;
+    node->size = 0;
+    node->next = NULL;
+    return node;
 }
 
 Type* create_type_simple(TypeKind kind) {

@@ -17,9 +17,8 @@ typedef enum {
 
 struct s_func_type;
 
-typedef struct s_type {
+typedef struct {
     TypeKind kind;
-    struct s_type* next;
     union {
         struct s_func_type* function;
     };

@@ -117,7 +117,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     if (var->definition == NULL) {
-        if (TYPE_IS_KIND(symbol->type, TYPE_UNKNOWN)) {
+        if (TYPE_IS_UNKNOWN(symbol->type)) {
             error(
                 checker,
                 &var->identifier,
@@ -125,7 +125,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
                 var->identifier.length,
                 var->identifier.start);
         }
-        if (TYPE_IS_KIND(symbol->type, TYPE_VOID)) {
+        if (TYPE_IS_VOID(symbol->type)) {
             error(
                 checker,
                 &var->identifier,
@@ -136,7 +136,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
         return;
     }
     ACCEPT_EXPR(ctx, var->definition);
-    if (TYPE_IS_KIND(checker->last_type, TYPE_VOID)) {
+    if (TYPE_IS_VOID(checker->last_type)) {
         error(
             checker,
             &var->identifier,
@@ -146,7 +146,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     if (TYPE_EQUALS(symbol->type, checker->last_type)) {
         return;
     }
-    if (TYPE_IS_KIND(symbol->type, TYPE_UNKNOWN)) {
+    if (TYPE_IS_UNKNOWN(symbol->type)) {
         symbol->type = checker->last_type;
         return;
     }
@@ -173,7 +173,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
 
     ACCEPT_EXPR(checker, assignment->value);
 
-    if (TYPE_IS_KIND(checker->last_type, TYPE_VOID)) {
+    if (TYPE_IS_VOID(checker->last_type)) {
         error(
             checker,
             &assignment->name,
@@ -198,7 +198,7 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     assert(symbol != NULL);
 
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
-    Type** param_types = VECTOR_AS_TYPES(&symbol->type->function->param_types);
+    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(symbol->type));
     for (uint32_t i = 0; i < call->params.size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
@@ -212,7 +212,7 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         }
     }
 
-    checker->last_type = symbol->type->function->return_type;
+    checker->last_type = TYPE_FN_RETURN(symbol->type);
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
@@ -228,11 +228,11 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     assert(symbol->kind == SYMBOL_FUNCTION);
     typecheck_params_arent_void(checker, symbol);
 
-    checker->last_type = symbol->type->function->return_type;
+    checker->last_type = TYPE_FN_RETURN(symbol->type);
 }
 
 static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol) {
-    Vector* vector_types = &symbol->type->function->param_types;
+    Vector* vector_types = &TYPE_FN_PARAMS(symbol->type);
     Vector* vector_names = &symbol->function.param_names;
     assert(vector_types->size == vector_names->size);
 
@@ -241,7 +241,7 @@ static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol) {
 
     for (uint32_t i = 0; i < vector_types->size; i++) {
         assert(param_names[i].length > 0);
-        if (TYPE_IS_KIND(param_types[i], TYPE_VOID)) {
+        if (TYPE_IS_VOID(param_types[i])) {
             error(
                 checker,
                 &param_names[i],
@@ -261,11 +261,11 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     Symbol* symbol = lookup_str(checker, checker->func_identifier.start, checker->func_identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
-    if (! TYPE_EQUALS(symbol->type->function->return_type, checker->last_type)) {
+    if (! TYPE_EQUALS(TYPE_FN_RETURN(symbol->type), checker->last_type)) {
         error_last_type_match(
             checker,
             &checker->func_identifier,
-            symbol->type->function->return_type,
+            TYPE_FN_RETURN(symbol->type),
             "in function return");
     }
 }
@@ -314,7 +314,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
 
     switch (binary->op.kind) {
     case TOKEN_PLUS: {
-        if (TYPE_IS_KIND(left_type, TYPE_STRING) && TYPE_IS_KIND(right_type, TYPE_STRING)) {
+        if (TYPE_IS_STRING(left_type) && TYPE_IS_STRING(right_type)) {
             checker->last_type = CREATE_TYPE_STRING();
             return;
         }
@@ -328,7 +328,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_STAR:
     case TOKEN_PERCENT:
     case TOKEN_SLASH: {
-        if (TYPE_IS_KIND(left_type, TYPE_NUMBER) && TYPE_IS_KIND(right_type, TYPE_NUMBER)) {
+        if (TYPE_IS_NUMBER(left_type, TYPE_NUMBER) && TYPE_IS_NUMBER(right_type, TYPE_NUMBER)) {
             checker->last_type = CREATE_TYPE_NUMBER();
             return;
         }
@@ -337,7 +337,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     }
     case TOKEN_AND:
     case TOKEN_OR: {
-        if (TYPE_IS_KIND(left_type, TYPE_BOOL) && TYPE_IS_KIND(right_type, TYPE_BOOL)) {
+        if (TYPE_IS_BOOL(left_type, TYPE_BOOL) && TYPE_IS_BOOL(right_type, TYPE_BOOL)) {
             checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
@@ -374,7 +374,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 
     switch (unary->op.kind) {
     case TOKEN_BANG: {
-        if (TYPE_IS_KIND(inner_type, TYPE_BOOL)) {
+        if (TYPE_IS_BOOL(inner_type, TYPE_BOOL)) {
             checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
@@ -383,7 +383,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     }
     case TOKEN_PLUS:
     case TOKEN_MINUS: {
-        if (TYPE_IS_KIND(inner_type, TYPE_NUMBER)) {
+        if (TYPE_IS_NUMBER(inner_type, TYPE_NUMBER)) {
             checker->last_type = inner_type;
             return;
         }

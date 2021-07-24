@@ -290,7 +290,7 @@ static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
     if (last_emitted_byte_equals(compiler, OP_RETURN)) {
         return;
     }
-    if (TYPE_IS_KIND(fn_sym->type->function->return_type, TYPE_VOID)) {
+    if (TYPE_IS_VOID(TYPE_FN_RETURN(fn_sym->type))) {
         emit(compiler, OP_NIL);
         emit(compiler, OP_RETURN);
     }

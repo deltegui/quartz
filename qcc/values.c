@@ -14,7 +14,7 @@ void value_print(Value val) {
 }
 
 Value value_default(Type* type) {
-    assert(! TYPE_IS_KIND(type, TYPE_UNKNOWN));
+    assert(! TYPE_IS_UNKNOWN(type));
     switch (type->kind) {
     case TYPE_NUMBER: return NUMBER_VALUE(0);
     case TYPE_BOOL: return BOOL_VALUE(false);

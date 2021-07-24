@@ -1,6 +1,10 @@
 #include "type.h"
 #include <stdio.h>
 
+// These variables are here to store only one instance
+// of these types. Simple types only stores it's kind,
+// so let repeating these inside the type pool
+// eats resources and is useless.
 Type number_type;
 Type bool_type;
 Type nil_type;
@@ -8,6 +12,19 @@ Type string_type;
 Type void_type;
 Type unknown_type;
 
+// A type pool it's a place where types by value are
+// stored. The rest of the interpreter just have
+// references to the types that are stored here.
+// It's implemented using a linked-list in which every
+// node has an array. Storing just one type per node is
+// inefficient because every new node is a system call, and
+// that's expensive. A program may have the order of hundreds of
+// custom types. We don't want hundreds of system calls.
+// You could think reusing the Vector type defined in
+// vector.h is a good idea. No, it's not. It'll automatically
+// realloc memory, invalidating previous references to it and
+// crashing the interpreter. Keep all that in mind before
+// changing this data structure.
 typedef struct s_pool_node {
     struct s_pool_node* next;
     uint32_t size;
@@ -119,17 +136,6 @@ Type* create_type_function() {
     };
     return type_pool_add(type);
 }
-
-// TODO this function may be dead code. Check references.
-/*
-Type* type_from_obj_kind(ObjKind kind) {
-    switch (kind) {
-    case OBJ_STRING: return CREATE_TYPE_STRING();
-    case OBJ_FUNCTION: return SIMPLE_TYPE(TYPE_FUNCTION);
-    default: return CREATE_TYPE_UNKNOWN();
-    }
-}
-*/
 
 Type* type_from_token_kind(TokenKind kind) {
     switch (kind) {

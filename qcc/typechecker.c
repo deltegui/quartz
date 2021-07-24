@@ -328,7 +328,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     case TOKEN_STAR:
     case TOKEN_PERCENT:
     case TOKEN_SLASH: {
-        if (TYPE_IS_NUMBER(left_type, TYPE_NUMBER) && TYPE_IS_NUMBER(right_type, TYPE_NUMBER)) {
+        if (TYPE_IS_NUMBER(left_type) && TYPE_IS_NUMBER(right_type)) {
             checker->last_type = CREATE_TYPE_NUMBER();
             return;
         }
@@ -337,7 +337,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     }
     case TOKEN_AND:
     case TOKEN_OR: {
-        if (TYPE_IS_BOOL(left_type, TYPE_BOOL) && TYPE_IS_BOOL(right_type, TYPE_BOOL)) {
+        if (TYPE_IS_BOOL(left_type) && TYPE_IS_BOOL(right_type)) {
             checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
@@ -374,7 +374,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 
     switch (unary->op.kind) {
     case TOKEN_BANG: {
-        if (TYPE_IS_BOOL(inner_type, TYPE_BOOL)) {
+        if (TYPE_IS_BOOL(inner_type)) {
             checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
@@ -383,7 +383,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     }
     case TOKEN_PLUS:
     case TOKEN_MINUS: {
-        if (TYPE_IS_NUMBER(inner_type, TYPE_NUMBER)) {
+        if (TYPE_IS_NUMBER(inner_type)) {
             checker->last_type = inner_type;
             return;
         }

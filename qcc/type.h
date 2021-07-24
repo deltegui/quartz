@@ -30,7 +30,7 @@ typedef struct s_func_type {
 } FunctionType;
 
 #define TYPE_FN_RETURN(type_fn) (type_fn->function->return_type)
-#define TYPE_FN_PARAMS(type_fn) (type_fn->function->param_types);
+#define TYPE_FN_PARAMS(type_fn) (type_fn->function->param_types)
 
 #define TYPE_IS_NUMBER(type) (type->kind == TYPE_NUMBER)
 #define TYPE_IS_BOOL(type) (type->kind == TYPE_BOOL)

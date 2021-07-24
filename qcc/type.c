@@ -36,8 +36,6 @@ uint32_t last_capacity = 0;
 PoolNode* type_pool = NULL;
 PoolNode* current_node = NULL;
 
-#define GROW_CAPACITY ((last_capacity < 8) ? 8 : last_capacity * 2)
-
 inline static uint32_t next_capacity();
 static void free_pool_node(PoolNode* node);
 static void free_type(Type* type);
@@ -50,6 +48,9 @@ inline static uint32_t next_capacity() {
 }
 
 void init_type_pool() {
+    last_capacity = 0;
+    type_pool = NULL;
+    current_node = NULL;
     number_type.kind = TYPE_NUMBER;
     bool_type.kind = TYPE_BOOL;
     nil_type.kind = TYPE_NIL;

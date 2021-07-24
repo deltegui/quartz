@@ -119,14 +119,9 @@ static void grow_symbol_table(SymbolTable* table) {
     table->capacity = S_GROW_CAPACITY(old_capacity);
     table->entries = (Symbol*) malloc(sizeof(Symbol) * table->capacity);
 
-    // TODO is this really necessary?
     for (int i = 0; i < table->capacity; i++) {
         Symbol* symbol = &table->entries[i];
-        symbol->declaration_line = 0;
-        symbol->type = CREATE_TYPE_UNKNOWN();
-        symbol->name.str = NULL;
         symbol->name.length = 0;
-        symbol->name.hash = 0;
     }
 
     for (int i = 0; i < old_capacity; i++) {

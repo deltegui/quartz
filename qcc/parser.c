@@ -393,8 +393,7 @@ static Stmt* function_decl(Parser* parser) {
                 fn.identifier.length,
                 fn.identifier.start);
         }
-        Type* fn_return_type = TYPE_FN_RETURN(symbol.type);
-        fn_return_type = return_type;
+        TYPE_FN_RETURN(symbol.type) = return_type;
         advance(parser); // consume type
     }
 

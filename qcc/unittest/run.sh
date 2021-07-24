@@ -38,4 +38,7 @@ sh -c "$CC $MACROS ./table_test.c $SOURCES $LIBS $AND_EXEC"
 printf "\n\n-------- [SYMBOL TESTS] --------\n"
 sh -c "$CC $MACROS ./symbol_test.c $SOURCES $LIBS $AND_EXEC"
 
+printf "\n\n-------- [TYPEPOOL TESTS] --------\n"
+sh -c "$CC $MACROS ./type_test.c $SOURCES $LIBS $AND_EXEC"
+
 rm $BIN

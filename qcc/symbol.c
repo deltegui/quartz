@@ -60,7 +60,7 @@ static void create_function_symbol(Symbol* symbol) {
 }
 
 void free_symbol(Symbol* symbol) {
-    // Notice we dont own Type*. Please DO NOT FREE Type*.
+    // Notice we dont own Type* (symbol->type). Please DO NOT FREE Type*.
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
         free_vector(&symbol->function.param_names);

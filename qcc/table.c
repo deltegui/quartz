@@ -56,7 +56,7 @@ static void insert(Table* table, ObjString* key, Value value) {
             table->max_distance = entry_insert.distance;
         }
         current_index = (current_index + 1) & (table->capacity - 1);
-        // It's garateed that there is at least one empty space. So, returning to
+        // It's garanteed that there is at least one empty space. So, returning to
         // the start should never happen.
         assert(current_index != index);
     }

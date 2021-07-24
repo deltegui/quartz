@@ -27,6 +27,5 @@ uint32_t vector_next_add_position(Vector* vect) {
     }
     assert(vect->capacity > 0);
     assert(vect->elements != NULL);
-    // vect->elements[vect->size] = element;
     return vect->size++;
 }

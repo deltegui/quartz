@@ -10,9 +10,6 @@ typedef struct s_obj {
     struct s_obj* next;
 } Obj;
 
-// Here we use flexible array member. This lets you to
-// avoid double indirection using pointers, which let
-// us have better performance.
 typedef struct s_obj_string {
     Obj obj;
     uint32_t hash;

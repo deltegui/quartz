@@ -2,7 +2,6 @@
 #define QUARTZ_STMT_H_
 
 #include "expr.h"
-// #include "vector.h"
 
 typedef enum {
     STMT_EXPR,

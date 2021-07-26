@@ -292,6 +292,8 @@ static Stmt* declaration_block(Parser* const parser, TokenKind limit_token) {
     while (parser->current.kind != limit_token && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
         if (parser->panic_mode) {
+            // That stmt is not inside the abstract syntax tree. You need to free it.
+            free_stmt(stmt);
             syncronize(parser);
         } else {
             stmt_list_add(list, stmt);

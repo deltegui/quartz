@@ -12,13 +12,13 @@
 #include "symbol.h" // for symbol_table_print
 #include "table.h"  // for table_print
 
-void table_print(Table* table);
-void scoped_symbol_table_print(ScopedSymbolTable* table);
-void chunk_print(Chunk* chunk);
+void table_print(const Table* table);
+void scoped_symbol_table_print(const ScopedSymbolTable* table);
+void chunk_print(const Chunk* chunk);
 void token_print(Token token);
-void valuearray_print(ValueArray* values);
+void valuearray_print(const ValueArray* values);
 void ast_print(Stmt* ast);
-void stack_print(Value* stack_top, Value* stack);
+void stack_print(const Value* stack_top, Value* stack);
 void opcode_print(uint8_t op);
 
 #endif

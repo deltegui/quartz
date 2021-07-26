@@ -13,13 +13,13 @@ typedef struct {
     Token func_identifier;
 } Typechecker;
 
-static void error_last_type_match(Typechecker* checker, Token* where, Type* first, const char* message);
-static void error(Typechecker* checker, Token* token, const char* message, ...);
+static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
+static void error(Typechecker* const checker, Token* token, const char* message, ...);
 
-static void start_scope(Typechecker* checker);
-static void end_scope(Typechecker* checker);
-static Symbol* lookup_str(Typechecker* checker, const char* name, int length);
-static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol);
+static void start_scope(Typechecker* const checker);
+static void end_scope(Typechecker* const checker);
+static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
+static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -56,7 +56,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
 #define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
 
-static void error_last_type_match(Typechecker* checker, Token* where, Type* first, const char* message) {
+static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
     Type* last_type = checker->last_type;
     error(checker, where, "The type '");
     type_print(first);
@@ -65,7 +65,7 @@ static void error_last_type_match(Typechecker* checker, Token* where, Type* firs
     printf("' %s\n", message);
 }
 
-static void error(Typechecker* checker, Token* token, const char* message, ...) {
+static void error(Typechecker* const checker, Token* token, const char* message, ...) {
     checker->has_error = true;
     checker->last_type = CREATE_TYPE_UNKNOWN();
     va_list params;
@@ -75,15 +75,15 @@ static void error(Typechecker* checker, Token* token, const char* message, ...) 
     va_end(params);
 }
 
-static void start_scope(Typechecker* checker) {
+static void start_scope(Typechecker* const checker) {
     symbol_start_scope(checker->symbols);
 }
 
-static void end_scope(Typechecker* checker) {
+static void end_scope(Typechecker* const checker) {
     symbol_end_scope(checker->symbols);
 }
 
-static Symbol* lookup_str(Typechecker* checker, const char* name, int length) {
+static Symbol* lookup_str(Typechecker* const checker, const char* name, int length) {
     return scoped_symbol_lookup_str(checker->symbols, name, length);
 }
 
@@ -231,7 +231,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     checker->last_type = TYPE_FN_RETURN(symbol->type);
 }
 
-static void typecheck_params_arent_void(Typechecker* checker, Symbol* symbol) {
+static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {
     Vector* vector_types = &TYPE_FN_PARAMS(symbol->type);
     Vector* vector_names = &symbol->function.param_names;
     assert(vector_types->size == vector_names->size);

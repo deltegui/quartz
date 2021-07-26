@@ -34,33 +34,33 @@ struct IdentifierOps {
     uint8_t op_local;
 };
 
-static void error(Compiler* compiler, const char* message);
+static void error(Compiler* const compiler, const char* message);
 
-static void init_compiler(Compiler* compiler, CompilerMode mode, const char* source);
-static void free_compiler(Compiler* compiler);
-static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_identifier);
+static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source);
+static void free_compiler(Compiler* const compiler);
+static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier);
 
-static Chunk* current_chunk(Compiler* compiler);
+static Chunk* current_chunk(Compiler* const compiler);
 
-static void start_scope(Compiler* compiler);
-static void end_scope(Compiler* compiler);
-static Symbol* lookup_str(Compiler* compiler, const char* name, int length);
+static void start_scope(Compiler* const compiler);
+static void end_scope(Compiler* const compiler);
+static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
 
-static void emit(Compiler* compiler, uint8_t bytecode);
-static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param);
-static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param);
-static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
-static bool last_emitted_byte_equals(Compiler* compiler, uint8_t byte);
+static void emit(Compiler* const compiler, uint8_t bytecode);
+static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param);
+static void emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param);
+static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
+static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
 
-static uint16_t make_constant(Compiler* compiler, Value value);
-static uint16_t identifier_constant(Compiler* compiler, Token* identifier);
+static uint16_t make_constant(Compiler* const compiler, Value value);
+static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
 
-static void update_param_index(Compiler* compiler, Symbol* symbol);
-static void update_symbol_variable_info(Compiler* compiler, Symbol* var_sym, uint16_t var_index);
-static uint16_t get_variable_index(Compiler* compiler, Token* identifier);
-static void emit_variable_declaration(Compiler* compiler, uint16_t index);
-static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops);
-static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym);
+static void update_param_index(Compiler* const compiler, Symbol* symbol);
+static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index);
+static uint16_t get_variable_index(Compiler* const compiler, const Token* identifier);
+static void emit_variable_declaration(Compiler* const compiler, uint16_t index);
+static void identifier_use(Compiler* const compiler, Token identifier, const struct IdentifierOps* ops);
+static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -97,12 +97,12 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
 #define ACCEPT_EXPR(compiler, expr) expr_dispatch(&compiler_expr_visitor, compiler, expr)
 
-static void error(Compiler* compiler, const char* message) {
+static void error(Compiler* const compiler, const char* message) {
     fprintf(stderr, "[Line %d] Compile error: %s\n", compiler->last_line, message);
     compiler->has_error = true;
 }
 
-static void init_compiler(Compiler* compiler, CompilerMode mode, const char* source) {
+static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source) {
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
 
@@ -117,11 +117,11 @@ static void init_compiler(Compiler* compiler, CompilerMode mode, const char* sou
     memset(compiler->locals, 0, UINT8_COUNT);
 }
 
-static void free_compiler(Compiler* compiler) {
+static void free_compiler(Compiler* const compiler) {
     free_scoped_symbol_table(&compiler->symbols);
 }
 
-static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_identifier) {
+static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier) {
     inner->parser = outer->parser;
     inner->symbols = outer->symbols;
     inner->func = new_function(fn_identifier->start, fn_identifier->length);
@@ -132,11 +132,11 @@ static void init_inner_compiler(Compiler* inner, Compiler* outer, Token* fn_iden
     memset(inner->locals, 0, UINT8_COUNT);
 }
 
-static Chunk* current_chunk(Compiler* compiler) {
+static Chunk* current_chunk(Compiler* const compiler) {
     return &compiler->func->chunk;
 }
 
-CompilationResult compile(const char* source, ObjFunction** result) {
+CompilationResult compile(const char* source, ObjFunction** const result) {
 #define END_WITH(final) do {\
         free_compiler(&compiler);\
         free_stmt(ast);\
@@ -172,12 +172,12 @@ CompilationResult compile(const char* source, ObjFunction** result) {
 #undef END_WITH
 }
 
-static void start_scope(Compiler* compiler) {
+static void start_scope(Compiler* const compiler) {
     compiler->scope_depth++;
     symbol_start_scope(&compiler->symbols);
 }
 
-static void end_scope(Compiler* compiler) {
+static void end_scope(Compiler* const compiler) {
     compiler->next_local_index -= compiler->locals[compiler->scope_depth];
     while (compiler->locals[compiler->scope_depth] > 0) {
         emit(compiler, OP_POP);
@@ -187,20 +187,20 @@ static void end_scope(Compiler* compiler) {
     symbol_end_scope(&compiler->symbols);
 }
 
-static Symbol* lookup_str(Compiler* compiler, const char* name, int length) {
+static Symbol* lookup_str(Compiler* const compiler, const char* name, int length) {
     return scoped_symbol_lookup_str(&compiler->symbols, name, length);
 }
 
-static void emit(Compiler* compiler, uint8_t bytecode) {
+static void emit(Compiler* const compiler, uint8_t bytecode) {
     chunk_write(current_chunk(compiler), bytecode, compiler->last_line);
 }
 
-static void emit_short(Compiler* compiler, uint8_t bytecode, uint8_t param) {
+static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param) {
     emit(compiler, bytecode);
     emit(compiler, param);
 }
 
-static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param) {
+static void emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param) {
     uint8_t high = param >> 0x8;
     uint8_t low = param & 0x00FF;
     emit(compiler, bytecode);
@@ -208,7 +208,7 @@ static void emit_long(Compiler* compiler, uint8_t bytecode, uint16_t param) {
     emit(compiler, low);
 }
 
-static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  uint16_t param) {
+static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param) {
     if (param > UINT8_MAX) {
         emit_long(compiler, op_long, param);
     } else {
@@ -216,11 +216,11 @@ static void emit_param(Compiler* compiler, uint8_t op_short, uint8_t op_long,  u
     }
 }
 
-static bool last_emitted_byte_equals(Compiler* compiler, uint8_t byte) {
+static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte) {
     return chunk_check_last_byte(current_chunk(compiler), byte);
 }
 
-static uint16_t make_constant(Compiler* compiler, Value value) {
+static uint16_t make_constant(Compiler* const compiler, Value value) {
     int constant_index = chunk_add_constant(current_chunk(compiler), value);
     if (constant_index > UINT16_COUNT) {
         error(compiler, "Too many constants for chunk!");
@@ -229,7 +229,7 @@ static uint16_t make_constant(Compiler* compiler, Value value) {
     return (uint16_t)constant_index;
 }
 
-static uint16_t identifier_constant(Compiler* compiler, Token* identifier) {
+static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier) {
     Value value = OBJ_VALUE(
         copy_string(identifier->start, identifier->length),
         CREATE_TYPE_STRING());
@@ -286,7 +286,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_variable_declaration(compiler, fn_index);
 }
 
-static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
+static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym) {
     if (last_emitted_byte_equals(compiler, OP_RETURN)) {
         return;
     }
@@ -296,7 +296,7 @@ static void ensure_function_returns_value(Compiler* compiler, Symbol* fn_sym) {
     }
 }
 
-static void update_param_index(Compiler* compiler, Symbol* symbol) {
+static void update_param_index(Compiler* const compiler, Symbol* symbol) {
     Token* param_names = VECTOR_AS_TOKENS(&symbol->function.param_names);
     for (uint32_t i = 0; i < symbol->function.param_names.size; i++) {
         Token param = param_names[i];
@@ -333,12 +333,12 @@ static void compile_var(void* ctx, VarStmt* var) {
     emit_variable_declaration(compiler, variable_index);
 }
 
-static void update_symbol_variable_info(Compiler* compiler, Symbol* var_sym, uint16_t var_index) {
+static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index) {
     var_sym->global = compiler->scope_depth == 0;
     var_sym->constant_index = var_index;
 }
 
-static uint16_t get_variable_index(Compiler* compiler, Token* identifier) {
+static uint16_t get_variable_index(Compiler* const compiler, const Token* identifier) {
     if (compiler->scope_depth == 0) {
         return identifier_constant(compiler, identifier);
     }
@@ -348,7 +348,7 @@ static uint16_t get_variable_index(Compiler* compiler, Token* identifier) {
     return index;
 }
 
-static void emit_variable_declaration(Compiler* compiler, uint16_t index) {
+static void emit_variable_declaration(Compiler* const compiler, uint16_t index) {
     if (compiler->scope_depth == 0) {
         emit_param(compiler, OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG, index);
     }
@@ -377,7 +377,7 @@ static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     identifier_use(compiler, assignment->name, &ops_set_identifier);
 }
 
-static void identifier_use(Compiler* compiler, Token identifier, struct IdentifierOps* ops) {
+static void identifier_use(Compiler* const compiler, Token identifier, const struct IdentifierOps* ops) {
     Symbol* symbol = lookup_str(compiler, identifier.start, identifier.length);
     assert(symbol != NULL);
     assert(symbol->constant_index < UINT16_MAX);

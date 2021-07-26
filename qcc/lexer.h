@@ -10,7 +10,7 @@ typedef struct {
     uint32_t line;
 } Lexer;
 
-void init_lexer(Lexer* lexer, const char* buffer);
-Token next_token(Lexer* lexer);
+void init_lexer(Lexer* const lexer, const char* const buffer);
+Token next_token(Lexer* const lexer);
 
 #endif

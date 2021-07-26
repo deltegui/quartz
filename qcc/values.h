@@ -48,8 +48,8 @@ typedef struct {
     Value* values;
 } ValueArray;
 
-void init_valuearray(ValueArray* values);
-void free_valuearray(ValueArray* values);
-int valuearray_write(ValueArray* values, Value value);
+void init_valuearray(ValueArray* const values);
+void free_valuearray(ValueArray* const values);
+int valuearray_write(ValueArray* const values, Value value);
 
 #endif

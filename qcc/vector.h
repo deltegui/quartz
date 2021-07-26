@@ -10,9 +10,9 @@ typedef struct {
     void* elements;
 } Vector;
 
-void init_vector(Vector* vect, size_t element_size);
-void free_vector(Vector* vect);
-uint32_t vector_next_add_position(Vector* vect);
+void init_vector(Vector* const vect, size_t element_size);
+void free_vector(Vector* const vect);
+uint32_t vector_next_add_position(Vector* const vect);
 
 #define VECTOR_AS(vect, element_type) ((element_type*) (vect)->elements)
 

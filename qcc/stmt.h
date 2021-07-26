@@ -48,7 +48,7 @@ typedef struct {
 } ReturnStmt;
 
 ListStmt* create_stmt_list();
-void stmt_list_add(ListStmt* list, struct _Stmt* stmt);
+void stmt_list_add(ListStmt* const list, struct _Stmt* stmt);
 
 typedef struct _Stmt {
     StmtKind kind;
@@ -90,7 +90,7 @@ typedef struct {
 #define CREATE_STMT_BLOCK(block) create_stmt(STMT_BLOCK, &block)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
-void free_stmt(Stmt* stmt);
+void free_stmt(Stmt* const stmt);
 void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt);
 
 #endif

@@ -4,7 +4,7 @@
 #include "type.h"
 #include "object.h"
 
-void table_print(Table* table) {
+void table_print(const Table* table) {
     printf("\t| Key\t\t| Value\n");
     printf("\t|---------------|-----------------\n");
     for (int i = 0; i < table->capacity; i++) {
@@ -17,7 +17,7 @@ void table_print(Table* table) {
     printf("\n\n");
 }
 
-static void symbol_table_print(SymbolTable* table) {
+static void symbol_table_print(const SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
     printf("| Name\t| Line\t| Type\n");
     printf("|-------|-------|------------\n");
@@ -37,18 +37,18 @@ static void symbol_table_print(SymbolTable* table) {
     printf("\n\n");
 }
 
-static void symbol_node_print(SymbolNode* node) {
+static void symbol_node_print(const SymbolNode* node) {
     symbol_table_print(&node->symbols);
     for (int i = 0; i < node->size; i++) {
         symbol_node_print(&node->childs[i]);
     }
 }
 
-void scoped_symbol_table_print(ScopedSymbolTable* table) {
+void scoped_symbol_table_print(const ScopedSymbolTable* table) {
     symbol_node_print(&table->global);
 }
 
-void valuearray_print(ValueArray* values) {
+void valuearray_print(const ValueArray* values) {
     printf("--------[ VALUE ARRAY ]--------\n\n");
     printf("| Index\t| Value\n");
     printf("|-------|------------\n");
@@ -99,7 +99,7 @@ void opcode_print(uint8_t op) {
     printf("%s\n", OpCodeStrings[op]);
 }
 
-void stack_print(Value* stack_top, Value* stack) {
+void stack_print(const Value* stack_top, Value* stack) {
     Value* current = stack;
     while (current < stack_top) {
         printf("[ ");
@@ -109,14 +109,14 @@ void stack_print(Value* stack_top, Value* stack) {
     }
 }
 
-static void chunk_format_print(Chunk* chunk, int i, const char* format, ...);
-static void chunk_value_print(Chunk* chunk, int index);
-static int chunk_opcode_print(Chunk* chunk, int i);
-static int chunk_short_print(Chunk* chunk, int i);
-static int chunk_long_print(Chunk* chunk, int i);
-static void standalone_chunk_print(Chunk* chunk);
+static void chunk_format_print(const Chunk* chunk, int i, const char* format, ...);
+static void chunk_value_print(const Chunk* chunk, int index);
+static int chunk_opcode_print(const Chunk* chunk, int i);
+static int chunk_short_print(const Chunk* chunk, int i);
+static int chunk_long_print(const Chunk* chunk, int i);
+static void standalone_chunk_print(const Chunk* chunk);
 
-static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
+static void chunk_format_print(const Chunk* chunk, int i, const char* format, ...) {
     printf("[%02d;%02d]\t", i, chunk->lines[i]);
     va_list params;
     va_start(params, format);
@@ -124,18 +124,18 @@ static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
     va_end(params);
 }
 
-static void chunk_value_print(Chunk* chunk, int index) {
+static void chunk_value_print(const Chunk* chunk, int index) {
     Value val = chunk->constants.values[index];
     value_print(val);
     printf("\n");
 }
 
-static int chunk_opcode_print(Chunk* chunk, int i) {
+static int chunk_opcode_print(const Chunk* chunk, int i) {
     chunk_format_print(chunk, i, "%s\n", OpCodeStrings[chunk->code[i]]);
     return ++i;
 }
 
-static int chunk_short_print(Chunk* chunk, int i) {
+static int chunk_short_print(const Chunk* chunk, int i) {
     i = chunk_opcode_print(chunk, i);
     chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
     if (chunk->code[i] < chunk->constants.size) {
@@ -146,7 +146,7 @@ static int chunk_short_print(Chunk* chunk, int i) {
     return ++i;
 }
 
-static int chunk_long_print(Chunk* chunk, int i) {
+static int chunk_long_print(const Chunk* chunk, int i) {
     i = chunk_opcode_print(chunk, i);
     uint8_t* pc = &chunk->code[i];
     uint16_t num = read_long(&pc);
@@ -156,7 +156,7 @@ static int chunk_long_print(Chunk* chunk, int i) {
     return ++i;
 }
 
-static void standalone_chunk_print(Chunk* chunk) {
+static void standalone_chunk_print(const Chunk* chunk) {
     for (int i = 0; i < chunk->size; i++) {
         printf("[%d] %04x\n", i, chunk->code[i]);
     }
@@ -209,7 +209,7 @@ static void standalone_chunk_print(Chunk* chunk) {
     printf("\n");
 }
 
-void chunk_print(Chunk* chunk) {
+void chunk_print(const Chunk* chunk) {
     printf("--------[ CHUNK DUMP: <GLOBAL> ]--------\n\n");
     valuearray_print(&chunk->constants);
     standalone_chunk_print(chunk);

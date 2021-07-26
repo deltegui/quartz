@@ -8,9 +8,9 @@
 #define S_GROW_CAPACITY(cap) (cap < 8 ? 8 : cap * 2)
 #define SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
 
-static void create_function_symbol(Symbol* symbol);
-static Symbol* find(SymbolTable* table, SymbolName* name);
-static void grow_symbol_table(SymbolTable* table);
+static void create_function_symbol(Symbol* const symbol);
+static Symbol* find(SymbolTable* const table, const SymbolName* name);
+static void grow_symbol_table(SymbolTable* const table);
 static SymbolKind kind_from_type(Type* type);
 
 SymbolName create_symbol_name(const char* str, int length) {
@@ -53,13 +53,13 @@ static SymbolKind kind_from_type(Type* type) {
     }
 }
 
-static void create_function_symbol(Symbol* symbol) {
+static void create_function_symbol(Symbol* const symbol) {
     FunctionSymbol fn_sym;
     init_vector(&fn_sym.param_names, sizeof(Token));
     symbol->function = fn_sym;
 }
 
-void free_symbol(Symbol* symbol) {
+void free_symbol(Symbol* const symbol) {
     // Notice we dont own Type* (symbol->type). Please DO NOT FREE Type*.
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
@@ -71,13 +71,13 @@ void free_symbol(Symbol* symbol) {
     }
 }
 
-void init_symbol_table(SymbolTable* table) {
+void init_symbol_table(SymbolTable* const table) {
     table->size = 0;
     table->capacity = 0;
     table->entries = NULL;
 }
 
-void free_symbol_table(SymbolTable* table) {
+void free_symbol_table(SymbolTable* const table) {
     for (int i = 0; i < table->capacity; i++) {
         if (! IS_EMPTY(&table->entries[i])) {
             free_symbol(&table->entries[i]);
@@ -87,7 +87,7 @@ void free_symbol_table(SymbolTable* table) {
     init_symbol_table(table);
 }
 
-Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {
+Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name) {
     if (table->capacity == 0) {
         return NULL;
     }
@@ -98,12 +98,12 @@ Symbol* symbol_lookup(SymbolTable* table, SymbolName* name) {
     return symbol;
 }
 
-Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length) {
+Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length) {
     SymbolName symbol_name = create_symbol_name(name, length);
     return symbol_lookup(table, &symbol_name);
 }
 
-void symbol_insert(SymbolTable* table, Symbol symbol) {
+void symbol_insert(SymbolTable* const table, Symbol symbol) {
     if (SHOULD_GROW(table)) {
         grow_symbol_table(table);
     }
@@ -113,7 +113,7 @@ void symbol_insert(SymbolTable* table, Symbol symbol) {
     table->size++;
 }
 
-static void grow_symbol_table(SymbolTable* table) {
+static void grow_symbol_table(SymbolTable* const table) {
     Symbol* old_entries = table->entries;
     int old_capacity = table->capacity;
     table->capacity = S_GROW_CAPACITY(old_capacity);
@@ -136,7 +136,7 @@ static void grow_symbol_table(SymbolTable* table) {
     free(old_entries);
 }
 
-static Symbol* find(SymbolTable* table, SymbolName* name) {
+static Symbol* find(SymbolTable* const table, const SymbolName* name) {
     assert(table != NULL);
     assert(name != NULL);
     assert(name->str != NULL);
@@ -161,7 +161,7 @@ static Symbol* find(SymbolTable* table, SymbolName* name) {
 #define NODE_CHILDS_SHOULD_GROW(node) (node->size + 1 > node->capacity)
 #define NODE_GROW_CAPACITY(node) ((node->capacity == 0) ? 8 : node->capacity * 2)
 
-void init_symbol_node(SymbolNode* node) {
+void init_symbol_node(SymbolNode* const node) {
     init_symbol_table(&node->symbols);
     node->father = NULL;
     node->childs = NULL;
@@ -170,7 +170,7 @@ void init_symbol_node(SymbolNode* node) {
     node->next_node_to_visit = 0;
 }
 
-void free_symbol_node(SymbolNode* node) {
+void free_symbol_node(SymbolNode* const node) {
     free_symbol_table(&node->symbols);
     for (int i = 0; i < node->size; i++) {
         free_symbol_node(&node->childs[i]);
@@ -178,14 +178,14 @@ void free_symbol_node(SymbolNode* node) {
     free(node->childs);
 }
 
-void symbol_node_reset(SymbolNode* node) {
+void symbol_node_reset(SymbolNode* const node) {
     node->next_node_to_visit = 0;
     for (int i = 0; i < node->size; i++) {
         symbol_node_reset(&node->childs[i]);
     }
 }
 
-SymbolNode* symbol_node_add_child(SymbolNode* node, SymbolNode* child) {
+SymbolNode* symbol_node_add_child(SymbolNode* const node, SymbolNode* const child) {
     if (NODE_CHILDS_SHOULD_GROW(node)) {
         node->capacity = NODE_GROW_CAPACITY(node);
         node->childs = (SymbolNode*) realloc(node->childs, sizeof(SymbolNode) * node->capacity);
@@ -198,30 +198,30 @@ SymbolNode* symbol_node_add_child(SymbolNode* node, SymbolNode* child) {
     return &node->childs[node->size - 1];
 }
 
-void init_scoped_symbol_table(ScopedSymbolTable* table) {
+void init_scoped_symbol_table(ScopedSymbolTable* const table) {
     init_symbol_node(&table->global);
     table->current = &table->global;
 }
 
-void free_scoped_symbol_table(ScopedSymbolTable* table) {
+void free_scoped_symbol_table(ScopedSymbolTable* const table) {
     free_symbol_node(&table->global);
     table->current = NULL;
 }
 
-void symbol_create_scope(ScopedSymbolTable* table) {
+void symbol_create_scope(ScopedSymbolTable* const table) {
     assert(table->current != NULL);
     SymbolNode child;
     init_symbol_node(&child);
     table->current = symbol_node_add_child(table->current, &child);
 }
 
-void symbol_end_scope(ScopedSymbolTable* table) {
+void symbol_end_scope(ScopedSymbolTable* const table) {
     assert(table->current != NULL);
     assert(table->current->father != NULL);
     table->current = table->current->father;
 }
 
-void symbol_start_scope(ScopedSymbolTable* table) {
+void symbol_start_scope(ScopedSymbolTable* const table) {
     assert(table->current != NULL);
     assert(table->current->childs != NULL);
     assert(table->current->capacity > 0);
@@ -231,12 +231,12 @@ void symbol_start_scope(ScopedSymbolTable* table) {
     table->current = &table->current->childs[table->current->next_node_to_visit - 1];
 }
 
-void symbol_reset_scopes(ScopedSymbolTable* table) {
+void symbol_reset_scopes(ScopedSymbolTable* const table) {
     symbol_node_reset(&table->global);
     table->current = &table->global;
 }
 
-Symbol* scoped_symbol_lookup(ScopedSymbolTable* table, SymbolName* name) {
+Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name) {
     assert(table->current != NULL);
     SymbolNode* current = table->current;
     Symbol* symbol = NULL;
@@ -250,12 +250,12 @@ Symbol* scoped_symbol_lookup(ScopedSymbolTable* table, SymbolName* name) {
     return NULL;
 }
 
-Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* table, const char* name, int length) {
+Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length) {
     SymbolName symbol_name = create_symbol_name(name, length);
     return scoped_symbol_lookup(table, &symbol_name);
 }
 
-void scoped_symbol_insert(ScopedSymbolTable* table, Symbol entry) {
+void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
     assert(table->current != NULL);
     symbol_insert(&table->current->symbols, entry);
 }

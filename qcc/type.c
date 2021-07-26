@@ -37,8 +37,8 @@ PoolNode* type_pool = NULL;
 PoolNode* current_node = NULL;
 
 inline static uint32_t next_capacity();
-static void free_pool_node(PoolNode* node);
-static void free_type(Type* type);
+static void free_pool_node(PoolNode* const node);
+static void free_type(Type* const type);
 static Type* type_pool_add(Type type);
 static PoolNode* alloc_node();
 
@@ -68,14 +68,14 @@ void free_type_pool() {
     }
 }
 
-static void free_pool_node(PoolNode* node) {
+static void free_pool_node(PoolNode* const node) {
     for (uint32_t i = 0; i < node->size; i++) {
         free_type(&node->types[i]);
     }
     free(node);
 }
 
-static void free_type(Type* type) {
+static void free_type(Type* const type) {
     switch (type->kind) {
     case TYPE_FUNCTION: {
         free_vector(&type->function->param_types);
@@ -149,7 +149,7 @@ Type* type_from_token_kind(TokenKind kind) {
     }
 }
 
-void type_print(Type* type) {
+void type_print(const Type* const type) {
     switch (type->kind) {
     case TYPE_NUMBER: printf("Number"); break;
     case TYPE_BOOL: printf("Bool"); break;

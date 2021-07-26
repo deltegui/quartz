@@ -56,7 +56,7 @@ Type* create_type_function();
 #define CREATE_TYPE_UNKNOWN() create_type_simple(TYPE_UNKNOWN)
 
 Type* type_from_token_kind(TokenKind kind);
-void type_print(Type* type);
+void type_print(const Type* const type);
 
 #define VECTOR_AS_TYPES(vect) VECTOR_AS(vect, Type*)
 #define VECTOR_ADD_TYPE(vect, type) VECTOR_ADD(vect, type, Type*)

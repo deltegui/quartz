@@ -55,12 +55,12 @@ typedef struct {
     ValueArray constants;
 } Chunk;
 
-void init_chunk(Chunk* chunk);
-void free_chunk(Chunk* chunk);
-void chunk_write(Chunk* chunk, uint8_t bytecode, int line);
-bool chunk_check_last_byte(Chunk* chunk, uint8_t bytecode);
-int chunk_add_constant(Chunk* chunk, Value value);
+void init_chunk(Chunk* const chunk);
+void free_chunk(Chunk* const chunk);
+void chunk_write(Chunk* const chunk, uint8_t bytecode, int line);
+bool chunk_check_last_byte(Chunk* const chunk, uint8_t bytecode);
+int chunk_add_constant(Chunk* const chunk, Value value);
 
-uint16_t read_long(uint8_t** pc);
+uint16_t read_long(uint8_t **pc);
 
 #endif

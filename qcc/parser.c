@@ -23,8 +23,8 @@ typedef enum {
     PREC_PRIMARY
 } Precedence;
 
-typedef Expr* (*PrefixParse)(Parser* parser, bool can_assign);
-typedef Expr* (*SuffixParse)(Parser* parser, bool can_assign, Expr* left);
+typedef Expr* (*PrefixParse)(Parser* const parser, bool can_assign);
+typedef Expr* (*SuffixParse)(Parser* const parser, bool can_assign, Expr* left);
 
 typedef struct {
     PrefixParse prefix;
@@ -33,47 +33,47 @@ typedef struct {
 } ParseRule;
 
 static ParseRule* get_rule(TokenKind kind);
-static Expr* parse_precendence(Parser* parser, Precedence precedence);
+static Expr* parse_precendence(Parser* const parser, Precedence precedence);
 
-static void error(Parser* parser, const char* message, ...);
-static void error_prev(Parser* parser, const char* message, ...);
-static void error_at(Parser* parser, Token* token, const char* message, va_list params);
-static void syncronize(Parser* parser);
+static void error(Parser* const parser, const char* message, ...);
+static void error_prev(Parser* const parser, const char* message, ...);
+static void error_at(Parser* const parser, Token* token, const char* message, va_list params);
+static void syncronize(Parser* const parser);
 
-static void create_scope(Parser* parser);
-static void end_scope(Parser* parser);
-static Symbol* current_scope_lookup(Parser* parser, SymbolName* name);
-static Symbol* lookup_str(Parser* parser, const char* name, int length);
-static void insert(Parser* parser, Symbol entry);
-static void register_symbol(Parser* parser, Symbol symbol);
+static void create_scope(Parser* const parser);
+static void end_scope(Parser* const parser);
+static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
+static Symbol* lookup_str(Parser* const parser, const char* name, int length);
+static void insert(Parser* const parser, Symbol entry);
+static void register_symbol(Parser* const parser, Symbol symbol);
 
-static void advance(Parser* parser);
-static bool consume(Parser* parser, TokenKind expected, const char* msg);
+static void advance(Parser* const parser);
+static bool consume(Parser* const parser, TokenKind expected, const char* msg);
 
-static Symbol* get_identifier_symbol(Parser* parser, Token identifier);
+static Symbol* get_identifier_symbol(Parser* const parser, Token identifier);
 
-static Stmt* declaration_block(Parser* parser, TokenKind limit_token);
+static Stmt* declaration_block(Parser* const parser, TokenKind limit_token);
 
-static Stmt* declaration(Parser* parser);
-static Stmt* variable_decl(Parser* parser);
-static Stmt* function_decl(Parser* parser);
-static void parse_function_body(Parser* parser, FunctionStmt* fn, Symbol* fn_sym);
-static void parse_function_params_declaration(Parser* parser, Symbol* symbol);
-static void add_params_to_body(Parser* parser, Symbol* fn_sym);
+static Stmt* declaration(Parser* const parser);
+static Stmt* variable_decl(Parser* const parser);
+static Stmt* function_decl(Parser* const parser);
+static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
+static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
+static void add_params_to_body(Parser* const parser, Symbol* fn_sym);
 
-static Stmt* statement(Parser* parser);
-static Stmt* block_stmt(Parser* parser);
-static Stmt* print_stmt(Parser* parser);
-static Stmt* return_stmt(Parser* parser);
-static Stmt* expr_stmt(Parser* parser);
+static Stmt* statement(Parser* const parser);
+static Stmt* block_stmt(Parser* const parser);
+static Stmt* print_stmt(Parser* const parser);
+static Stmt* return_stmt(Parser* const parser);
+static Stmt* expr_stmt(Parser* const parser);
 
-static Expr* expression(Parser* parser);
-static Expr* grouping(Parser* parser, bool can_assign);
-static Expr* primary(Parser* parser, bool can_assign);
-static Expr* identifier(Parser* parser, bool can_assign);
-static Expr* unary(Parser* parser, bool can_assign);
-static Expr* binary(Parser* parser, bool can_assign, Expr* left);
-static Expr* call(Parser* parser, bool can_assign, Expr* left);
+static Expr* expression(Parser* const parser);
+static Expr* grouping(Parser* const parser, bool can_assign);
+static Expr* primary(Parser* const parser, bool can_assign);
+static Expr* identifier(Parser* const parser, bool can_assign);
+static Expr* unary(Parser* const parser, bool can_assign);
+static Expr* binary(Parser* const parser, bool can_assign, Expr* left);
+static Expr* call(Parser* const parser, bool can_assign, Expr* left);
 
 ParseRule rules[] = {
     [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
@@ -125,7 +125,7 @@ static ParseRule* get_rule(TokenKind kind) {
     return &rules[kind];
 }
 
-static Expr* parse_precendence(Parser* parser, Precedence precedence) {
+static Expr* parse_precendence(Parser* const parser, Precedence precedence) {
     advance(parser);
     PrefixParse prefix_parser = get_rule(parser->prev.kind)->prefix;
     if (prefix_parser == NULL) {
@@ -148,7 +148,7 @@ static Expr* parse_precendence(Parser* parser, Precedence precedence) {
     return left;
 }
 
-void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols) {
+void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* symbols) {
     parser->symbols = symbols;
     parser->current.kind = -1;
     parser->prev.kind = -1;
@@ -158,21 +158,21 @@ void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols)
     parser->function_deep_count = 0;
 }
 
-static void error(Parser* parser, const char* message, ...) {
+static void error(Parser* const parser, const char* message, ...) {
     va_list params;
     va_start(params, message);
     error_at(parser, &parser->current, message, params);
     va_end(params);
 }
 
-static void error_prev(Parser* parser, const char* message, ...) {
+static void error_prev(Parser* const parser, const char* message, ...) {
     va_list params;
     va_start(params, message);
     error_at(parser, &parser->prev, message, params);
     va_end(params);
 }
 
-static void error_at(Parser* parser, Token* token, const char* format, va_list params) {
+static void error_at(Parser* const parser, Token* token, const char* format, va_list params) {
     if (parser->panic_mode) {
         return;
     }
@@ -192,7 +192,7 @@ static void error_at(Parser* parser, Token* token, const char* format, va_list p
     parser->has_error = true;
 }
 
-static void syncronize(Parser* parser) {
+static void syncronize(Parser* const parser) {
     parser->panic_mode = false;
     for (;;) {
         switch (parser->current.kind) {
@@ -208,27 +208,27 @@ static void syncronize(Parser* parser) {
     }
 }
 
-static void create_scope(Parser* parser){
+static void create_scope(Parser* const parser){
     symbol_create_scope(parser->symbols);
 }
 
-static void end_scope(Parser* parser){
+static void end_scope(Parser* const parser){
     symbol_end_scope(parser->symbols);
 }
 
-static Symbol* current_scope_lookup(Parser* parser, SymbolName* name){
+static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name){
     return symbol_lookup(&parser->symbols->current->symbols, name);
 }
 
-static Symbol* lookup_str(Parser* parser, const char* name, int length){
+static Symbol* lookup_str(Parser* const parser, const char* name, int length){
     return scoped_symbol_lookup_str(parser->symbols, name, length);
 }
 
-static void insert(Parser* parser, Symbol entry){
+static void insert(Parser* const parser, Symbol entry){
     scoped_symbol_insert(parser->symbols, entry);
 }
 
-static void register_symbol(Parser* parser, Symbol symbol) {
+static void register_symbol(Parser* const parser, Symbol symbol) {
     Symbol* exsting = current_scope_lookup(parser, &symbol.name);
     if (exsting) {
         error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
@@ -237,7 +237,7 @@ static void register_symbol(Parser* parser, Symbol symbol) {
     insert(parser, symbol);
 }
 
-static void advance(Parser* parser) {
+static void advance(Parser* const parser) {
     if (parser->current.kind == TOKEN_END) {
         return;
     }
@@ -245,7 +245,7 @@ static void advance(Parser* parser) {
     parser->current = next_token(&parser->lexer);
 }
 
-static bool consume(Parser* parser, TokenKind expected, const char* message) {
+static bool consume(Parser* const parser, TokenKind expected, const char* message) {
     if (parser->current.kind != expected) {
         error(parser, message);
         return false;
@@ -254,7 +254,7 @@ static bool consume(Parser* parser, TokenKind expected, const char* message) {
     return true;
 }
 
-static Symbol* get_identifier_symbol(Parser* parser, Token identifier) {
+static Symbol* get_identifier_symbol(Parser* const parser, Token identifier) {
     Symbol* existing = lookup_str(parser, identifier.start, identifier.length);
     if (!existing) {
         error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
@@ -267,7 +267,7 @@ static Symbol* get_identifier_symbol(Parser* parser, Token identifier) {
     return existing;
 }
 
-Stmt* parse(Parser* parser) {
+Stmt* parse(Parser* const parser) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: Parser start\n");
 #endif
@@ -287,7 +287,7 @@ Stmt* parse(Parser* parser) {
     return ast;
 }
 
-static Stmt* declaration_block(Parser* parser, TokenKind limit_token) {
+static Stmt* declaration_block(Parser* const parser, TokenKind limit_token) {
     ListStmt* list = create_stmt_list();
     while (parser->current.kind != limit_token && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
@@ -300,7 +300,7 @@ static Stmt* declaration_block(Parser* parser, TokenKind limit_token) {
     return CREATE_STMT_LIST(list);
 }
 
-static Stmt* declaration(Parser* parser) {
+static Stmt* declaration(Parser* const parser) {
     switch (parser->current.kind) {
     case TOKEN_VAR:
         return variable_decl(parser);
@@ -311,7 +311,7 @@ static Stmt* declaration(Parser* parser) {
     }
 }
 
-static Stmt* statement(Parser* parser) {
+static Stmt* statement(Parser* const parser) {
     switch (parser->current.kind) {
     case TOKEN_LEFT_BRACE:
         return block_stmt(parser);
@@ -324,7 +324,7 @@ static Stmt* statement(Parser* parser) {
     }
 }
 
-static Stmt* block_stmt(Parser* parser) {
+static Stmt* block_stmt(Parser* const parser) {
     advance(parser); // consume {
     BlockStmt block;
     create_scope(parser);
@@ -334,7 +334,7 @@ static Stmt* block_stmt(Parser* parser) {
     return CREATE_STMT_BLOCK(block);
 }
 
-static Stmt* variable_decl(Parser* parser) {
+static Stmt* variable_decl(Parser* const parser) {
     advance(parser); // consume var
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         error(parser, "Expected identifier to be var name");
@@ -365,7 +365,7 @@ static Stmt* variable_decl(Parser* parser) {
     return CREATE_STMT_VAR(var);
 }
 
-static Stmt* function_decl(Parser* parser) {
+static Stmt* function_decl(Parser* const parser) {
     advance(parser); // consume fn
 
     if (parser->current.kind != TOKEN_IDENTIFIER) {
@@ -403,7 +403,7 @@ static Stmt* function_decl(Parser* parser) {
     return CREATE_STMT_FUNCTION(fn);
 }
 
-static void parse_function_body(Parser* parser, FunctionStmt* fn, Symbol* fn_sym) {
+static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym) {
     create_scope(parser);
     add_params_to_body(parser, fn_sym);
     parser->function_deep_count++;
@@ -412,7 +412,7 @@ static void parse_function_body(Parser* parser, FunctionStmt* fn, Symbol* fn_sym
     end_scope(parser);
 }
 
-static void parse_function_params_declaration(Parser* parser, Symbol* fn_sym) {
+static void parse_function_params_declaration(Parser* const parser, Symbol* fn_sym) {
     for (;;) {
         if (parser->current.kind != TOKEN_IDENTIFIER) {
             error(parser, "Expected to have an identifier in parameter in function declaration");
@@ -436,7 +436,7 @@ static void parse_function_params_declaration(Parser* parser, Symbol* fn_sym) {
     }
 }
 
-static void add_params_to_body(Parser* parser, Symbol* fn_sym) {
+static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
     Token* param_names = VECTOR_AS_TOKENS(&fn_sym->function.param_names);
     Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(fn_sym->type));
     for (uint32_t i = 0; i < fn_sym->function.param_names.size; i++) {
@@ -447,7 +447,7 @@ static void add_params_to_body(Parser* parser, Symbol* fn_sym) {
     }
 }
 
-static Stmt* print_stmt(Parser* parser) {
+static Stmt* print_stmt(Parser* const parser) {
     advance(parser); // consume print
     Expr* expr = expression(parser);
     PrintStmt print_stmt = (PrintStmt){
@@ -457,7 +457,7 @@ static Stmt* print_stmt(Parser* parser) {
     return CREATE_STMT_PRINT(print_stmt);
 }
 
-static Stmt* return_stmt(Parser* parser) {
+static Stmt* return_stmt(Parser* const parser) {
     if (parser->function_deep_count == 0) {
         error(parser, "Cannot use return outside a function!");
     }
@@ -473,7 +473,7 @@ static Stmt* return_stmt(Parser* parser) {
     return CREATE_STMT_RETURN(return_stmt);
 }
 
-static Stmt* expr_stmt(Parser* parser) {
+static Stmt* expr_stmt(Parser* const parser) {
     Expr* expr = expression(parser);
     ExprStmt expr_stmt = (ExprStmt){
         .inner = expr,
@@ -482,11 +482,11 @@ static Stmt* expr_stmt(Parser* parser) {
     return CREATE_STMT_EXPR(expr_stmt);
 }
 
-static Expr* expression(Parser* parser) {
+static Expr* expression(Parser* const parser) {
     return parse_precendence(parser, PREC_ASSIGNMENT);
 }
 
-static Expr* binary(Parser* parser, bool can_assign, Expr* left) {
+static Expr* binary(Parser* const parser, bool can_assign, Expr* left) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: BINARY Expression\n");
 #endif
@@ -525,7 +525,7 @@ static Expr* binary(Parser* parser, bool can_assign, Expr* left) {
     return CREATE_BINARY_EXPR(binary);
 }
 
-static Expr* call(Parser* parser, bool can_assign, Expr* left) {
+static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
     if (! EXPR_IS_IDENTIFIER(*left)) {
         error(parser, "You can only call functions");
     }
@@ -568,7 +568,7 @@ static Expr* call(Parser* parser, bool can_assign, Expr* left) {
     return CREATE_CALL_EXPR(call);
 }
 
-static Expr* grouping(Parser* parser, bool can_assign) {
+static Expr* grouping(Parser* const parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: GROUP Expression\n");
 #endif
@@ -585,7 +585,7 @@ static Expr* grouping(Parser* parser, bool can_assign) {
     return inner;
 }
 
-static Expr* primary(Parser* parser, bool can_assign) {
+static Expr* primary(Parser* const parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: PRIMARY Expression\n");
 #endif
@@ -603,7 +603,7 @@ static Expr* primary(Parser* parser, bool can_assign) {
     return expr;
 }
 
-static Expr* unary(Parser* parser, bool can_assign) {
+static Expr* unary(Parser* const parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: UNARY Expression\n");
 #endif
@@ -625,7 +625,7 @@ static Expr* unary(Parser* parser, bool can_assign) {
     return expr;
 }
 
-static Expr* identifier(Parser* parser, bool can_assign) {
+static Expr* identifier(Parser* const parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: IDENTIFIER Expression\n");
 #endif

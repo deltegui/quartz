@@ -36,7 +36,7 @@ typedef struct {
 
 Symbol create_symbol_from_token(Token* token, Type* type);
 Symbol create_symbol(SymbolName name, int line, Type* type);
-void free_symbol(Symbol* symbol);
+void free_symbol(Symbol* const symbol);
 
 typedef struct {
     Symbol* entries;
@@ -44,11 +44,11 @@ typedef struct {
     int capacity;
 } SymbolTable;
 
-void init_symbol_table(SymbolTable* table);
-void free_symbol_table(SymbolTable* table);
-Symbol* symbol_lookup(SymbolTable* table, SymbolName* name);
-Symbol* symbol_lookup_str(SymbolTable* table, const char* name, int length);
-void symbol_insert(SymbolTable* table, Symbol entry);
+void init_symbol_table(SymbolTable* const table);
+void free_symbol_table(SymbolTable* const table);
+Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name);
+Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length);
+void symbol_insert(SymbolTable* const table, Symbol entry);
 
 typedef struct _SymbolNode {
     SymbolTable symbols;
@@ -59,26 +59,26 @@ typedef struct _SymbolNode {
     int next_node_to_visit;
 } SymbolNode;
 
-void init_symbol_node(SymbolNode* node);
-void free_symbol_node(SymbolNode* node);
-void symbol_node_reset(SymbolNode* node);
-SymbolNode* symbol_node_add_child(SymbolNode* node, SymbolNode* child);
+void init_symbol_node(SymbolNode* const node);
+void free_symbol_node(SymbolNode* const node);
+void symbol_node_reset(SymbolNode* const node);
+SymbolNode* symbol_node_add_child(SymbolNode* const node, SymbolNode* const child);
 
 typedef struct {
     SymbolNode global;
     SymbolNode* current;
 } ScopedSymbolTable;
 
-void init_scoped_symbol_table(ScopedSymbolTable* table);
-void free_scoped_symbol_table(ScopedSymbolTable* table);
+void init_scoped_symbol_table(ScopedSymbolTable* const table);
+void free_scoped_symbol_table(ScopedSymbolTable* const table);
 
-void symbol_create_scope(ScopedSymbolTable* table);
-void symbol_end_scope(ScopedSymbolTable* table);
-void symbol_start_scope(ScopedSymbolTable* table);
-void symbol_reset_scopes(ScopedSymbolTable* table);
+void symbol_create_scope(ScopedSymbolTable* const table);
+void symbol_end_scope(ScopedSymbolTable* const table);
+void symbol_start_scope(ScopedSymbolTable* const table);
+void symbol_reset_scopes(ScopedSymbolTable* const table);
 
-Symbol* scoped_symbol_lookup(ScopedSymbolTable* table, SymbolName* name);
-Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* table, const char* name, int length);
-void scoped_symbol_insert(ScopedSymbolTable* table, Symbol entry);
+Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name);
+Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length);
+void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 
 #endif

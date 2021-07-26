@@ -1,6 +1,6 @@
 #include "expr.h"
 
-Expr* create_expr(ExprKind kind, void* expr_node) {
+Expr* create_expr(ExprKind kind, const void* const expr_node) {
     Expr* expr = (Expr*) malloc(sizeof(Expr));
     switch(kind) {
     case EXPR_BINARY:
@@ -36,7 +36,7 @@ Expr* create_expr(ExprKind kind, void* expr_node) {
 // iterate over all nodes and free memory
 // for each one. A node pointer can be NULL
 // so we must protect ourselves from that.
-void free_expr(Expr* expr) {
+void free_expr(Expr* const expr) {
     if (expr == NULL) {
         return;
     }

@@ -10,8 +10,17 @@ typedef struct {
     ScopedSymbolTable* symbols;
     Type* last_type;
     bool has_error;
-    Token func_identifier;
+
+    // We need the current funciton in some contexts in the
+    // typechecker. But a function can be declared inside other
+    // functions, so we need a stack-like data structure
+    Vector functions; // Vector<Token>
+    int functions_top;
 } Typechecker;
+
+static void function_stack_pop(Typechecker* const checker);
+static Token function_stack_peek(Typechecker* const checker);
+static void function_stack_push(Typechecker* const checker, Token fn_token);
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
@@ -56,6 +65,22 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
 #define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
 
+static void function_stack_pop(Typechecker* const checker) {
+    assert(checker->functions_top > 0);
+    checker->functions_top--;
+}
+
+static Token function_stack_peek(Typechecker* const checker) {
+    assert(checker->functions.size > 0);
+    Token* tokens = VECTOR_AS_TOKENS(&checker->functions);
+    return tokens[checker->functions_top - 1];
+}
+
+static void function_stack_push(Typechecker* const checker, Token fn_token) {
+    VECTOR_ADD_TOKEN(&checker->functions, fn_token);
+    checker->functions_top++;
+}
+
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
     Type* last_type = checker->last_type;
     error(checker, where, "The type '");
@@ -91,8 +116,11 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
+    checker.functions_top = 0;
+    init_vector(&checker.functions, sizeof(Token));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
+    free_vector(&checker.functions);
     return !checker.has_error;
 }
 
@@ -217,7 +245,7 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
     Typechecker* checker = (Typechecker*) ctx;
-    checker->func_identifier = function->identifier;
+    function_stack_push(checker, function->identifier);
 
     start_scope(checker);
     ACCEPT_STMT(ctx, function->body);
@@ -227,6 +255,8 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     typecheck_params_arent_void(checker, symbol);
+
+    function_stack_pop(checker);
 
     checker->last_type = TYPE_FN_RETURN(symbol->type);
 }
@@ -258,13 +288,14 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     if (return_->inner == NULL) {
         checker->last_type = CREATE_TYPE_VOID();
     }
-    Symbol* symbol = lookup_str(checker, checker->func_identifier.start, checker->func_identifier.length);
+    Token func_identifier = function_stack_peek(checker);
+    Symbol* symbol = lookup_str(checker, func_identifier.start, func_identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     if (! TYPE_EQUALS(TYPE_FN_RETURN(symbol->type), checker->last_type)) {
         error_last_type_match(
             checker,
-            &checker->func_identifier,
+            &func_identifier,
             TYPE_FN_RETURN(symbol->type),
             "in function return");
     }

@@ -350,7 +350,7 @@ static Stmt* variable_decl(Parser* const parser) {
     Type* var_type = CREATE_TYPE_UNKNOWN();
     if (parser->current.kind == TOKEN_COLON) {
         advance(parser); // consume :
-        var_type = type_from_token_kind(parser->current.kind);
+        var_type = parse_type(parser);
         if (TYPE_IS_UNKNOWN(var_type)) {
             error(parser, "Unkown type in variable declaration");
         }
@@ -389,7 +389,7 @@ static Stmt* function_decl(Parser* const parser) {
 
     if (parser->current.kind == TOKEN_COLON) {
         advance(parser); // consume colon
-        Type* return_type = type_from_token_kind(parser->current.kind);
+        Type* return_type = parse_type(parser);
         if (TYPE_IS_UNKNOWN(return_type)) {
             error(
                 parser,
@@ -469,6 +469,7 @@ static Type* parse_function_type(Parser* const parser) {
     advance(parser); // consume '('.
     for (;;) {
         Type* param = parse_type(parser);
+        advance(parser); // consume simple type
         if (TYPE_IS_UNKNOWN(param)) {
             error(parser, "Unkown type in param in function type declaration");
         }
@@ -601,7 +602,9 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in function call");
 
-    if (fn_sym->function.param_names.size != call.params.size) {
+    // if (fn_sym->function.param_names.size != call.params.size) {
+    // TODO what to do with variables that holds funcitons (function_symbol)
+    if (TYPE_FN_PARAMS(fn_sym->type).size != call.params.size) {
         error(
             parser,
             "Function '%.*s' expects %d params, but was called with %d params",

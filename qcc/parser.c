@@ -60,6 +60,8 @@ static Stmt* function_decl(Parser* const parser);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym);
+static Type* parse_type(Parser* const parser);
+static Type* parse_function_type(Parser* const parser);
 
 static Stmt* statement(Parser* const parser);
 static Stmt* block_stmt(Parser* const parser);
@@ -447,6 +449,49 @@ static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
             param_types[i]);
         register_symbol(parser, param);
     }
+}
+
+static Type* parse_type(Parser* const parser) {
+    Type* simple_type = type_from_token_kind(parser->current.kind);
+    if (! TYPE_IS_UNKNOWN(simple_type)) {
+        return simple_type;
+    }
+    if (parser->current.kind == TOKEN_LEFT_PAREN) {
+        return parse_function_type(parser);
+    }
+    return CREATE_TYPE_UNKNOWN();
+}
+
+// TODO reafactor this function and all related with that (eg. parse_function_params_declaration)
+// TODO please create something like consume token.
+static Type* parse_function_type(Parser* const parser) {
+    Type* fn_type = create_type_function();
+    advance(parser); // consume '('.
+    for (;;) {
+        Type* param = parse_type(parser);
+        if (TYPE_IS_UNKNOWN(param)) {
+            error(parser, "Unkown type in param in function type declaration");
+        }
+        VECTOR_ADD_TYPE(& TYPE_FN_PARAMS(fn_type), param);
+        if (parser->current.kind != TOKEN_COMMA) {
+            break;
+        }
+        advance(parser); // consume comma
+    }
+    if (parser->current.kind != TOKEN_RIGHT_PAREN) {
+        error(parser, "Expected ) at end of function param types declaration");
+    }
+    advance(parser); // consume ')'
+    if (parser->current.kind != TOKEN_COLON) {
+        error(parser, "Expected return type in function type declaration");
+    }
+    advance(parser); // consume ':'
+    Type* return_type = parse_type(parser);
+    if (TYPE_IS_UNKNOWN(return_type)) {
+        error(parser, "Unkown type in return in function type declaration");
+    }
+    TYPE_FN_RETURN(fn_type) = return_type;
+    return fn_type;
 }
 
 static Stmt* print_stmt(Parser* const parser) {

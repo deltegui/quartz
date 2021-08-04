@@ -41,6 +41,7 @@ static void free_pool_node(PoolNode* const node);
 static void free_type(Type* const type);
 static Type* type_pool_add(Type type);
 static PoolNode* alloc_node();
+static bool fn_params_equals(FunctionType* first, FunctionType* second);
 
 inline static uint32_t next_capacity() {
     last_capacity = ((last_capacity < 8) ? 8 : last_capacity * 2);
@@ -138,6 +139,7 @@ Type* create_type_function() {
     return type_pool_add(type);
 }
 
+// TODO now this should be called 'simple_type_from_token_kind'
 Type* type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return CREATE_TYPE_NUMBER();
@@ -159,4 +161,35 @@ void type_print(const Type* const type) {
     case TYPE_UNKNOWN: printf("Unknown"); break;
     case TYPE_VOID: printf("Void"); break;
     }
+}
+
+bool type_equals(Type* first, Type* second) {
+    assert(first != NULL && second != NULL);
+    if (first->kind != second->kind) {
+        return false;
+    }
+    if (first->kind == TYPE_FUNCTION) {
+        assert(first->function != NULL && second->function != NULL);
+        if (! fn_params_equals(first->function, second->function)) {
+            return false;
+        }
+        return first->function->return_type == second->function->return_type;
+    }
+    return true;
+}
+
+static bool fn_params_equals(FunctionType* first, FunctionType* second) {
+    assert(first != NULL && second != NULL);
+    if (first->param_types.size != second->param_types.size) {
+        return false;
+    }
+    Type** first_types = VECTOR_AS_TYPES(&first->param_types);
+    Type** second_types = VECTOR_AS_TYPES(&second->param_types);
+    for (uint32_t i = 0; i < first->param_types.size; i++) {
+        bool param_equals = type_equals(first_types[i], second_types[i]);
+        if (! param_equals) {
+            return false;
+        }
+    }
+    return true;
 }

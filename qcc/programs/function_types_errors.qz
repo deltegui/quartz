@@ -5,8 +5,5 @@ fn hola(): (Number): Void {
     return mama;
 }
 
-var a: (Number): Void = hola();
+var a = hola();
 a(5);
-
-var b = hola();
-b(6);

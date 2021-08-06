@@ -586,6 +586,7 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
 
     Symbol* fn_sym = lookup_str(parser, fn_name.name.start, fn_name.name.length);
     assert(fn_sym != NULL);
+    assert(fn_sym->type != NULL);
 
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
         for (;;) {

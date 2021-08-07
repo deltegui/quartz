@@ -236,7 +236,7 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     // It is correct?
     // If so, its good idea to search for usages of param_type and param_names to show if you only
     // check the size of one assuming the other will have the same size.
-    int fn_param_type_size = TYPE_FN_PARAMS(symbol->type).size;
+    uint32_t fn_param_type_size = TYPE_FN_PARAMS(symbol->type).size;
     if (fn_param_type_size != call->params.size) {
         error(
             checker,

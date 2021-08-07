@@ -189,7 +189,19 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
     Typechecker* checker = (Typechecker*) ctx;
 
     Symbol* symbol = lookup_str(checker, identifier->name.start, identifier->name.length);
-    assert(symbol != NULL);
+    if (symbol == NULL) {
+        error(
+            checker,
+            &identifier->name,
+            "Use of undeclared variable\n");
+        return;
+    }
+    if (symbol->declaration_line == identifier->name.line) {
+        error(
+            checker,
+            &identifier->name,
+            "Use of identifier inside declaration\n");
+    }
     checker->last_type = symbol->type;
 }
 
@@ -224,6 +236,24 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
     Symbol* symbol = lookup_str(checker, call->identifier.start, call->identifier.length);
     assert(symbol != NULL);
+    assert(symbol->type != NULL);
+
+    // TODO here is the first time that the size of param_type is not equal to param_names.
+    // It is correct?
+    // If so, its good idea to search for usages of param_type and param_names to show if you only
+    // check the size of one assuming the other will have the same size.
+    int fn_param_type_size = TYPE_FN_PARAMS(symbol->type).size;
+    if (fn_param_type_size != call->params.size) {
+        error(
+            checker,
+            &call->identifier,
+            "Function '%.*s' expects %d params, but was called with %d params\n",
+            call->identifier.length,
+            call->identifier.start,
+            fn_param_type_size,
+            call->params.size);
+        return;
+    }
 
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
     Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(symbol->type));

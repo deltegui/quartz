@@ -1,2 +1,2 @@
-[Line 1] Type error: Use of identifier inside declaration
+[Line 1] Type error: Use of undeclared variable
 [Line 1] Type error: Invalid types for numeric operation for types: 'Unknown' and 'Number'

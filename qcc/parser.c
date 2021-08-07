@@ -43,14 +43,11 @@ static void syncronize(Parser* const parser);
 static void create_scope(Parser* const parser);
 static void end_scope(Parser* const parser);
 static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
-static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static void register_symbol(Parser* const parser, Symbol symbol);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
-
-static Symbol* get_identifier_symbol(Parser* const parser, Token identifier);
 
 static Stmt* declaration_block(Parser* const parser, TokenKind limit_token);
 
@@ -222,10 +219,6 @@ static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name){
     return symbol_lookup(&parser->symbols->current->symbols, name);
 }
 
-static Symbol* lookup_str(Parser* const parser, const char* name, int length){
-    return scoped_symbol_lookup_str(parser->symbols, name, length);
-}
-
 static void insert(Parser* const parser, Symbol entry){
     scoped_symbol_insert(parser->symbols, entry);
 }
@@ -254,19 +247,6 @@ static bool consume(Parser* const parser, TokenKind expected, const char* messag
     }
     advance(parser);
     return true;
-}
-
-static Symbol* get_identifier_symbol(Parser* const parser, Token identifier) {
-    Symbol* existing = lookup_str(parser, identifier.start, identifier.length);
-    if (!existing) {
-        error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
-        return NULL;
-    }
-    if (existing->declaration_line > identifier.line) {
-        error_prev(parser, "Use of variable '%.*s' before declaration", identifier.length, identifier.start);
-        return NULL;
-    }
-    return existing;
 }
 
 Stmt* parse(Parser* const parser) {
@@ -584,10 +564,6 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
     };
     init_vector(&call.params, sizeof(Expr*));
 
-    Symbol* fn_sym = lookup_str(parser, fn_name.name.start, fn_name.name.length);
-    assert(fn_sym != NULL);
-    assert(fn_sym->type != NULL);
-
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
         for (;;) {
             Expr* param = expression(parser);
@@ -602,18 +578,6 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
         parser,
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in function call");
-
-    // if (fn_sym->function.param_names.size != call.params.size) {
-    // TODO what to do with variables that holds funcitons (function_symbol)
-    if (TYPE_FN_PARAMS(fn_sym->type).size != call.params.size) {
-        error(
-            parser,
-            "Function '%.*s' expects %d params, but was called with %d params",
-            call.identifier.length,
-            call.identifier.start,
-            fn_sym->function.param_names.size,
-            call.params.size);
-    }
 
     free_expr(left); // We only need left identifier. We must free it.
     return CREATE_CALL_EXPR(call);
@@ -682,11 +646,6 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
 #endif
 
     Token identifier = parser->prev;
-    Symbol* existing = get_identifier_symbol(parser, identifier);
-    if (!existing) {
-        return NULL;
-    }
-
     Expr* expr = NULL;
     if (can_assign && parser->current.kind == TOKEN_EQUAL) {
         advance(parser); //consume =

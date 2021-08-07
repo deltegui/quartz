@@ -17,6 +17,7 @@ void init_qvm() {
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
     qvm.frame_count = 0;
+    qvm.had_runtime_error = false;
 }
 
 void free_qvm() {
@@ -26,7 +27,16 @@ void free_qvm() {
     free_objects();
 }
 
+static void runtime_error(const char* message) {
+    qvm.had_runtime_error = true;
+    printf("%s\n", message);
+}
+
 static inline void call(uint8_t param_count) {
+    if (qvm.frame_count + 1 >= FRAMES_MAX) {
+        runtime_error("Frame overflow");
+        return;
+    }
     qvm.frame_count++;
     Value* fn_ptr = (qvm.stack_top - param_count - 1);
     Value fn_value = *fn_ptr;
@@ -38,6 +48,10 @@ static inline void call(uint8_t param_count) {
 }
 
 static inline void stack_push(Value val) {
+    if ((qvm.stack_top - qvm.stack) + 1 >= STACK_MAX) {
+        runtime_error("Stack overflow");
+        return;
+    }
     *(qvm.stack_top++) = val;
 }
 
@@ -106,6 +120,9 @@ static void run(ObjFunction* func) {
     qvm.frame->func = func;
 
     for (;;) {
+        if (qvm.had_runtime_error) {
+            return;
+        }
 #ifdef VM_DEBUG
         opcode_print(*qvm.frame->pc);
 #endif

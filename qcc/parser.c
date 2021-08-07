@@ -401,9 +401,16 @@ static Stmt* function_decl(Parser* const parser) {
         advance(parser); // consume type
     }
 
-    parse_function_body(parser, &fn, &symbol);
-
+    // Insert symbol before parsing the function body
+    // so you can call the founction inside the function
+    // TODO maybe register_symbol should return Symbol*?
     register_symbol(parser, symbol);
+    Symbol* registered = lookup_str(parser, fn.identifier.start, fn.identifier.length);
+    assert(registered != NULL);
+
+    parse_function_body(parser, &fn, registered);
+
+    
     return CREATE_STMT_FUNCTION(fn);
 }
 

@@ -232,6 +232,16 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     assert(symbol != NULL);
     assert(symbol->type != NULL);
 
+    if (! TYPE_IS_FUNCTION(symbol->type)) {
+        error(
+            checker,
+            &call->identifier,
+            "Calling '%.*s' which is not a function\n",
+            call->identifier.length,
+            call->identifier.start);
+        return;
+    }
+
     // TODO here is the first time that the size of param_type is not equal to param_names.
     // It is correct?
     // If so, its good idea to search for usages of param_type and param_names to show if you only

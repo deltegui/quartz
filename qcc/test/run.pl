@@ -49,6 +49,7 @@ if($ARGV[0]) {
 }
 
 my $have_err = 0;
+my $test_number = 0;
 
 while(my ($key, $value) = each(%tests)) {
 	if($prog{$key}) {
@@ -70,7 +71,10 @@ while(my ($key, $value) = each(%tests)) {
 			print color('reset');
 			$have_err = 1;
 		}
+		$test_number++;
 	}
 }
+
+print("\nExecuted $test_number tests\n");
 
 exit($have_err);

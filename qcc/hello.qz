@@ -1,5 +1,6 @@
 fn hola() {
     print "hola";
+    var hola = 5;
     hola();
 }
 

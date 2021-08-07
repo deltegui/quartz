@@ -43,11 +43,14 @@ static void syncronize(Parser* const parser);
 static void create_scope(Parser* const parser);
 static void end_scope(Parser* const parser);
 static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
+static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static void register_symbol(Parser* const parser, Symbol symbol);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
+
+static Symbol* get_identifier_symbol(Parser* const parser, Token identifier);
 
 static Stmt* declaration_block(Parser* const parser, TokenKind limit_token);
 
@@ -219,6 +222,10 @@ static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name){
     return symbol_lookup(&parser->symbols->current->symbols, name);
 }
 
+static Symbol* lookup_str(Parser* const parser, const char* name, int length){
+    return scoped_symbol_lookup_str(parser->symbols, name, length);
+}
+
 static void insert(Parser* const parser, Symbol entry){
     scoped_symbol_insert(parser->symbols, entry);
 }
@@ -247,6 +254,19 @@ static bool consume(Parser* const parser, TokenKind expected, const char* messag
     }
     advance(parser);
     return true;
+}
+
+static Symbol* get_identifier_symbol(Parser* const parser, Token identifier) {
+    Symbol* existing = lookup_str(parser, identifier.start, identifier.length);
+    if (!existing) {
+        error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
+        return NULL;
+    }
+    if (existing->declaration_line > identifier.line) {
+        error_prev(parser, "Use of variable '%.*s' before declaration", identifier.length, identifier.start);
+        return NULL;
+    }
+    return existing;
 }
 
 Stmt* parse(Parser* const parser) {
@@ -646,6 +666,21 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
 #endif
 
     Token identifier = parser->prev;
+    // Why you shouldn't change this line?
+    // Well, you may think it's strange that a language that has
+    // a complete compiler cant be smart enough to realize that
+    // a function that is declared before its use is correct.
+    // Well, there is a problem in the compiler phase that prevents
+    // eliminate these lines and checking that in the typechecker:
+    // The AST order is relevant for the compiler phase, so it won't
+    // realize that the function is declared before, generating bad
+    // bytecode (chunk constant index).
+    // TODO try to change that.
+    Symbol* existing = get_identifier_symbol(parser, identifier);
+    if (!existing) {
+        return NULL;
+    }
+
     Expr* expr = NULL;
     if (can_assign && parser->current.kind == TOKEN_EQUAL) {
         advance(parser); //consume =

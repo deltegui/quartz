@@ -189,13 +189,7 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
     Typechecker* checker = (Typechecker*) ctx;
 
     Symbol* symbol = lookup_str(checker, identifier->name.start, identifier->name.length);
-    if (symbol == NULL) {
-        error(
-            checker,
-            &identifier->name,
-            "Use of undeclared variable\n");
-        return;
-    }
+    assert(symbol != NULL);
     if (symbol->declaration_line == identifier->name.line) {
         error(
             checker,

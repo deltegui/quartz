@@ -1,1 +1,10 @@
-var a: String = "Hola";
+fn say(name: String) {
+    hola();
+    print name;
+}
+
+fn hola() {
+    print "hola";
+}
+
+say("diego");

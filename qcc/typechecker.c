@@ -11,6 +11,7 @@ typedef struct {
     Type* last_type;
     bool has_error;
 
+    // TODO im so tired. Substitute this commend with good naming.
     // We need the current funciton in some contexts in the
     // typechecker. But a function can be declared inside other
     // functions, so we need a stack-like data structure

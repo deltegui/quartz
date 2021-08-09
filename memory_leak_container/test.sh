@@ -1,5 +1,7 @@
-!#/bin/bash
+#!/bin/bash
 
-cp ../qcc/ ./src
+cp -a ../qcc/ ./test/src
+export PROGRAM="$1"
 docker-compose up
-rm -rf ./src
+rm -rf ./test/src
+docker-compose down

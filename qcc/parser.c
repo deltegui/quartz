@@ -403,7 +403,6 @@ static Stmt* function_decl(Parser* const parser) {
 
     // Insert symbol before parsing the function body
     // so you can call the founction inside the function
-    // TODO maybe register_symbol should return Symbol*?
     register_symbol(parser, symbol);
     Symbol* registered = lookup_str(parser, fn.identifier.start, fn.identifier.length);
     assert(registered != NULL);
@@ -430,11 +429,8 @@ static void parse_function_params_declaration(Parser* const parser, Symbol* fn_s
         }
         VECTOR_ADD_TOKEN(&fn_sym->function.param_names, parser->current);
         advance(parser); // cosume param identifier
-        if (parser->current.kind != TOKEN_COLON) {
-            error(parser, "Expected function parameter to have a type in function declaration");
-        }
-        advance(parser); // cosume colon
-        Type* type = type_from_token_kind(parser->current.kind);
+        consume(parser, TOKEN_COLON, "Expected function parameter to have a type in function declaration");
+        Type* type = simple_type_from_token_kind(parser->current.kind);
         if (TYPE_IS_UNKNOWN(type)) {
             error (parser, "Unknown type in function param in function declaration");
         }
@@ -459,7 +455,7 @@ static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
 }
 
 static Type* parse_type(Parser* const parser) {
-    Type* simple_type = type_from_token_kind(parser->current.kind);
+    Type* simple_type = simple_type_from_token_kind(parser->current.kind);
     if (! TYPE_IS_UNKNOWN(simple_type)) {
         return simple_type;
     }
@@ -469,11 +465,9 @@ static Type* parse_type(Parser* const parser) {
     return CREATE_TYPE_UNKNOWN();
 }
 
-// TODO reafactor this function and all related with that (eg. parse_function_params_declaration)
-// TODO please create something like consume token.
 static Type* parse_function_type(Parser* const parser) {
     Type* fn_type = create_type_function();
-    advance(parser); // consume '('.
+    consume(parser, TOKEN_LEFT_PAREN, "Expected left paren in function type");
     for (;;) {
         Type* param = parse_type(parser);
         advance(parser); // consume simple type
@@ -486,14 +480,8 @@ static Type* parse_function_type(Parser* const parser) {
         }
         advance(parser); // consume comma
     }
-    if (parser->current.kind != TOKEN_RIGHT_PAREN) {
-        error(parser, "Expected ) at end of function param types declaration");
-    }
-    advance(parser); // consume ')'
-    if (parser->current.kind != TOKEN_COLON) {
-        error(parser, "Expected return type in function type declaration");
-    }
-    advance(parser); // consume ':'
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ) at end of function param types declaration");
+    consume(parser, TOKEN_COLON, "Expected return type in function type declaration");
     Type* return_type = parse_type(parser);
     if (TYPE_IS_UNKNOWN(return_type)) {
         error(parser, "Unkown type in return in function type declaration");

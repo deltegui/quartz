@@ -30,7 +30,6 @@ typedef struct s_func_type {
 } FunctionType;
 
 #define TYPE_FN_RETURN(type_fn) (type_fn->function->return_type)
-// TODO should use VECTOR_AS_TYPE?
 #define TYPE_FN_PARAMS(type_fn) (type_fn->function->param_types)
 
 #define TYPE_IS_NUMBER(type) (type->kind == TYPE_NUMBER)
@@ -40,9 +39,6 @@ typedef struct s_func_type {
 #define TYPE_IS_FUNCTION(type) (type->kind == TYPE_FUNCTION)
 #define TYPE_IS_VOID(type) (type->kind == TYPE_VOID)
 #define TYPE_IS_UNKNOWN(type) (type->kind == TYPE_UNKNOWN)
-
-// TODO subtitute this macro with the function
-#define TYPE_EQUALS(first, second) type_equals(first, second)
 
 void init_type_pool();
 void free_type_pool();
@@ -57,7 +53,7 @@ Type* create_type_function();
 #define CREATE_TYPE_VOID() create_type_simple(TYPE_VOID)
 #define CREATE_TYPE_UNKNOWN() create_type_simple(TYPE_UNKNOWN)
 
-Type* type_from_token_kind(TokenKind kind);
+Type* simple_type_from_token_kind(TokenKind kind);
 void type_print(const Type* const type);
 bool type_equals(Type* first, Type* second);
 

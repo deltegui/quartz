@@ -139,8 +139,7 @@ Type* create_type_function() {
     return type_pool_add(type);
 }
 
-// TODO now this should be called 'simple_type_from_token_kind'
-Type* type_from_token_kind(TokenKind kind) {
+Type* simple_type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return CREATE_TYPE_NUMBER();
     case TOKEN_TYPE_STRING: return CREATE_TYPE_STRING();

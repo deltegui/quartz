@@ -11,12 +11,8 @@ typedef struct {
     Type* last_type;
     bool has_error;
 
-    // TODO im so tired. Substitute this commend with good naming.
-    // We need the current funciton in some contexts in the
-    // typechecker. But a function can be declared inside other
-    // functions, so we need a stack-like data structure
-    Vector functions; // Vector<Token>
-    int functions_top;
+    Vector function_stack; // Vector<Token>
+    int function_stack_top;
 } Typechecker;
 
 static void function_stack_pop(Typechecker* const checker);
@@ -67,19 +63,19 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
 #define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
 
 static void function_stack_pop(Typechecker* const checker) {
-    assert(checker->functions_top > 0);
-    checker->functions_top--;
+    assert(checker->function_stack_top > 0);
+    checker->function_stack_top--;
 }
 
 static Token function_stack_peek(Typechecker* const checker) {
-    assert(checker->functions.size > 0);
-    Token* tokens = VECTOR_AS_TOKENS(&checker->functions);
-    return tokens[checker->functions_top - 1];
+    assert(checker->function_stack.size > 0);
+    Token* tokens = VECTOR_AS_TOKENS(&checker->function_stack);
+    return tokens[checker->function_stack_top - 1];
 }
 
 static void function_stack_push(Typechecker* const checker, Token fn_token) {
-    VECTOR_ADD_TOKEN(&checker->functions, fn_token);
-    checker->functions_top++;
+    VECTOR_ADD_TOKEN(&checker->function_stack, fn_token);
+    checker->function_stack_top++;
 }
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
@@ -117,11 +113,11 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
-    checker.functions_top = 0;
-    init_vector(&checker.functions, sizeof(Token));
+    checker.function_stack_top = 0;
+    init_vector(&checker.function_stack, sizeof(Token));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
-    free_vector(&checker.functions);
+    free_vector(&checker.function_stack);
     return !checker.has_error;
 }
 
@@ -172,7 +168,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
             "Cannot declare Void variable\n");
         return;
     }
-    if (TYPE_EQUALS(symbol->type, checker->last_type)) {
+    if (type_equals(symbol->type, checker->last_type)) {
         return;
     }
     if (TYPE_IS_UNKNOWN(symbol->type)) {
@@ -215,7 +211,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
             "Cannot assign variable to Void\n");
         return;
     }
-    if (! TYPE_EQUALS(symbol->type, checker->last_type)) {
+    if (! type_equals(symbol->type, checker->last_type)) {
         error_last_type_match(
             checker,
             &assignment->name,
@@ -262,11 +258,13 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
     Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(symbol->type));
+    assert(call->params.size == TYPE_FN_PARAMS(symbol->type).size);
+
     for (uint32_t i = 0; i < call->params.size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
-        if (! TYPE_EQUALS(last, def_type)) {
+        if (! type_equals(last, def_type)) {
             error(checker, &call->identifier, "Type of param number %d in function call (", i);
             type_print(last);
             printf(") does not match with function definition (");
@@ -303,6 +301,7 @@ static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symb
 
     Token* param_names = VECTOR_AS_TOKENS(vector_names);
     Type** param_types = VECTOR_AS_TYPES(vector_types);
+    assert(vector_types->size == vector_names->size);
 
     for (uint32_t i = 0; i < vector_types->size; i++) {
         assert(param_names[i].length > 0);
@@ -327,7 +326,7 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     Symbol* symbol = lookup_str(checker, func_identifier.start, func_identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
-    if (! TYPE_EQUALS(TYPE_FN_RETURN(symbol->type), checker->last_type)) {
+    if (! type_equals(TYPE_FN_RETURN(symbol->type), checker->last_type)) {
         error_last_type_match(
             checker,
             &func_identifier,
@@ -412,7 +411,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     }
     case TOKEN_EQUAL_EQUAL:
     case TOKEN_BANG_EQUAL: {
-        if (TYPE_EQUALS(left_type, right_type)) {
+        if (type_equals(left_type, right_type)) {
             checker->last_type = CREATE_TYPE_BOOL();
             return;
         }

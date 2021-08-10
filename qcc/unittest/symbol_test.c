@@ -42,7 +42,7 @@ static void assert_entry(Symbol* first, Symbol* second) {
     assert_non_null(second);
     assert_key(&first->name, &second->name);
     assert_int_equal(first->declaration_line, second->declaration_line);
-    assert_true(TYPE_EQUALS(first->type, second->type));
+    assert_true(type_equals(first->type, second->type));
 }
 
 #define SYM_LENGTH 17

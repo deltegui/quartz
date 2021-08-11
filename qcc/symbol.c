@@ -39,6 +39,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .type = type,
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
+        .closed = false,
     };
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
@@ -258,4 +259,16 @@ Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* nam
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
     assert(table->current != NULL);
     symbol_insert(&table->current->symbols, entry);
+}
+
+void scoped_symbol_check_and_mark_closed(ScopedSymbolTable* const table, const char* name, int length) {
+    printf("[SYMBOL TABLE] A symbol is being closed: %*.s => ", length, name);
+    Symbol* symbol = scoped_symbol_lookup_str(table, name, length);
+    assert(! IS_EMPTY(symbol));
+    if (symbol->global) {
+        printf("NOPE!\n");
+        return;
+    }
+    printf("YES NIGGA!\n");
+    symbol->closed = true;
 }

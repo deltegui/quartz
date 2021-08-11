@@ -15,9 +15,13 @@ typedef struct {
     int function_stack_top;
 } Typechecker;
 
+#define FUNCTION_STACK_IS_NOT_GLOBAL(checker) (checker->function_stack_top == 0);
+
 static void function_stack_pop(Typechecker* const checker);
 static Token function_stack_peek(Typechecker* const checker);
 static void function_stack_push(Typechecker* const checker, Token fn_token);
+
+static void symbol_mark_closed(Typechecker* const checker, const char* name, int length);
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
@@ -76,6 +80,12 @@ static Token function_stack_peek(Typechecker* const checker) {
 static void function_stack_push(Typechecker* const checker, Token fn_token) {
     VECTOR_ADD_TOKEN(&checker->function_stack, fn_token);
     checker->function_stack_top++;
+}
+
+static void symbol_mark_closed(Typechecker* const checker, const char* name, int length) {
+    if (FUNCTION_STACK_IS_NOT_GLOBAL(checker)) {
+        scoped_symbol_check_and_mark_closed(checker, name, length);
+    }
 }
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {

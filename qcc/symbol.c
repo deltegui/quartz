@@ -261,14 +261,14 @@ void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
     symbol_insert(&table->current->symbols, entry);
 }
 
-void scoped_symbol_check_and_mark_closed(ScopedSymbolTable* const table, const char* name, int length) {
-    printf("[SYMBOL TABLE] A symbol is being closed: %*.s => ", length, name);
-    Symbol* symbol = scoped_symbol_lookup_str(table, name, length);
+bool scoped_symbol_check_and_mark_closed(ScopedSymbolTable* const table, Symbol* symbol) {
+    assert(symbol != NULL);
     assert(! IS_EMPTY(symbol));
     if (symbol->global) {
         printf("NOPE!\n");
-        return;
+        return false;
     }
     printf("YES NIGGA!\n");
     symbol->closed = true;
+    return true;
 }

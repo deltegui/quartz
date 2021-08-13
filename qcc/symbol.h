@@ -20,6 +20,7 @@ typedef enum {
 typedef struct {
     Vector param_names; // Vector<Token>
     // Function type information is stored in Type* type inside Symbol struct
+    uint32_t upvalue_count;
 } FunctionSymbol;
 
 typedef struct {
@@ -81,6 +82,6 @@ void symbol_reset_scopes(ScopedSymbolTable* const table);
 Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name);
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
-void scoped_symbol_check_and_mark_closed(ScopedSymbolTable* const table, const char* name, int length);
+bool scoped_symbol_check_and_mark_closed(ScopedSymbolTable* const table, Symbol* symbol);
 
 #endif

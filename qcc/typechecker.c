@@ -15,13 +15,13 @@ typedef struct {
     int function_stack_top;
 } Typechecker;
 
-#define FUNCTION_STACK_IS_NOT_GLOBAL(checker) (checker->function_stack_top == 0);
+#define FUNCTION_STACK_IS_NOT_GLOBAL(checker) (checker->function_stack_top == 0)
 
 static void function_stack_pop(Typechecker* const checker);
 static Token function_stack_peek(Typechecker* const checker);
 static void function_stack_push(Typechecker* const checker, Token fn_token);
 
-static void symbol_mark_closed(Typechecker* const checker, const char* name, int length);
+static bool symbol_mark_closed(Typechecker* const checker, Symbol* symbol);
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
@@ -82,10 +82,12 @@ static void function_stack_push(Typechecker* const checker, Token fn_token) {
     checker->function_stack_top++;
 }
 
-static void symbol_mark_closed(Typechecker* const checker, const char* name, int length) {
+// TODO maybe the two last parameters should be simply a Simbol*
+static bool symbol_mark_closed(Typechecker* const checker, Symbol* symbol) {
     if (FUNCTION_STACK_IS_NOT_GLOBAL(checker)) {
-        scoped_symbol_check_and_mark_closed(checker, name, length);
+        return scoped_symbol_check_and_mark_closed(checker->symbols, name, length);
     }
+    return false;
 }
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
@@ -151,6 +153,9 @@ static void typecheck_var(void* ctx, VarStmt* var) {
 
     Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
+
+    mark_closed_variable(checker, symbol);
+
     if (var->definition == NULL) {
         if (TYPE_IS_UNKNOWN(symbol->type)) {
             error(
@@ -190,6 +195,22 @@ static void typecheck_var(void* ctx, VarStmt* var) {
         &var->identifier,
         symbol->type,
         "in variable declaration.");
+}
+
+static void mark_closed_variable(Typechecker* checer, Symbol* var_sym) {
+    if (symbol_mark_closed(checker, symbol)) {
+        Token fn_token = function_stack_peek(checker);
+        Symbol* fn_sym = lookup_str(checker, fn_token->start, fn_token->length);
+        assert(fn_sym != NULL);
+        fn_sym->upvalue_count++;
+        // TODO test this thing
+        if (fn_sym->upvalue_count > UINT32_MAX) {
+            error(
+                checker,
+                &fn_sym->identifier,
+                "Too many upvalues defined for this function\n");
+        }
+    }
 }
 
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {

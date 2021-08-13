@@ -13,6 +13,7 @@
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 #define UINT16_COUNT (UINT16_MAX + 1)
+#define UINT32_COUNT (UINT32_MAX + 1)
 
 #ifdef DEBUG
 #define LEXER_DEBUG

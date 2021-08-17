@@ -40,6 +40,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
     };
+    init_vector(&symbol.in_upvalue_refs, sizeof(Token));
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
     }
@@ -56,6 +57,7 @@ static SymbolKind kind_from_type(Type* type) {
 static void create_function_symbol(Symbol* const symbol) {
     FunctionSymbol fn_sym;
     init_vector(&fn_sym.param_names, sizeof(Token));
+    init_vector(&fn_sym.out_upvalue_refs, sizeof(Token));
     symbol->function = fn_sym;
 }
 
@@ -64,11 +66,13 @@ void free_symbol(Symbol* const symbol) {
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
         free_vector(&symbol->function.param_names);
+        free_vector(&symbol->function.out_upvalue_refs);
         break;
     }
     case SYMBOL_VAR:
         break;
     }
+    free_vector(&symbol->in_upvalue_refs);
 }
 
 void init_symbol_table(SymbolTable* const table) {
@@ -255,7 +259,38 @@ Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* nam
     return scoped_symbol_lookup(table, &symbol_name);
 }
 
+// TODO merge this with traditional scoped_symbol_lookup
+Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels) {
+    assert(table->current != NULL);
+    SymbolNode* current = table->current;
+    Symbol* symbol = NULL;
+    while (current != NULL && levels >= 0) {
+        symbol = symbol_lookup(&current->symbols, name);
+        if (symbol != NULL) {
+            return symbol;
+        }
+        current = current->father;
+        levels--;
+    }
+    return NULL;
+}
+
+Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return scoped_symbol_lookup_levels(table, &symbol_name, levels);
+}
+
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
     assert(table->current != NULL);
     symbol_insert(&table->current->symbols, entry);
+}
+
+void scoped_symbol_upvalue(ScopedSymbolTable* const table, Token fn, Token var_upvalue) {
+    Symbol* fn_sym = scoped_symbol_lookup_str(table, fn.start, fn.length);
+    assert(fn_sym != NULL);
+    assert(fn_sym.kind == SYMBOL_FUNCTION);
+    VECTOR_ADD_TOKEN(&fn_sym->function.out_upvalue_refs, var_upvalue);
+    Symbol* var_sym = scoped_symbol_lookup_str(table, var_upvalue.start, var_upvalue.length);
+    assert(fn_sym != NULL);
+    VECTOR_ADD_TOKEN(&var_sym->in_upvalue_refs, fn);
 }

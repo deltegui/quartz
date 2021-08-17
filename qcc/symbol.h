@@ -20,15 +20,30 @@ typedef enum {
 typedef struct {
     Vector param_names; // Vector<Token>
     // Function type information is stored in Type* type inside Symbol struct
+
+    // This is used for out upvalue references. That is, other variables that
+    // this function is closed over. Is mainly used to bind open upvalues to
+    // those variables.
+    Vector out_upvalue_refs; // Vector<Token>.
 } FunctionSymbol;
 
 typedef struct {
     SymbolKind kind;
     SymbolName name;
+
     Type* type;
+
     uint32_t declaration_line;
     uint16_t constant_index;
+
     bool global;
+
+    // This is used for in upvalue refereces. That is, other functions that
+    // this variable requested to closed over them. Is mainly used to close
+    // open upvalues in that functions when this variable is going to be out
+    // of scope.
+    Vector in_upvalue_refs; // Vector <Token>
+
     union {
         FunctionSymbol function;
     };
@@ -79,6 +94,9 @@ void symbol_reset_scopes(ScopedSymbolTable* const table);
 
 Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name);
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length);
+Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels);
+Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
+void scoped_symbol_upvalue(ScopedSymbolTable* const table, Token fn, Token var_upvalue);
 
 #endif

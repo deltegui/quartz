@@ -284,6 +284,73 @@ static void scoped_symbol_should_insert_and_lookup() {
     });
 }
 
+static void scoped_symbol_should_do_lookups_with_limited_levels() {
+    SymbolName a = create_symbol_name("a", 1);
+    SymbolName c = create_symbol_name("c", 1);
+    SymbolName d = create_symbol_name("d", 1);
+    SymbolName e = create_symbol_name("e", 1);
+    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+    Symbol sym_c = create_symbol(c, 3, CREATE_TYPE_NUMBER());
+    Symbol sym_d = create_symbol(d, 4, CREATE_TYPE_NUMBER());
+    Symbol sym_e = create_symbol(e, 5, CREATE_TYPE_NUMBER());
+
+     SCOPED_TABLE({
+        /*
+        {
+            a
+            {
+                c
+                {
+                    d
+                }
+            }
+            {
+                e
+            }
+        }
+        */
+        scoped_symbol_insert(&table, sym_a);
+        symbol_create_scope(&table);
+            scoped_symbol_insert(&table, sym_c);
+            symbol_create_scope(&table);
+                scoped_symbol_insert(&table, sym_d);
+            symbol_end_scope(&table);
+        symbol_end_scope(&table);
+        symbol_create_scope(&table);
+            scoped_symbol_insert(&table, sym_e);
+        symbol_end_scope(&table);
+
+        symbol_reset_scopes(&table);
+        symbol_start_scope(&table);
+            symbol_start_scope(&table);
+
+                assert_non_null(scoped_symbol_lookup_levels(&table, &a, 2));
+                assert_null(scoped_symbol_lookup_levels(&table, &a, 1));
+                assert_null(scoped_symbol_lookup_levels(&table, &a, 0));
+
+                assert_non_null(scoped_symbol_lookup_levels(&table, &c, 1));
+                assert_null(scoped_symbol_lookup_levels(&table, &c, 0));
+
+                assert_non_null(scoped_symbol_lookup_levels(&table, &d, 0));
+                assert_null(scoped_symbol_lookup_levels(&table, &e, 10));
+
+            symbol_end_scope(&table);
+        symbol_end_scope(&table);
+        symbol_start_scope(&table);
+
+            assert_non_null(scoped_symbol_lookup_levels(&table, &a, 1));
+            assert_null(scoped_symbol_lookup_levels(&table, &a, 0));
+
+            assert_null(scoped_symbol_lookup_levels(&table, &c, 100));
+
+            assert_null(scoped_symbol_lookup_levels(&table, &d, 1000));
+
+            assert_non_null(scoped_symbol_lookup_levels(&table, &e, 0));
+
+        symbol_end_scope(&table);
+    });
+}
+
 static void scoped_symbol_should_insert_globals() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName b = create_symbol_name("b", 1);
@@ -328,6 +395,7 @@ int main(void) {
         cmocka_unit_test(scoped_symbol_should_insert_locals),
         cmocka_unit_test(scoped_symbol_should_insert_globals),
         cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
+        cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
         cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
         cmocka_unit_test(should_insert_symbols),
         cmocka_unit_test(should_insert_sixteen_elements)

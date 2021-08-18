@@ -18,8 +18,8 @@ static Obj* alloc_obj(size_t size, ObjKind kind) {
     return obj;
 }
 
-ObjFunction* new_function(const char* name, int length) {
-    ObjFunction* func = ALLOC_OBJ(ObjFunction, OBJ_FUNCTION);
+ObjFunction* new_function(const char* name, int length, int upvalues) {
+    ObjFunction* func = ALLOC_OBJ(ObjFunction + (Upvalue * upvalues), OBJ_FUNCTION);
     init_chunk(&func->chunk);
     func->arity = 0;
     func->name = copy_string(name, length);

@@ -1,5 +1,6 @@
 #include "symbol.h"
 #include <string.h>
+#include "token.h" // for Vector<Token>
 #include "object.h" // for hash function
 
 #define LOAD_FACTOR 0.7
@@ -40,7 +41,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
     };
-    init_vector(&symbol.in_upvalue_refs, sizeof(Token));
+    init_vector(&symbol.upvalue_fn_refs, sizeof(Token));
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
     }
@@ -57,7 +58,7 @@ static SymbolKind kind_from_type(Type* type) {
 static void create_function_symbol(Symbol* const symbol) {
     FunctionSymbol fn_sym;
     init_vector(&fn_sym.param_names, sizeof(Token));
-    init_vector(&fn_sym.out_upvalue_refs, sizeof(Token));
+    init_vector(&fn_sym.upvalues, sizeof(Token));
     symbol->function = fn_sym;
 }
 
@@ -66,13 +67,34 @@ void free_symbol(Symbol* const symbol) {
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
         free_vector(&symbol->function.param_names);
-        free_vector(&symbol->function.out_upvalue_refs);
+        free_vector(&symbol->function.upvalues);
         break;
     }
     case SYMBOL_VAR:
         break;
     }
-    free_vector(&symbol->in_upvalue_refs);
+    free_vector(&symbol->upvalue_fn_refs);
+}
+
+bool symbol_is_closed(Symbol* const symbol, Token fn_name) {
+    Token* tokens = VECTOR_AS_TOKENS(&symbol->upvalue_fn_refs);
+    for (int i = 0; i < symbol->upvalue_fn_refs.size; i++) {
+        if (token_equals(&tokens[i], &fn_name)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int symbol_get_function_upvalue_index(Symbol* const symbol, Token upvalue) {
+    assert(symbol->kind == SYMBOL_FUNCTION);
+    Token* tokens = VECTOR_AS_TOKENS(&symbol->function.upvalues);
+    for (int i = 0; i < symbol->function.upvalues.size; i++) {
+        if (token_equals(&tokens[i], &upvalue)) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void init_symbol_table(SymbolTable* const table) {
@@ -288,9 +310,9 @@ void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
 void scoped_symbol_upvalue(ScopedSymbolTable* const table, Token fn, Token var_upvalue) {
     Symbol* fn_sym = scoped_symbol_lookup_str(table, fn.start, fn.length);
     assert(fn_sym != NULL);
-    assert(fn_sym.kind == SYMBOL_FUNCTION);
-    VECTOR_ADD_TOKEN(&fn_sym->function.out_upvalue_refs, var_upvalue);
+    assert(fn_sym->kind == SYMBOL_FUNCTION);
+    VECTOR_ADD_TOKEN(&fn_sym->function.upvalues, var_upvalue);
     Symbol* var_sym = scoped_symbol_lookup_str(table, var_upvalue.start, var_upvalue.length);
     assert(fn_sym != NULL);
-    VECTOR_ADD_TOKEN(&var_sym->in_upvalue_refs, fn);
+    VECTOR_ADD_TOKEN(&var_sym->upvalue_fn_refs, fn);
 }

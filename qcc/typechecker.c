@@ -6,7 +6,7 @@
 #include "expr.h"
 #include "symbol.h"
 
-static struct {
+typedef struct {
     Token name;
     int scope_distance;
 } FuncMeta;
@@ -35,8 +35,9 @@ static void error(Typechecker* const checker, Token* token, const char* message,
 static void start_scope(Typechecker* const checker);
 static void end_scope(Typechecker* const checker);
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
-static Symbol* lookup_level_str(Typechecker* const checker, const char* name, int length, int level);
+static Symbol* lookup_levels_str(Typechecker* const checker, const char* name, int length, int level);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
+static void check_and_mark_upvalue(Typechecker* const checker, Token var);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -133,8 +134,8 @@ static Symbol* lookup_str(Typechecker* const checker, const char* name, int leng
     return scoped_symbol_lookup_str(checker->symbols, name, length);
 }
 
-static Symbol* lookup_level_str(Typechecker* const checker, const char* name, int length, int level) {
-    return scoped_symbol_lookup_level_str(checker->symbols, name, length, level);
+static Symbol* lookup_levels_str(Typechecker* const checker, const char* name, int length, int level) {
+    return scoped_symbol_lookup_levels_str(checker->symbols, name, length, level);
 }
 
 bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
@@ -319,7 +320,7 @@ static void check_and_mark_upvalue(Typechecker* const checker, Token var) {
         return;
     }
     FuncMeta meta = function_stack_peek(checker);
-    Symbol* var_sym = lookup_level_str(checker, var.start, var.length, meta.scope_distance);
+    Symbol* var_sym = lookup_levels_str(checker, var.start, var.length, meta.scope_distance);
     if (var_sym != NULL) {
         return;
     }

@@ -18,10 +18,22 @@ typedef struct s_obj_string {
 } ObjString;
 
 typedef struct {
+} ObjClosed;
+
+typedef struct {
+    bool closed;
+    union {
+        Value* open;
+        ObjClosed* closed;
+    };
+} Upvalue;
+
+typedef struct {
     Obj obj;
     int arity;
     Chunk chunk;
     ObjString* name;
+    Upvalue upvalues[];
 } ObjFunction;
 
 void print_object(Obj* obj);
@@ -38,6 +50,6 @@ ObjString* concat_string(ObjString* first, ObjString* second);
 #define OBJ_IS_FUNCTION(obj) (is_obj_kind(obj, OBJ_FUNCTION))
 #define OBJ_AS_FUNCTION(obj) ((ObjFunction*) obj)
 
-ObjFunction* new_function(const char* name, int length);
+ObjFunction* new_function(const char* name, int length, int upvalues);
 
 #endif

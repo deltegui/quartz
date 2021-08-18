@@ -24,7 +24,7 @@ typedef struct {
     // This is used for out upvalue references. That is, other variables that
     // this function is closed over. Is mainly used to bind open upvalues to
     // those variables.
-    Vector out_upvalue_refs; // Vector<Token>.
+    Vector upvalues; // Vector<Token>.
 } FunctionSymbol;
 
 typedef struct {
@@ -42,7 +42,7 @@ typedef struct {
     // this variable requested to closed over them. Is mainly used to close
     // open upvalues in that functions when this variable is going to be out
     // of scope.
-    Vector in_upvalue_refs; // Vector <Token>
+    Vector upvalue_fn_refs; // Vector <Token>
 
     union {
         FunctionSymbol function;
@@ -52,6 +52,11 @@ typedef struct {
 Symbol create_symbol_from_token(Token* token, Type* type);
 Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* const symbol);
+// TODO change name (is_closed instead)
+bool symbol_is_closed(Symbol* const symbol, Token fn_name);
+int symbol_get_function_upvalue_index(Symbol* const symbol, Token upvalue);
+
+#define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (sym->function.upvlaues.size)
 
 typedef struct {
     Symbol* entries;

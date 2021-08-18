@@ -32,13 +32,14 @@ struct IdentifierOps {
     uint8_t op_global;
     uint8_t op_global_long;
     uint8_t op_local;
+    uint8_t op_upvalue;
 };
 
 static void error(Compiler* const compiler, const char* message);
 
 static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source);
 static void free_compiler(Compiler* const compiler);
-static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier);
+static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, int upvalue_size);
 
 static Chunk* current_chunk(Compiler* const compiler);
 
@@ -61,6 +62,8 @@ static uint16_t get_variable_index(Compiler* const compiler, const Token* identi
 static void emit_variable_declaration(Compiler* const compiler, uint16_t index);
 static void identifier_use(Compiler* const compiler, Token identifier, const struct IdentifierOps* ops);
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym);
+static int get_current_function_upvalue_index(Compiler* const compiler, Token var);
+static int get_function_upvalue_index(Compiler* const compiler, const char* fn_str, int fn_length, Token var);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -106,7 +109,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
 
-    compiler->func = new_function("<GLOBAL>", 8);
+    compiler->func = new_function("<GLOBAL>", 8, 0);
     compiler->mode = mode;
 
     compiler->last_line = 1;
@@ -121,10 +124,10 @@ static void free_compiler(Compiler* const compiler) {
     free_scoped_symbol_table(&compiler->symbols);
 }
 
-static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier) {
+static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, int upvalue_size) {
     inner->parser = outer->parser;
     inner->symbols = outer->symbols;
-    inner->func = new_function(fn_identifier->start, fn_identifier->length);
+    inner->func = new_function(fn_identifier->start, fn_identifier->length, upvalue_size);
     inner->last_line = outer->last_line;
     inner->has_error = false;
     inner->scope_depth = outer->scope_depth;
@@ -268,7 +271,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     update_symbol_variable_info(compiler, symbol, fn_index);
 
     Compiler inner;
-    init_inner_compiler(&inner, compiler, &function->identifier);
+    init_inner_compiler(&inner, compiler, &function->identifier, SYMBOL_GET_FUNCTION_UPVALUE_SIZE(symbol));
     start_scope(&inner);
     update_param_index(&inner, symbol);
     ACCEPT_STMT(&inner, function->body);
@@ -358,12 +361,14 @@ struct IdentifierOps ops_get_identifier = (struct IdentifierOps) {
     .op_global = OP_GET_GLOBAL,
     .op_global_long = OP_GET_GLOBAL_LONG,
     .op_local = OP_GET_LOCAL,
+    .op_upvalue = OP_GET_UPVALUE,
 };
 
 struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
     .op_global = OP_SET_GLOBAL,
     .op_global_long = OP_SET_GLOBAL_LONG,
     .op_local = OP_SET_LOCAL,
+    .up_upvalue = OP_SET_UPVALUE,
 };
 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
@@ -387,10 +392,39 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
 #endif
     if (symbol->global) {
         emit_param(compiler, ops->op_global, ops->op_global_long, symbol->constant_index);
-    } else {
-        assert(symbol->constant_index < UINT8_MAX);
-        emit_short(compiler, ops->op_local, symbol->constant_index);
+        return;
     }
+    int index = get_current_function_upvalue_index(compiler, identifier);
+    if (index != -1) {
+        emit_short(compiler, ops->op_upvalue, index);
+        return;
+    }
+    assert(symbol->constant_index < UINT8_MAX);
+    emit_short(compiler, ops->op_local, symbol->constant_index);
+}
+
+// static int symbol_is_closed(Compiler* const compiler, Symbol* symbol) {
+//     Token fn_token = (Token){
+//         .kind = TOKEN_IDENTIFIER,
+//         .start = compiler->func->name->chars,
+//         .length = compiler->func->name->length,
+//         .line = 0, // doesnt matter. TODO if so, search for the symbol.
+//     };
+//     return symbol_is_closed(symbol, fn_token);
+// }
+
+static int get_current_function_upvalue_index(Compiler* const compiler, Token var) {
+    return get_function_upvalue_index(
+        compiler,
+        compiler->func->name->chars,
+        compiler->func->name->length,
+        var);
+}
+
+static int get_function_upvalue_index(Compiler* const compiler, const char* fn_str, int fn_length, Token var) {
+    Symbol* fn_sym = lookup_str(compiler, compiler->func->name->chars, compiler->func->name->length);
+    assert(fn_sym != NULL);
+    return symbol_get_function_upvalue_index(fn_sym, var);
 }
 
 static void compile_literal(void* ctx, LiteralExpr* literal) {

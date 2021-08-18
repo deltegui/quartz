@@ -41,4 +41,7 @@ sh -c "$CC $MACROS ./symbol_test.c $SOURCES $LIBS $AND_EXEC"
 printf "\n\n-------- [TYPEPOOL TESTS] --------\n"
 sh -c "$CC $MACROS ./type_test.c $SOURCES $LIBS $AND_EXEC"
 
+printf "\n\n-------- [TOKEN TESTS] --------\n"
+sh -c "$CC $MACROS ./token_test.c $SOURCES $LIBS $AND_EXEC"
+
 rm $BIN

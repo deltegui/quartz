@@ -34,7 +34,7 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case STMT_VAR: {
-        assert_true(token_equals(
+        assert_true(t_token_equals(
             &first->var.identifier,
             &second->var.identifier));
         assert_expr_equals(first->var.definition, second->var.definition);
@@ -53,7 +53,7 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case STMT_FUNCTION: {
-        assert_true(token_equals(
+        assert_true(t_token_equals(
             &first->function.identifier,
             &second->function.identifier));
         assert_stmt_equals(first->function.body, second->function.body);
@@ -85,16 +85,16 @@ static void assert_expr_equals(Expr* first, Expr* second) {
     }
     case EXPR_LITERAL: {
         assert_true(first->literal.literal.kind == second->literal.literal.kind);
-        assert_true(token_equals(&first->literal.literal, &second->literal.literal));
+        assert_true(t_token_equals(&first->literal.literal, &second->literal.literal));
         break;
     }
     case EXPR_IDENTIFIER: {
-        assert_true(token_equals(&first->identifier.name, &second->identifier.name));
+        assert_true(t_token_equals(&first->identifier.name, &second->identifier.name));
         break;
     }
     case EXPR_ASSIGNMENT: {
         assert_expr_equals(first->assignment.value, second->assignment.value);
-        assert_true(token_equals(&first->assignment.name, &second->assignment.name));
+        assert_true(t_token_equals(&first->assignment.name, &second->assignment.name));
         break;
     }
     case EXPR_UNARY: {
@@ -102,7 +102,7 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         break;
     }
     case EXPR_CALL: {
-        assert_true(token_equals(&first->call.identifier, &second->call.identifier));
+        assert_true(t_token_equals(&first->call.identifier, &second->call.identifier));
         assert_int_equal(first->call.params.size, second->call.params.size);
         Expr** first_expr = VECTOR_AS_EXPRS(&first->call.params);
         Expr** second_expr = VECTOR_AS_EXPRS(&second->call.params);

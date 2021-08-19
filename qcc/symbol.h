@@ -56,7 +56,7 @@ void free_symbol(Symbol* const symbol);
 bool symbol_is_closed(Symbol* const symbol, Token fn_name);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Token upvalue);
 
-#define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (sym->function.upvlaues.size)
+#define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (sym->function.upvalues.size)
 
 typedef struct {
     Symbol* entries;
@@ -103,5 +103,14 @@ Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* 
 Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table, Token fn, Token var_upvalue);
+
+typedef struct {
+    SymbolNode* current;
+    int current_upvalue;
+    int depth;
+} UpvalueIterator;
+
+void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* table, int depth);
+Symbol* upvalue_iterator_next(UpvalueIterator* const iterator);
 
 #endif

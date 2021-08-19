@@ -25,6 +25,7 @@ typedef struct {
 
     int locals[UINT8_COUNT];
     int scope_depth;
+    int function_scope_depth;
     int next_local_index;
 } Compiler;
 
@@ -51,10 +52,16 @@ static void emit(Compiler* const compiler, uint8_t bytecode);
 static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param);
 static void emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param);
 static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
+static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn);
 static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
+static void emit_closed_variables(Compiler* const compiler, int depth);
+static void emit_close_stack_upvalue(Compiler* const compiler, Token var_token);
+static int get_upvalue_index_in_function(Compiler* const compiler, Token var_token, Token fn_ref);
+static Token symbol_to_token_identifier(Symbol* symbol);
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
 static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
+static void number_constant_use(Compiler* const compiler, int number);
 
 static void update_param_index(Compiler* const compiler, Symbol* symbol);
 static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index);
@@ -100,6 +107,20 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
 #define ACCEPT_EXPR(compiler, expr) expr_dispatch(&compiler_expr_visitor, compiler, expr)
 
+struct IdentifierOps ops_get_identifier = (struct IdentifierOps) {
+    .op_global = OP_GET_GLOBAL,
+    .op_global_long = OP_GET_GLOBAL_LONG,
+    .op_local = OP_GET_LOCAL,
+    .op_upvalue = OP_GET_UPVALUE,
+};
+
+struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
+    .op_global = OP_SET_GLOBAL,
+    .op_global_long = OP_SET_GLOBAL_LONG,
+    .op_local = OP_SET_LOCAL,
+    .op_upvalue = OP_SET_UPVALUE,
+};
+
 static void error(Compiler* const compiler, const char* message) {
     fprintf(stderr, "[Line %d] Compile error: %s\n", compiler->last_line, message);
     compiler->has_error = true;
@@ -116,6 +137,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->has_error = false;
 
     compiler->scope_depth = 0;
+    compiler->function_scope_depth = 0;
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
 }
@@ -125,12 +147,17 @@ static void free_compiler(Compiler* const compiler) {
 }
 
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, int upvalue_size) {
-    inner->parser = outer->parser;
     inner->symbols = outer->symbols;
+    inner->parser = outer->parser;
+
     inner->func = new_function(fn_identifier->start, fn_identifier->length, upvalue_size);
+    inner->mode = MODE_FUNCTION;
+
     inner->last_line = outer->last_line;
     inner->has_error = false;
+
     inner->scope_depth = outer->scope_depth;
+    inner->function_scope_depth = 0;
     inner->next_local_index = 1; // We expect to always have a function in pos 0
     memset(inner->locals, 0, UINT8_COUNT);
 }
@@ -239,6 +266,11 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
     return make_constant(compiler, value);
 }
 
+static void number_constant_use(Compiler* const compiler, int number) {
+    uint16_t upvalue_index = make_constant(compiler, NUMBER_VALUE(number));
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, upvalue_index);
+}
+
 static void compile_print(void* ctx, PrintStmt* print) {
     Compiler* compiler = (Compiler*)ctx;
     ACCEPT_EXPR(compiler, print->inner);
@@ -247,13 +279,62 @@ static void compile_print(void* ctx, PrintStmt* print) {
 
 static void compile_block(void* ctx, BlockStmt* block) {
     Compiler* compiler = (Compiler*)ctx;
+
     start_scope(compiler);
+    compiler->function_scope_depth++;
+
     if (compiler->scope_depth > UINT8_MAX) {
         error(compiler, "Too many scopes!");
         return;
     }
     ACCEPT_STMT(compiler, block->stmts);
+
+    emit_closed_variables(compiler, 0);
+
+    compiler->function_scope_depth--;
     end_scope(compiler);
+}
+
+static void emit_closed_variables(Compiler* const compiler, int depth) {
+    UpvalueIterator it;
+    init_upvalue_iterator(&it, &compiler->symbols, depth);
+    for (;;) {
+        Symbol* var_sym = upvalue_iterator_next(&it);
+        if (var_sym == NULL) {
+            break;
+        }
+        Token var_token = symbol_to_token_identifier(var_sym);
+        emit_close_stack_upvalue(compiler, var_token);
+        Token* refs = VECTOR_AS_TOKENS(&var_sym->upvalue_fn_refs);
+        for (uint32_t i = 0; i < var_sym->upvalue_fn_refs.size; i++) {
+            int index = get_upvalue_index_in_function(compiler, var_token, refs[i]);
+            number_constant_use(compiler, index);
+            identifier_use(compiler, refs[i], &ops_get_identifier);
+            emit(compiler, OP_BIND_CLOSED);
+        }
+        emit(compiler, OP_POP);
+    }
+}
+
+static void emit_close_stack_upvalue(Compiler* const compiler, Token var_token) {
+    identifier_use(compiler, var_token, &ops_get_identifier);
+    emit(compiler, OP_CLOSE);
+}
+
+static int get_upvalue_index_in_function(Compiler* const compiler, Token var_token, Token fn_ref) {
+    Symbol* fn_sym = lookup_str(compiler, fn_ref.start, fn_ref.length);
+    assert(fn_sym != NULL);
+    assert(fn_sym->kind = SYMBOL_FUNCTION);
+    return symbol_get_function_upvalue_index(fn_sym, var_token);
+}
+
+static Token symbol_to_token_identifier(Symbol* symbol) {
+    return (Token){
+        .kind = TOKEN_IDENTIFIER,
+        .start = symbol->name.str,
+        .length = symbol->name.length,
+        .line = symbol->declaration_line,
+    };
 }
 
 static void compile_expr(void* ctx, ExprStmt* expr) {
@@ -287,6 +368,21 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
 
     emit_variable_declaration(compiler, fn_index);
+
+    emit_bind_upvalues(compiler, symbol, function->identifier);
+}
+
+static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {
+    Token* upvalues = VECTOR_AS_TOKENS(&fn_sym->function.upvalues);
+    int size = fn_sym->function.upvalues.size;
+    for (int i = 0; i < size; i++) {
+        Symbol* upvalue_sym = lookup_str(compiler, upvalues[i].start, upvalues[i].length);
+        assert(upvalue_sym != NULL);
+        number_constant_use(compiler, upvalue_sym->constant_index);
+        number_constant_use(compiler, i);
+        identifier_use(compiler, fn, &ops_get_identifier);
+        emit(compiler, OP_BIND_UPVALUE);
+    }
 }
 
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym) {
@@ -311,6 +407,9 @@ static void update_param_index(Compiler* const compiler, Symbol* symbol) {
 
 static void compile_return(void* ctx, ReturnStmt* return_) {
     Compiler* compiler = (Compiler*) ctx;
+
+    emit_closed_variables(compiler, compiler->function_scope_depth);
+
     if (return_->inner != NULL) {
         ACCEPT_EXPR(compiler, return_->inner);
     } else {
@@ -356,20 +455,6 @@ static void emit_variable_declaration(Compiler* const compiler, uint16_t index) 
         emit_param(compiler, OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG, index);
     }
 }
-
-struct IdentifierOps ops_get_identifier = (struct IdentifierOps) {
-    .op_global = OP_GET_GLOBAL,
-    .op_global_long = OP_GET_GLOBAL_LONG,
-    .op_local = OP_GET_LOCAL,
-    .op_upvalue = OP_GET_UPVALUE,
-};
-
-struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
-    .op_global = OP_SET_GLOBAL,
-    .op_global_long = OP_SET_GLOBAL_LONG,
-    .op_local = OP_SET_LOCAL,
-    .up_upvalue = OP_SET_UPVALUE,
-};
 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;

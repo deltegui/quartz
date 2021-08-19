@@ -18,10 +18,11 @@ typedef struct s_obj_string {
 } ObjString;
 
 typedef struct {
+    Obj obj;
 } ObjClosed;
 
 typedef struct {
-    bool closed;
+    bool is_closed;
     union {
         Value* open;
         ObjClosed* closed;

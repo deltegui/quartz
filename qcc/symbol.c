@@ -13,6 +13,7 @@ static void create_function_symbol(Symbol* const symbol);
 static Symbol* find(SymbolTable* const table, const SymbolName* name);
 static void grow_symbol_table(SymbolTable* const table);
 static SymbolKind kind_from_type(Type* type);
+static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
 
 SymbolName create_symbol_name(const char* str, int length) {
     assert(length != 0);
@@ -78,7 +79,7 @@ void free_symbol(Symbol* const symbol) {
 
 bool symbol_is_closed(Symbol* const symbol, Token fn_name) {
     Token* tokens = VECTOR_AS_TOKENS(&symbol->upvalue_fn_refs);
-    for (int i = 0; i < symbol->upvalue_fn_refs.size; i++) {
+    for (uint32_t i = 0; i < symbol->upvalue_fn_refs.size; i++) {
         if (token_equals(&tokens[i], &fn_name)) {
             return true;
         }
@@ -89,7 +90,7 @@ bool symbol_is_closed(Symbol* const symbol, Token fn_name) {
 int symbol_get_function_upvalue_index(Symbol* const symbol, Token upvalue) {
     assert(symbol->kind == SYMBOL_FUNCTION);
     Token* tokens = VECTOR_AS_TOKENS(&symbol->function.upvalues);
-    for (int i = 0; i < symbol->function.upvalues.size; i++) {
+    for (uint32_t i = 0; i < symbol->function.upvalues.size; i++) {
         if (token_equals(&tokens[i], &upvalue)) {
             return i;
         }
@@ -315,4 +316,40 @@ void scoped_symbol_upvalue(ScopedSymbolTable* const table, Token fn, Token var_u
     Symbol* var_sym = scoped_symbol_lookup_str(table, var_upvalue.start, var_upvalue.length);
     assert(fn_sym != NULL);
     VECTOR_ADD_TOKEN(&var_sym->upvalue_fn_refs, fn);
+}
+
+void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* table, int depth) {
+    iterator->current = table->current;
+    iterator->current_upvalue = 0;
+    iterator->depth = depth;
+}
+
+Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
+    if (iterator->depth < 0) {
+        return NULL;
+    }
+    for (;;) {
+        if (iterator->current_upvalue > iterator->current->symbols.size) {
+            if (! find_next_scope_with_upvalues(iterator)) {
+                return NULL;
+            }
+        }
+        Symbol* sym = &iterator->current->symbols.entries[iterator->current_upvalue++];
+        if (sym->upvalue_fn_refs.size > 0) {
+            return sym;
+        }
+    }
+    
+}
+
+static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator) {
+    while (iterator->current->father != NULL && iterator->depth >= 1) {
+        iterator->depth--;
+        iterator->current = iterator->current->father;
+        iterator->current_upvalue = 0;
+        if (iterator->current->symbols.size > 0) {
+            return true;
+        }
+    }
+    return false;
 }

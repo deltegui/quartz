@@ -45,6 +45,13 @@ typedef enum {
 	OP_SET_GLOBAL_LONG,
 	OP_GET_LOCAL,
 	OP_SET_LOCAL,
+
+    // Upvalues
+    OP_GET_UPVALUE,
+    OP_SET_UPVALUE,
+    OP_BIND_UPVALUE,
+    OP_CLOSE,
+    OP_BIND_CLOSED,
 } OpCode;
 
 typedef struct {

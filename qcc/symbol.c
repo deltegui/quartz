@@ -159,8 +159,11 @@ static void grow_symbol_table(SymbolTable* const table) {
         *symbol = old_entries[i];
     }
 
-    // Just free the array. Do not free key str.
-    free(old_entries);
+    // Just free the array if wasnt NULL. Do not free key str.
+    // old_entries is NULL if is the first time that is initialized.
+    if (old_entries != NULL) {
+        free(old_entries);
+    }
 }
 
 static Symbol* find(SymbolTable* const table, const SymbolName* name) {
@@ -329,12 +332,17 @@ Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
         return NULL;
     }
     for (;;) {
-        if (iterator->current_upvalue > iterator->current->symbols.size) {
+        if (iterator->current_upvalue >= iterator->current->symbols.capacity) {
             if (! find_next_scope_with_upvalues(iterator)) {
                 return NULL;
             }
         }
-        Symbol* sym = &iterator->current->symbols.entries[iterator->current_upvalue++];
+        assert(iterator->current->symbols.size > 0);
+        Symbol* sym = &iterator->current->symbols.entries[iterator->current_upvalue];
+        iterator->current_upvalue++;
+        if (IS_EMPTY(sym)) {
+            continue;
+        }
         if (sym->upvalue_fn_refs.size > 0) {
             return sym;
         }

@@ -324,7 +324,7 @@ static void emit_close_stack_upvalue(Compiler* const compiler, Token var_token) 
 static int get_upvalue_index_in_function(Compiler* const compiler, Token var_token, Token fn_ref) {
     Symbol* fn_sym = lookup_str(compiler, fn_ref.start, fn_ref.length);
     assert(fn_sym != NULL);
-    assert(fn_sym->kind = SYMBOL_FUNCTION);
+    assert(fn_sym->kind == SYMBOL_FUNCTION);
     return symbol_get_function_upvalue_index(fn_sym, var_token);
 }
 

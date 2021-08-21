@@ -452,10 +452,9 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
         init_upvalue_iterator(&it, &table, 1);
 
         // The first one should be a
-        printf("DIOS PIPO MUERE TIO\n");
-        Symbol* sym_a = upvalue_iterator_next(&it);
-        printf("OOOOOOOOOHHH: %s\n", sym_a->name.str);
-        // assert_true(memcmp(sym_a->name.str, a.str, 8) == 0);
+        Symbol* sym_a_upvalue = upvalue_iterator_next(&it);
+        assert_non_null(sym_a_upvalue);
+        assert_true(memcmp(sym_a_upvalue->name.str, a.str, 8) == 0);
 
         // And that's it, it should be empty.
         Symbol* this_is_null = upvalue_iterator_next(&it);
@@ -465,13 +464,13 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
-        // cmocka_unit_test(scoped_symbol_should_insert_locals),
-        // cmocka_unit_test(scoped_symbol_should_insert_globals),
-        // cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
-        // cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
-        // cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        // cmocka_unit_test(should_insert_symbols),
-        // cmocka_unit_test(should_insert_sixteen_elements),
+        cmocka_unit_test(scoped_symbol_should_insert_locals),
+        cmocka_unit_test(scoped_symbol_should_insert_globals),
+        cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
+        cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
+        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        cmocka_unit_test(should_insert_symbols),
+        cmocka_unit_test(should_insert_sixteen_elements),
         cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);

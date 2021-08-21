@@ -327,6 +327,8 @@ void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* t
     iterator->depth = depth;
 }
 
+// TODO maybe this is a mistake. This should iterate over the capacity of every
+// symbol table inside the specified depth. Maybe is expensive.
 Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
     if (iterator->depth < 0) {
         return NULL;

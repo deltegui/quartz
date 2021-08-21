@@ -339,7 +339,7 @@ Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
             return sym;
         }
     }
-    
+    return NULL;
 }
 
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator) {

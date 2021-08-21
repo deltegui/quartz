@@ -4,9 +4,11 @@
 #include "../symbol.h"
 #include "../typechecker.h"
 #include "../debug.h"
+#include "../type.h"
 
 #define TABLE(...) do {\
     SymbolTable table;\
+    init_type_pool();\
     init_symbol_table(&table);\
     __VA_ARGS__\
     printf(\
@@ -15,13 +17,16 @@
         table.capacity,\
         (double)table.size / (double)table.capacity);\
     free_symbol_table(&table);\
+    free_type_pool();\
 } while (false)
 
 #define SCOPED_TABLE(...) do {\
     ScopedSymbolTable table;\
+    init_type_pool();\
     init_scoped_symbol_table(&table);\
     __VA_ARGS__\
     free_scoped_symbol_table(&table);\
+    free_type_pool();\
 } while (false)
 
 typedef struct {
@@ -460,13 +465,13 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(scoped_symbol_should_insert_locals),
-        cmocka_unit_test(scoped_symbol_should_insert_globals),
-        cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
-        cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
-        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        cmocka_unit_test(should_insert_symbols),
-        cmocka_unit_test(should_insert_sixteen_elements),
+        // cmocka_unit_test(scoped_symbol_should_insert_locals),
+        // cmocka_unit_test(scoped_symbol_should_insert_globals),
+        // cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
+        // cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
+        // cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        // cmocka_unit_test(should_insert_symbols),
+        // cmocka_unit_test(should_insert_sixteen_elements),
         cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);

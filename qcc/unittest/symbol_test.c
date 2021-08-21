@@ -454,7 +454,7 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
         // The first one should be a
         Symbol* sym_a_upvalue = upvalue_iterator_next(&it);
         assert_non_null(sym_a_upvalue);
-        assert_true(memcmp(sym_a_upvalue->name.str, a.str, 8) == 0);
+        assert_true(memcmp(sym_a_upvalue->name.str, a.str, sizeof(char)) == 0);
 
         // And that's it, it should be empty.
         Symbol* this_is_null = upvalue_iterator_next(&it);

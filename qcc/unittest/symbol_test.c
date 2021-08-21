@@ -390,6 +390,74 @@ static void scoped_symbol_should_insert_locals() {
     });
 }
 
+static void upvalue_iterator_should_iterate_over_upvalues() {
+    // First, initialize all we need
+    SymbolName a = create_symbol_name("a", 1);
+    SymbolName b = create_symbol_name("b", 1);
+    SymbolName c = create_symbol_name("c", 1);
+    SymbolName d = create_symbol_name("d", 1);
+    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+    Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
+    Symbol sym_c = create_symbol(c, 3, create_type_function());
+    Symbol sym_d = create_symbol(d, 4, CREATE_TYPE_NUMBER());
+    Token tkn_a = (Token){
+        .kind = TOKEN_IDENTIFIER,
+        .start = "a",
+        .length = 1,
+        .line = 1,
+    };
+    Token tkn_fn = (Token){
+        .kind = TOKEN_IDENTIFIER,
+        .start = "c",
+        .length = 1,
+        .line = 1,
+    };
+
+    SCOPED_TABLE({
+        // Create the symbol table to match this code:
+        /*
+        {
+            a, b
+            {
+                fn c() {
+                    d
+                }
+            }
+        }
+        */
+        scoped_symbol_insert(&table, sym_a);
+        scoped_symbol_insert(&table, sym_b);
+        symbol_create_scope(&table);
+            scoped_symbol_insert(&table, sym_c);
+            symbol_create_scope(&table);
+                scoped_symbol_insert(&table, sym_d);
+            symbol_end_scope(&table);
+        symbol_end_scope(&table);
+
+        // Now we want to emulate that we are in the c
+        // var scope.
+        symbol_reset_scopes(&table);
+        symbol_start_scope(&table);
+
+        // In that scope thell that the var a is closed by fn
+        scoped_symbol_upvalue(&table, tkn_fn, tkn_a);
+
+        // Iterate over upvalues
+        UpvalueIterator it;
+        init_upvalue_iterator(&it, &table, 1);
+
+        // The first one should be a
+        printf("DIOS PIPO MUERE TIO\n");
+        Symbol* sym_a = upvalue_iterator_next(&it);
+        printf("OOOOOOOOOHHH: %s\n", sym_a->name.str);
+        // assert_true(memcmp(sym_a->name.str, a.str, 8) == 0);
+
+        // And that's it, it should be empty.
+        Symbol* this_is_null = upvalue_iterator_next(&it);
+        assert_null(this_is_null);
+    });
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(scoped_symbol_should_insert_locals),
@@ -398,7 +466,8 @@ int main(void) {
         cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
         cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
         cmocka_unit_test(should_insert_symbols),
-        cmocka_unit_test(should_insert_sixteen_elements)
+        cmocka_unit_test(should_insert_sixteen_elements),
+        cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

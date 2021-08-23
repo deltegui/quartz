@@ -81,7 +81,6 @@ void repl() {
 #undef BUFFER_SIZE
 }
 
-
 int main(int argc, char** argv) {
     if (argc <= 1) {
         repl();

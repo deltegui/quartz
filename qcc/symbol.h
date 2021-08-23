@@ -24,6 +24,8 @@ typedef struct {
     // This is used for out upvalue references. That is, other variables that
     // this function is closed over. Is mainly used to bind open upvalues to
     // those variables.
+    // TODO what happends if two variables are check_and_marked (typechecker)
+    // THIS SHOULD BE A SET, SO IT SHOULD BE A HASHTABLE (HASH SET)
     Vector upvalues; // Vector<Token>.
 } FunctionSymbol;
 
@@ -42,6 +44,7 @@ typedef struct {
     // this variable requested to closed over them. Is mainly used to close
     // open upvalues in that functions when this variable is going to be out
     // of scope.
+    // TODO look the todo of FunctionSymbol upvalues.
     Vector upvalue_fn_refs; // Vector <Token>
 
     union {

@@ -499,6 +499,9 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
 // }
 
 static int get_current_function_upvalue_index(Compiler* const compiler, Token var) {
+    if (compiler->mode == MODE_SCRIPT) {
+        return -1;
+    }
     return get_function_upvalue_index(
         compiler,
         compiler->func->name->chars,

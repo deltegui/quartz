@@ -23,8 +23,10 @@ typedef struct {
     int function_stack_top;
 } Typechecker;
 
+#define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack_top == 0)
+
 static void function_stack_pop(Typechecker* const checker);
-static FuncMeta function_stack_peek(Typechecker* const checker);
+static FuncMeta* function_stack_peek(Typechecker* const checker);
 static void function_stack_push(Typechecker* const checker, Token fn_token);
 static void function_stack_start_scope(Typechecker* const checker);
 static void function_stack_end_scope(Typechecker* const checker);
@@ -38,6 +40,7 @@ static Symbol* lookup_str(Typechecker* const checker, const char* name, int leng
 static Symbol* lookup_levels_str(Typechecker* const checker, const char* name, int length, int level);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
 static void check_and_mark_upvalue(Typechecker* const checker, Token var);
+static bool var_is_current_function_local(Typechecker* const checker, Token var);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -79,10 +82,10 @@ static void function_stack_pop(Typechecker* const checker) {
     checker->function_stack_top--;
 }
 
-static FuncMeta function_stack_peek(Typechecker* const checker) {
+static FuncMeta* function_stack_peek(Typechecker* const checker) {
     assert(checker->function_stack.size > 0);
-    FuncMeta* tokens = VECTOR_AS_FUNC_META(&checker->function_stack);
-    return tokens[checker->function_stack_top - 1];
+    FuncMeta* meta = VECTOR_AS_FUNC_META(&checker->function_stack);
+    return &meta[checker->function_stack_top - 1];
 }
 
 static void function_stack_push(Typechecker* const checker, Token fn_token) {
@@ -94,13 +97,19 @@ static void function_stack_push(Typechecker* const checker, Token fn_token) {
 }
 
 static void function_stack_start_scope(Typechecker* const checker) {
-    FuncMeta meta = function_stack_peek(checker);
-    meta.scope_distance++;
+    if (TYPECHECK_IS_GLOBAL_FN(checker)) {
+        return;
+    }
+    FuncMeta* meta = function_stack_peek(checker);
+    meta->scope_distance++;
 }
 
 static void function_stack_end_scope(Typechecker* const checker) {
-    FuncMeta meta = function_stack_peek(checker);
-    meta.scope_distance--;
+    if (TYPECHECK_IS_GLOBAL_FN(checker)) {
+        return;
+    }
+    FuncMeta* meta = function_stack_peek(checker);
+    meta->scope_distance--;
 }
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
@@ -123,10 +132,12 @@ static void error(Typechecker* const checker, Token* token, const char* message,
 }
 
 static void start_scope(Typechecker* const checker) {
+    function_stack_start_scope(checker);
     symbol_start_scope(checker->symbols);
 }
 
 static void end_scope(Typechecker* const checker) {
+    function_stack_end_scope(checker);
     symbol_end_scope(checker->symbols);
 }
 
@@ -153,9 +164,7 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
 static void typecheck_block(void* ctx, BlockStmt* block) {
     Typechecker* checker = (Typechecker*) ctx;
     start_scope(checker);
-    function_stack_start_scope(checker);
     ACCEPT_STMT(ctx, block->stmts);
-    function_stack_end_scope(checker);
     end_scope(checker);
 }
 
@@ -319,15 +328,21 @@ static void check_and_mark_upvalue(Typechecker* const checker, Token var) {
     if (checker->function_stack_top == 0) {
         return;
     }
-    FuncMeta meta = function_stack_peek(checker);
-    Symbol* var_sym = lookup_levels_str(checker, var.start, var.length, meta.scope_distance);
-    if (var_sym != NULL) {
+    if (var_is_current_function_local(checker, var)) {
         return;
     }
+    FuncMeta* meta = function_stack_peek(checker);
+    Symbol* var_sym = lookup_str(checker, var.start, var.length);
     if (var_sym->global) {
         return;
     }
-    scoped_symbol_upvalue(checker->symbols, meta.name, var);
+    scoped_symbol_upvalue(checker->symbols, meta->name, var);
+}
+
+static bool var_is_current_function_local(Typechecker* const checker, Token var) {
+    FuncMeta* meta = function_stack_peek(checker);
+    Symbol* var_sym = lookup_levels_str(checker, var.start, var.length, meta->scope_distance);
+    return var_sym != NULL;
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
@@ -376,8 +391,8 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     if (return_->inner == NULL) {
         checker->last_type = CREATE_TYPE_VOID();
     }
-    FuncMeta meta = function_stack_peek(checker);
-    Token func_identifier = meta.name;
+    FuncMeta* meta = function_stack_peek(checker);
+    Token func_identifier = meta->name;
     Symbol* symbol = lookup_str(checker, func_identifier.start, func_identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);

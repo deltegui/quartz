@@ -39,6 +39,7 @@ static void symbol_table_print(const SymbolTable* table) {
 
 static void symbol_node_print(const SymbolNode* node) {
     symbol_table_print(&node->symbols);
+    printf("SCOPE CHILDS: %d\n", node->size);
     for (int i = 0; i < node->size; i++) {
         symbol_node_print(&node->childs[i]);
     }
@@ -92,6 +93,11 @@ static const char* OpCodeStrings[] = {
     "OP_SET_GLOBAL_LONG",
     "OP_GET_LOCAL",
     "OP_SET_LOCAL",
+    "OP_GET_UPVALUE",
+    "OP_SET_UPVALUE",
+    "OP_BIND_UPVALUE",
+    "OP_CLOSE",
+    "OP_BIND_CLOSED"
 };
 
 void opcode_print(uint8_t op) {
@@ -183,6 +189,9 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_POP:
         case OP_PRINT:
         case OP_GREATER:
+        case OP_BIND_UPVALUE:
+        case OP_BIND_CLOSED:
+        case OP_CLOSE:
         case OP_END: {
             i = chunk_opcode_print(chunk, i);
             break;
@@ -192,11 +201,24 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_SET_GLOBAL:
         case OP_GET_LOCAL:
         case OP_SET_LOCAL:
+        case OP_GET_UPVALUE:
+        case OP_SET_UPVALUE:
         case OP_CONSTANT:
         case OP_CALL: {
             i = chunk_short_print(chunk, i);
             break;
         }
+        /*
+        case OP_GET_LOCAL:
+        case OP_SET_LOCAL:
+        case OP_GET_UPVALUE:
+        case OP_SET_UPVALUE: {
+            i = chunk_opcode_print(chunk, i);
+            chunk_format_print(chunk, i, "%04x\n", chunk->code[i]);
+            i++;
+            break;
+        }
+        */
         case OP_GET_GLOBAL_LONG:
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:

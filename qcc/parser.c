@@ -409,7 +409,6 @@ static Stmt* function_decl(Parser* const parser) {
 
     parse_function_body(parser, &fn, registered);
 
-    
     return CREATE_STMT_FUNCTION(fn);
 }
 
@@ -430,7 +429,7 @@ static void parse_function_params_declaration(Parser* const parser, Symbol* fn_s
         VECTOR_ADD_TOKEN(&fn_sym->function.param_names, parser->current);
         advance(parser); // cosume param identifier
         consume(parser, TOKEN_COLON, "Expected function parameter to have a type in function declaration");
-        Type* type = simple_type_from_token_kind(parser->current.kind);
+        Type* type = parse_type(parser);
         if (TYPE_IS_UNKNOWN(type)) {
             error (parser, "Unknown type in function param in function declaration");
         }

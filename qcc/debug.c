@@ -208,17 +208,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
             i = chunk_short_print(chunk, i);
             break;
         }
-        /*
-        case OP_GET_LOCAL:
-        case OP_SET_LOCAL:
-        case OP_GET_UPVALUE:
-        case OP_SET_UPVALUE: {
-            i = chunk_opcode_print(chunk, i);
-            chunk_format_print(chunk, i, "%04x\n", chunk->code[i]);
-            i++;
-            break;
-        }
-        */
         case OP_GET_GLOBAL_LONG:
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:

@@ -26,6 +26,28 @@ SymbolName create_symbol_name(const char* str, int length) {
     return name;
 }
 
+void init_symbol_set(SymbolSet* const set) {
+    init_symbol_table(&set->hash);
+    init_vector(&set->elements, sizeof(SymbolName*));
+}
+
+void free_symbol_set(SymbolSet* const set) {
+    free_symbol_table(&set->hash);
+    free_vector(&set->elements);
+}
+
+void symbol_set_add(SymbolSet* const set, SymbolName name) {
+    Symbol* existing = symbol_lookup(&set->hash, &name);
+    if (existing != NULL) {
+        return;
+    }
+    Symbol symbol = create_symbol(name, 0, NULL);
+    symbol_insert(&set->hash, symbol);
+    Symbol* inserted = symbol_lookup(&set->hash, &name);
+    assert(inserted != NULL);
+    VECTOR_ADD(&set->elements, &inserted->name, SymbolName*);
+}
+
 Symbol create_symbol_from_token(Token* token, Type* type) {
     return create_symbol(
         create_symbol_name(token->start, token->length),

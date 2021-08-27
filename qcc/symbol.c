@@ -9,6 +9,7 @@
 #define S_GROW_CAPACITY(cap) (cap < 8 ? 8 : cap * 2)
 #define SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
 
+static bool symbol_name_equals(const SymbolName* first, const SymbolName* second);
 static void create_function_symbol(Symbol* const symbol);
 static Symbol* find(SymbolTable* const table, const SymbolName* name);
 static void grow_symbol_table(SymbolTable* const table);
@@ -26,26 +27,14 @@ SymbolName create_symbol_name(const char* str, int length) {
     return name;
 }
 
-void init_symbol_set(SymbolSet* const set) {
-    init_symbol_table(&set->hash);
-    init_vector(&set->elements, sizeof(SymbolName*));
-}
-
-void free_symbol_set(SymbolSet* const set) {
-    free_symbol_table(&set->hash);
-    free_vector(&set->elements);
-}
-
-void symbol_set_add(SymbolSet* const set, SymbolName name) {
-    Symbol* existing = symbol_lookup(&set->hash, &name);
-    if (existing != NULL) {
-        return;
+static bool symbol_name_equals(const SymbolName* first, const SymbolName* second) {
+    if (
+        first->hash != second->hash ||
+        first->length != second->length
+    ) {
+        return false;
     }
-    Symbol symbol = create_symbol(name, 0, NULL);
-    symbol_insert(&set->hash, symbol);
-    Symbol* inserted = symbol_lookup(&set->hash, &name);
-    assert(inserted != NULL);
-    VECTOR_ADD(&set->elements, &inserted->name, SymbolName*);
+    return memcmp(first->str, second->str, first->length) == 0;
 }
 
 Symbol create_symbol_from_token(Token* token, Type* type) {
@@ -64,7 +53,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
     };
-    init_vector(&symbol.upvalue_fn_refs, sizeof(Token));
+    symbol.upvalue_fn_refs = create_symbol_set();
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
     }
@@ -81,7 +70,7 @@ static SymbolKind kind_from_type(Type* type) {
 static void create_function_symbol(Symbol* const symbol) {
     FunctionSymbol fn_sym;
     init_vector(&fn_sym.param_names, sizeof(Token));
-    init_vector(&fn_sym.upvalues, sizeof(Token));
+    fn_sym.upvalues = create_symbol_set();
     symbol->function = fn_sym;
 }
 
@@ -90,30 +79,32 @@ void free_symbol(Symbol* const symbol) {
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
         free_vector(&symbol->function.param_names);
-        free_vector(&symbol->function.upvalues);
+        free_symbol_set(symbol->function.upvalues);
         break;
     }
     case SYMBOL_VAR:
         break;
     }
-    free_vector(&symbol->upvalue_fn_refs);
+    free_symbol_set(symbol->upvalue_fn_refs);
 }
 
-bool symbol_is_closed(Symbol* const symbol, Token fn_name) {
-    Token* tokens = VECTOR_AS_TOKENS(&symbol->upvalue_fn_refs);
-    for (uint32_t i = 0; i < symbol->upvalue_fn_refs.size; i++) {
-        if (token_equals(&tokens[i], &fn_name)) {
+bool symbol_is_closed(Symbol* const symbol, Symbol* fn_sym) {
+    Symbol** symbols = SYMBOL_SET_GET_ELEMENTS(symbol->upvalue_fn_refs);
+    uint32_t size = SYMBOL_SET_SIZE(symbol->upvalue_fn_refs);
+    for (uint32_t i = 0; i < size; i++) {
+        if (symbol_name_equals(&symbols[i]->name, &fn_sym->name)) {
             return true;
         }
     }
     return false;
 }
 
-int symbol_get_function_upvalue_index(Symbol* const symbol, Token upvalue) {
+int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue) {
     assert(symbol->kind == SYMBOL_FUNCTION);
-    Token* tokens = VECTOR_AS_TOKENS(&symbol->function.upvalues);
-    for (uint32_t i = 0; i < symbol->function.upvalues.size; i++) {
-        if (token_equals(&tokens[i], &upvalue)) {
+    Symbol** symbols = SYMBOL_SET_GET_ELEMENTS(symbol->function.upvalues);
+    uint32_t size = SYMBOL_SET_SIZE(symbol->function.upvalues);
+    for (uint32_t i = 0; i < size; i++) {
+        if (symbol_name_equals(&symbols[i]->name, &upvalue->name)) {
             return i;
         }
     }
@@ -333,14 +324,39 @@ void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
     symbol_insert(&table->current->symbols, entry);
 }
 
-void scoped_symbol_upvalue(ScopedSymbolTable* const table, Token fn, Token var_upvalue) {
-    Symbol* fn_sym = scoped_symbol_lookup_str(table, fn.start, fn.length);
+void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* var_upvalue) {
+    Symbol* fn_sym = scoped_symbol_lookup(table, &fn->name);
     assert(fn_sym != NULL);
     assert(fn_sym->kind == SYMBOL_FUNCTION);
-    VECTOR_ADD_TOKEN(&fn_sym->function.upvalues, var_upvalue);
-    Symbol* var_sym = scoped_symbol_lookup_str(table, var_upvalue.start, var_upvalue.length);
-    assert(fn_sym != NULL);
-    VECTOR_ADD_TOKEN(&var_sym->upvalue_fn_refs, fn);
+    symbol_set_add(fn_sym->function.upvalues, var_upvalue);
+    Symbol* var_sym = scoped_symbol_lookup(table, &var_upvalue->name);
+    assert(var_sym != NULL);
+    symbol_set_add(var_sym->upvalue_fn_refs, fn);
+}
+
+SymbolSet* create_symbol_set() {
+    SymbolSet* set = (SymbolSet*) malloc(sizeof(SymbolSet));
+    init_symbol_table(&set->hash);
+    init_vector(&set->elements, sizeof(Symbol*));
+    return set;
+}
+
+void free_symbol_set(SymbolSet* const set) {
+    free_symbol_table(&set->hash);
+    free_vector(&set->elements);
+    free(set);
+}
+
+void symbol_set_add(SymbolSet* const set, Symbol* symbol) {
+    Symbol* existing = symbol_lookup(&set->hash, &symbol->name);
+    if (existing != NULL) {
+        return;
+    }
+    symbol_insert(&set->hash, *symbol);
+    // TODO is needed?
+    Symbol* inserted = symbol_lookup(&set->hash, &symbol->name);
+    assert(inserted != NULL);
+    VECTOR_ADD(&set->elements, inserted, Symbol*);
 }
 
 void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* table, int depth) {
@@ -367,7 +383,7 @@ Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
         if (IS_EMPTY(sym)) {
             continue;
         }
-        if (sym->upvalue_fn_refs.size > 0) {
+        if (SYMBOL_SET_SIZE(sym->upvalue_fn_refs) > 0) {
             return sym;
         }
     }

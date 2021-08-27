@@ -37,10 +37,10 @@ static void error(Typechecker* const checker, Token* token, const char* message,
 static void start_scope(Typechecker* const checker);
 static void end_scope(Typechecker* const checker);
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
-static Symbol* lookup_levels_str(Typechecker* const checker, const char* name, int length, int level);
+static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
-static void check_and_mark_upvalue(Typechecker* const checker, Token var);
-static bool var_is_current_function_local(Typechecker* const checker, Token var);
+static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var);
+static bool var_is_current_function_local(Typechecker* const checker, Symbol* var);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -145,8 +145,8 @@ static Symbol* lookup_str(Typechecker* const checker, const char* name, int leng
     return scoped_symbol_lookup_str(checker->symbols, name, length);
 }
 
-static Symbol* lookup_levels_str(Typechecker* const checker, const char* name, int length, int level) {
-    return scoped_symbol_lookup_levels_str(checker->symbols, name, length, level);
+static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level) {
+    return scoped_symbol_lookup_levels(checker->symbols, &name, level);
 }
 
 bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
@@ -234,7 +234,7 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
             "Use of identifier inside declaration\n");
     }
 
-    check_and_mark_upvalue(checker, identifier->name);
+    check_and_mark_upvalue(checker, symbol);
 
     checker->last_type = symbol->type;
 }
@@ -263,7 +263,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
         return;
     }
 
-    check_and_mark_upvalue(checker, assignment->name);
+    check_and_mark_upvalue(checker, symbol);
 
     checker->last_type = symbol->type;
 }
@@ -319,12 +319,12 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         }
     }
 
-    check_and_mark_upvalue(checker, call->identifier);
+    check_and_mark_upvalue(checker, symbol);
 
     checker->last_type = TYPE_FN_RETURN(symbol->type);
 }
 
-static void check_and_mark_upvalue(Typechecker* const checker, Token var) {
+static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
     if (checker->function_stack_top == 0) {
         return;
     }
@@ -332,16 +332,19 @@ static void check_and_mark_upvalue(Typechecker* const checker, Token var) {
         return;
     }
     FuncMeta* meta = function_stack_peek(checker);
-    Symbol* var_sym = lookup_str(checker, var.start, var.length);
-    if (var_sym->global) {
+    if (var->global) {
         return;
     }
-    scoped_symbol_upvalue(checker->symbols, meta->name, var);
+    // SymbolName fn_name = create_symbol_name(meta->name.start, meta->name.length);
+    Symbol* fn_sym = lookup_str(checker, meta->name.start, meta->name.length);
+    assert(fn_sym != NULL);
+    assert(fn_sym.kind == SYMBOL_FUNCTION);
+    scoped_symbol_upvalue(checker->symbols, fn_sym, var);
 }
 
-static bool var_is_current_function_local(Typechecker* const checker, Token var) {
+static bool var_is_current_function_local(Typechecker* const checker, Symbol* var) {
     FuncMeta* meta = function_stack_peek(checker);
-    Symbol* var_sym = lookup_levels_str(checker, var.start, var.length, meta->scope_distance);
+    Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance);
     return var_sym != NULL;
 }
 

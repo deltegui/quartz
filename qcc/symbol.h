@@ -17,6 +17,8 @@ typedef enum {
     SYMBOL_VAR
 } SymbolKind;
 
+struct _SymbolSet;
+
 typedef struct {
     Vector param_names; // Vector<Token>
     // Function type information is stored in Type* type inside Symbol struct
@@ -24,9 +26,7 @@ typedef struct {
     // This is used for out upvalue references. That is, other variables that
     // this function is closed over. Is mainly used to bind open upvalues to
     // those variables.
-    // TODO what happends if two variables are check_and_marked (typechecker)
-    // THIS SHOULD BE A SET, SO IT SHOULD BE A HASHTABLE (HASH SET)
-    Vector upvalues; // Vector<Token>.
+    struct _SymbolSet* upvalues;
 } FunctionSymbol;
 
 typedef struct {
@@ -44,8 +44,7 @@ typedef struct {
     // this variable requested to closed over them. Is mainly used to close
     // open upvalues in that functions when this variable is going to be out
     // of scope.
-    // TODO look the todo of FunctionSymbol upvalues.
-    Vector upvalue_fn_refs; // Vector <Token>
+    struct _SymbolSet* upvalue_fn_refs;
 
     union {
         FunctionSymbol function;
@@ -55,10 +54,12 @@ typedef struct {
 Symbol create_symbol_from_token(Token* token, Type* type);
 Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* const symbol);
-bool symbol_is_closed(Symbol* const symbol, Token fn_name);
-int symbol_get_function_upvalue_index(Symbol* const symbol, Token upvalue);
+// TODO check if this functoin can be used. delete instead
+bool symbol_is_closed(Symbol* const symbol, Symbol* fn_name);
+int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
-#define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (sym->function.upvalues.size)
+// TODO should this be deleted?
+#define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (SYMBOL_SET_SIZE(sym->function.upvalues))
 
 typedef struct {
     Symbol* entries;
@@ -104,17 +105,17 @@ Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* nam
 Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels);
 Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
-void scoped_symbol_upvalue(ScopedSymbolTable* const table, Token fn, Token var_upvalue);
+void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);
 
-typedef struct {
+typedef struct _SymbolSet {
     SymbolTable hash;
-    Vector elements; // Vector<SymbolName*>
+    Vector elements; // Vector<Symbol*>
 } SymbolSet;
 
-void init_symbol_set(SymbolSet* const set);
+SymbolSet* create_symbol_set();
 void free_symbol_set(SymbolSet* const set);
-void symbol_set_add(SymbolSet* const set, SymbolName name);
-#define SYMBOL_SET_GET_ELEMENTS(set) VECTOR_AS(&(set)->elements, SymbolName*)
+void symbol_set_add(SymbolSet* const set, Symbol* symbol);
+#define SYMBOL_SET_GET_ELEMENTS(set) VECTOR_AS(&(set)->elements, Symbol*)
 #define SYMBOL_SET_SIZE(set) ((set)->elements.size)
 
 typedef struct {

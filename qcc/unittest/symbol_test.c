@@ -405,18 +405,6 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
     Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
     Symbol sym_c = create_symbol(c, 3, create_type_function());
     Symbol sym_d = create_symbol(d, 4, CREATE_TYPE_NUMBER());
-    Token tkn_a = (Token){
-        .kind = TOKEN_IDENTIFIER,
-        .start = "a",
-        .length = 1,
-        .line = 1,
-    };
-    Token tkn_fn = (Token){
-        .kind = TOKEN_IDENTIFIER,
-        .start = "c",
-        .length = 1,
-        .line = 1,
-    };
 
     SCOPED_TABLE({
         // Create the symbol table to match this code:
@@ -445,7 +433,7 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
         symbol_start_scope(&table);
 
         // In that scope thell that the var a is closed by fn
-        scoped_symbol_upvalue(&table, tkn_fn, tkn_a);
+        scoped_symbol_upvalue(&table, c, a);
 
         // Iterate over upvalues
         UpvalueIterator it;
@@ -466,29 +454,45 @@ void symbol_set_should_not_repeat_elements() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName a_clone = create_symbol_name("a", 1);
 
-    SymbolSet set;
-    init_symbol_set(&set);
+    SymbolSet* set = create_symbol_set();
     symbol_set_add(&set, a);
     symbol_set_add(&set, a_clone);
 
-    SymbolName** elements = SYMBOL_SET_GET_ELEMENTS(&set);
-    int size = SYMBOL_SET_SIZE(&set);
+    SymbolName** elements = SYMBOL_SET_GET_ELEMENTS(set);
+    int size = SYMBOL_SET_SIZE(set);
     assert_true(size == 1);
     assert_true(elements[0]->hash == a.hash);
     free_symbol_set(&set);
 }
 
+void symbol_set_should_insert_more_than_one() {
+    SymbolName a = create_symbol_name("a", 1);
+    SymbolName bebe = create_symbol_name("bebe", 1);
+
+    SymbolSet* set = create_symbol_set();
+    symbol_set_add(&set, a);
+    symbol_set_add(&set, bebe);
+
+    SymbolName** elements = SYMBOL_SET_GET_ELEMENTS(set);
+    int size = SYMBOL_SET_SIZE(set);
+    assert_true(size == 2);
+    assert_true(elements[0]->hash == a.hash);
+    assert_true(elements[1]->hash == bebe.hash);
+    free_symbol_set(&set);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
-        // cmocka_unit_test(scoped_symbol_should_insert_locals),
-        // cmocka_unit_test(scoped_symbol_should_insert_globals),
-        // cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
-        // cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
-        // cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        // cmocka_unit_test(should_insert_symbols),
-        // cmocka_unit_test(should_insert_sixteen_elements),
-        // cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues)
-        cmocka_unit_test(symbol_set_should_not_repeat_elements)
+        cmocka_unit_test(scoped_symbol_should_insert_locals),
+        cmocka_unit_test(scoped_symbol_should_insert_globals),
+        cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
+        cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
+        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        cmocka_unit_test(should_insert_symbols),
+        cmocka_unit_test(should_insert_sixteen_elements),
+        cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues),
+        cmocka_unit_test(symbol_set_should_not_repeat_elements),
+        cmocka_unit_test(symbol_set_should_insert_more_than_one)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

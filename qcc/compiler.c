@@ -55,8 +55,8 @@ static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_lo
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn);
 static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
 static void emit_closed_variables(Compiler* const compiler, int depth);
-static void emit_close_stack_upvalue(Compiler* const compiler, Token var_token);
-static int get_upvalue_index_in_function(Compiler* const compiler, Token var_token, Token fn_ref);
+static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_token);
+static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_token, Symbol* fn_ref);
 static Token symbol_to_token_identifier(Symbol* symbol);
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
@@ -67,10 +67,10 @@ static void update_param_index(Compiler* const compiler, Symbol* symbol);
 static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index);
 static uint16_t get_variable_index(Compiler* const compiler, const Token* identifier);
 static void emit_variable_declaration(Compiler* const compiler, uint16_t index);
+static void identifier_use_symbol(Compiler* const compiler, Symbol* sym, const struct IdentifierOps* ops);
 static void identifier_use(Compiler* const compiler, Token identifier, const struct IdentifierOps* ops);
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym);
-static int get_current_function_upvalue_index(Compiler* const compiler, Token var);
-static int get_function_upvalue_index(Compiler* const compiler, const char* fn_str, int fn_length, Token var);
+static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -303,29 +303,30 @@ static void emit_closed_variables(Compiler* const compiler, int depth) {
         if (var_sym == NULL) {
             break;
         }
-        Token var_token = symbol_to_token_identifier(var_sym);
-        emit_close_stack_upvalue(compiler, var_token);
-        Token* refs = VECTOR_AS_TOKENS(&var_sym->upvalue_fn_refs);
-        for (uint32_t i = 0; i < var_sym->upvalue_fn_refs.size; i++) {
-            int index = get_upvalue_index_in_function(compiler, var_token, refs[i]);
+        emit_close_stack_upvalue(compiler, var_sym);
+        Symbol** refs = SYMBOL_SET_GET_ELEMENTS(var_sym->upvalue_fn_refs);
+        int size = SYMBOL_SET_SIZE(var_sym->upvalue_fn_refs);
+        for (uint32_t i = 0; i < size; i++) {
+            int index = get_upvalue_index_in_function(compiler, var_sym, refs[i]);
             number_constant_use(compiler, index);
-            identifier_use(compiler, refs[i], &ops_get_identifier);
+            identifier_use_symbol(compiler, refs[i], &ops_get_identifier);
             emit(compiler, OP_BIND_CLOSED);
         }
         emit(compiler, OP_POP);
     }
 }
 
-static void emit_close_stack_upvalue(Compiler* const compiler, Token var_token) {
-    identifier_use(compiler, var_token, &ops_get_identifier);
+static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_sym) {
+    identifier_use_symbol(compiler, var_sym, &ops_get_identifier);
     emit(compiler, OP_CLOSE);
 }
 
-static int get_upvalue_index_in_function(Compiler* const compiler, Token var_token, Token fn_ref) {
-    Symbol* fn_sym = lookup_str(compiler, fn_ref.start, fn_ref.length);
-    assert(fn_sym != NULL);
-    assert(fn_sym->kind == SYMBOL_FUNCTION);
-    return symbol_get_function_upvalue_index(fn_sym, var_token);
+static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_name, Symbol* fn_ref) {
+    // TODO check that this is not needed
+    // Symbol* fn_sym = lookup(compiler, fn_ref->name);
+    // assert(fn_sym != NULL);
+    // assert(fn_sym->kind == SYMBOL_FUNCTION);
+    return symbol_get_function_upvalue_index(fn_ref, var_name);
 }
 
 static Token symbol_to_token_identifier(Symbol* symbol) {
@@ -373,11 +374,13 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {
-    Token* upvalues = VECTOR_AS_TOKENS(&fn_sym->function.upvalues);
-    int size = fn_sym->function.upvalues.size;
+    Symbol** upvalues = SYMBOL_SET_GET_ELEMENTS(fn_sym->function.upvalues);
+    int size = SYMBOL_SET_SIZE(fn_sym->function.upvalues);
     for (int i = 0; i < size; i++) {
-        Symbol* upvalue_sym = lookup_str(compiler, upvalues[i].start, upvalues[i].length);
-        assert(upvalue_sym != NULL);
+        // TODO this shouldn`t be necessary
+        // Symbol* upvalue_sym = lookup_str(compiler, upvalues[i].start, upvalues[i].length);
+        // assert(upvalue_sym != NULL);
+        Symbol* upvalue_sym = upvalues[i];
         number_constant_use(compiler, upvalue_sym->constant_index);
         number_constant_use(compiler, i);
         identifier_use(compiler, fn, &ops_get_identifier);
@@ -467,6 +470,11 @@ static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     identifier_use(compiler, assignment->name, &ops_set_identifier);
 }
 
+static void identifier_use_symbol(Compiler* const compiler, Symbol* sym, const struct IdentifierOps* ops) {
+    Token var_token = symbol_to_token_identifier(sym);
+    identifier_use(compiler, var_token, ops);
+}
+
 static void identifier_use(Compiler* const compiler, Token identifier, const struct IdentifierOps* ops) {
     Symbol* symbol = lookup_str(compiler, identifier.start, identifier.length);
     assert(symbol != NULL);
@@ -479,7 +487,7 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
         emit_param(compiler, ops->op_global, ops->op_global_long, symbol->constant_index);
         return;
     }
-    int index = get_current_function_upvalue_index(compiler, identifier);
+    int index = get_current_function_upvalue_index(compiler, symbol);
     if (index != -1) {
         emit_short(compiler, ops->op_upvalue, index);
         return;
@@ -498,19 +506,14 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
 //     return symbol_is_closed(symbol, fn_token);
 // }
 
-static int get_current_function_upvalue_index(Compiler* const compiler, Token var) {
+static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var) {
     if (compiler->mode == MODE_SCRIPT) {
         return -1;
     }
-    return get_function_upvalue_index(
+    Symbol* fn_sym = lookup_str(
         compiler,
         compiler->func->name->chars,
-        compiler->func->name->length,
-        var);
-}
-
-static int get_function_upvalue_index(Compiler* const compiler, const char* fn_str, int fn_length, Token var) {
-    Symbol* fn_sym = lookup_str(compiler, compiler->func->name->chars, compiler->func->name->length);
+        compiler->func->name->length);
     assert(fn_sym != NULL);
     return symbol_get_function_upvalue_index(fn_sym, var);
 }

@@ -433,7 +433,7 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
         symbol_start_scope(&table);
 
         // In that scope thell that the var a is closed by fn
-        scoped_symbol_upvalue(&table, c, a);
+        scoped_symbol_upvalue(&table, &sym_c, &sym_a);
 
         // Iterate over upvalues
         UpvalueIterator it;
@@ -453,32 +453,36 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
 void symbol_set_should_not_repeat_elements() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName a_clone = create_symbol_name("a", 1);
+    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+    Symbol sym_a_clone = create_symbol(a_clone, 1, CREATE_TYPE_NUMBER());
 
     SymbolSet* set = create_symbol_set();
-    symbol_set_add(&set, a);
-    symbol_set_add(&set, a_clone);
+    symbol_set_add(set, &sym_a);
+    symbol_set_add(set, &sym_a_clone);
 
-    SymbolName** elements = SYMBOL_SET_GET_ELEMENTS(set);
+    Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
     int size = SYMBOL_SET_SIZE(set);
     assert_true(size == 1);
-    assert_true(elements[0]->hash == a.hash);
-    free_symbol_set(&set);
+    assert_true(elements[0]->name.hash == a.hash);
+    free_symbol_set(set);
 }
 
 void symbol_set_should_insert_more_than_one() {
     SymbolName a = create_symbol_name("a", 1);
     SymbolName bebe = create_symbol_name("bebe", 1);
+    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+    Symbol sym_bebe = create_symbol(bebe, 1, CREATE_TYPE_NUMBER());
 
     SymbolSet* set = create_symbol_set();
-    symbol_set_add(&set, a);
-    symbol_set_add(&set, bebe);
+    symbol_set_add(set, &sym_a);
+    symbol_set_add(set, &sym_bebe);
 
-    SymbolName** elements = SYMBOL_SET_GET_ELEMENTS(set);
+    Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
     int size = SYMBOL_SET_SIZE(set);
     assert_true(size == 2);
-    assert_true(elements[0]->hash == a.hash);
-    assert_true(elements[1]->hash == bebe.hash);
-    free_symbol_set(&set);
+    assert_true(elements[0]->name.hash == a.hash);
+    assert_true(elements[1]->name.hash == bebe.hash);
+    free_symbol_set(set);
 }
 
 int main(void) {

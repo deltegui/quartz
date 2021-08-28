@@ -325,13 +325,14 @@ void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
 }
 
 void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* var_upvalue) {
-    Symbol* fn_sym = scoped_symbol_lookup(table, &fn->name);
-    assert(fn_sym != NULL);
-    assert(fn_sym->kind == SYMBOL_FUNCTION);
-    symbol_set_add(fn_sym->function.upvalues, var_upvalue);
-    Symbol* var_sym = scoped_symbol_lookup(table, &var_upvalue->name);
-    assert(var_sym != NULL);
-    symbol_set_add(var_sym->upvalue_fn_refs, fn);
+    // TODO esto no es necesario no?
+    // Symbol* fn_sym = scoped_symbol_lookup(table, &fn->name);
+    // assert(fn_sym != NULL);
+    // assert(fn_sym->kind == SYMBOL_FUNCTION);
+    symbol_set_add(fn->function.upvalues, var_upvalue);
+    // Symbol* var_sym = scoped_symbol_lookup(table, &var_upvalue->name);
+    // assert(var_sym != NULL);
+    symbol_set_add(var_upvalue->upvalue_fn_refs, fn);
 }
 
 SymbolSet* create_symbol_set() {

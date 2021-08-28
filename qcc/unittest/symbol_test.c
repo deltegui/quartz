@@ -487,16 +487,16 @@ void symbol_set_should_insert_more_than_one() {
 
 int main(void) {
     const struct CMUnitTest tests[] = {
-        cmocka_unit_test(scoped_symbol_should_insert_locals),
-        cmocka_unit_test(scoped_symbol_should_insert_globals),
-        cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
-        cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
-        cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
-        cmocka_unit_test(should_insert_symbols),
-        cmocka_unit_test(should_insert_sixteen_elements),
-        cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues),
-        cmocka_unit_test(symbol_set_should_not_repeat_elements),
-        cmocka_unit_test(symbol_set_should_insert_more_than_one)
+        // cmocka_unit_test(scoped_symbol_should_insert_locals),
+        // cmocka_unit_test(scoped_symbol_should_insert_globals),
+        // cmocka_unit_test(scoped_symbol_should_insert_and_lookup),
+        // cmocka_unit_test(scoped_symbol_should_do_lookups_with_limited_levels),
+        // cmocka_unit_test(should_return_null_if_symbol_does_not_exist),
+        // cmocka_unit_test(should_insert_symbols),
+        // cmocka_unit_test(should_insert_sixteen_elements),
+        cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues)
+        // cmocka_unit_test(symbol_set_should_not_repeat_elements),
+        // cmocka_unit_test(symbol_set_should_insert_more_than_one)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -1,10 +1,10 @@
 #include "ctable.h"
+#include <string.h> // for memcmp
 #include "object.h" // for hash function
 
 #define LOAD_FACTOR 0.7
 
-#define IS_EMPTY(symbol) ((symbol)->name.length == 0)
-#define S_GROW_CAPACITY(cap) (cap < 8 ? 8 : cap * 2)
+#define IS_EMPTY(symbol) (((CTableEntry*) symbol)->key.length == 0)
 #define SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
 
 #define CTABLE_KEY_EQUALS(first, second)\
@@ -13,7 +13,7 @@
     memcmp((first).str, (second).str, (second).length) == 0
 
 static void grow_symbol_table(CTable* const table);
-static CTableElement* find(CTable* const table, CTableKey* name);
+static CTableEntry* find(CTable* const table, CTableKey* name);
 
 CTableKey create_ctable_key(const char* str, int length) {
     assert(length != 0);
@@ -39,10 +39,10 @@ void free_ctable(CTable* const table) {
         return;
     }
     free(table->entries);
-    init_ctable(table);
+    init_ctable(table, table->element_size);
 }
 
-CTableEntry* ctable_find(CTable* const table, CTableKey* key) {
+void* ctable_find(CTable* const table, CTableKey* key) {
     if (table->capacity == 0) {
         return NULL;
     }
@@ -53,35 +53,35 @@ CTableEntry* ctable_find(CTable* const table, CTableKey* key) {
     return entry;
 }
 
-void ctable_set(CTable* const table, CTableKey* key, void* value) {
+void ctable_set(CTable* const table, CTableKey key, void* value) {
     if (SHOULD_GROW(table)) {
         grow_symbol_table(table);
     }
     assert(table->size + 1 < table->capacity);
-    CTableEntry* destination = find(table, key);
-    destination.key = key;
-    destination.value = value;
+    CTableEntry* destination = (CTableEntry*) find(table, &key);
+    destination->key = key;
+    destination->value = value;
     table->size++;
 }
 
 static void grow_symbol_table(CTable* const table) {
-    CTableEntry* old_entries = table->entries;
+    void* old_entries = table->entries;
     int old_capacity = table->capacity;
+
     table->capacity = S_GROW_CAPACITY(old_capacity);
     table->mask = table->capacity - 1;
-    size_t entry_size = sizeof(CTableEntry) + table->element_size;
-    table->entries = (CTableEntry*) malloc(entry_size * table->capacity);
+    table->entries = malloc(table->element_size * table->capacity);
 
     for (int i = 0; i < table->capacity; i++) {
-        CTableEntry* entry = &table->entries[i];
-        entry->name.length = 0;
+        CTableEntry* entry = (CTableEntry*) &table->entries[i];
+        entry->key.length = 0;
     }
 
     for (int i = 0; i < old_capacity; i++) {
         if (IS_EMPTY(&old_entries[i])) {
             continue;
         }
-        CTableEntry* entry = find(table, &old_entries[i].name);
+        CTableEntry* entry = (CTableEntry*) find(table, &old_entries[i].key);
         *entry = old_entries[i];
     }
 
@@ -92,18 +92,18 @@ static void grow_symbol_table(CTable* const table) {
     }
 }
 
-static CTableElement* find(CTable* const table, CTableKey* name) {
+static CTableEntry* find(CTable* const table, CTableKey* key) {
     assert(table != NULL);
-    assert(name != NULL);
-    assert(name->str != NULL);
-    assert(name->length != 0);
-    int index = name->hash & table->mask;
+    assert(key != NULL);
+    assert(key->str != NULL);
+    assert(key->length != 0);
+    int index = key->hash & table->mask;
     for (;;) {
-        CTableKey* current = &table->entries[index];
+        CTableEntry* current = &table->entries[index];
         if (IS_EMPTY(current)) {
             return current;
         }
-        if (CTABLE_KEY_EQUALS(current->name, *name)) {
+        if (CTABLE_KEY_EQUALS(current->key, *key)) {
             return current;
         }
         index = index + 1 & table->mask;

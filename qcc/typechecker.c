@@ -338,7 +338,7 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
     // SymbolName fn_name = create_symbol_name(meta->name.start, meta->name.length);
     Symbol* fn_sym = lookup_str(checker, meta->name.start, meta->name.length);
     assert(fn_sym != NULL);
-    assert(fn_sym.kind == SYMBOL_FUNCTION);
+    assert(fn_sym->kind == SYMBOL_FUNCTION);
     scoped_symbol_upvalue(checker->symbols, fn_sym, var);
 }
 

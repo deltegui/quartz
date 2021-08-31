@@ -55,10 +55,32 @@ void ctable_can_insert_values() {
     });
 }
 
+void ctable_can_iterate_over_values() {
+    CTableKey a_key = create_ctable_key("a", 1);
+    CTableKey b_key = create_ctable_key("b", 1);
+    CTableKey c_key = create_ctable_key("c", 1);
+    CTableKey d_key = create_ctable_key("d", 1);
+
+    CTABLE_TEST(int, {
+        CTABLE_SET_INT(&table, a_key, 0);
+        CTABLE_SET_INT(&table, b_key, 1);
+        CTABLE_SET_INT(&table, c_key, 2);
+        CTABLE_SET_INT(&table, d_key, 3);
+
+        int times = 0;
+        CTABLE_FOREACH(&table, int, {
+            times++;
+            assert_true(current == i);
+        });
+        assert_true(times == 4);
+    });
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(ctable_can_insert_and_search_for_elements),
-        cmocka_unit_test(ctable_can_insert_values)
+        cmocka_unit_test(ctable_can_insert_values),
+        cmocka_unit_test(ctable_can_iterate_over_values)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

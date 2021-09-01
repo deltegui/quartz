@@ -70,7 +70,7 @@ void ctable_can_iterate_over_values() {
         int times = 0;
         CTABLE_FOREACH(&table, int, {
             times++;
-            assert_true(current == i);
+            assert_true(elements[i] == i);
         });
         assert_true(times == 4);
     });

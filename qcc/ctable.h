@@ -35,7 +35,6 @@ CTableEntry* ctable_next_add_position(CTable* const table, CTableKey key);
 #define CTABLE_FOREACH(table, type, ...) do {\
     type* elements = (type*) (table)->data.elements;\
     for (int i = 0; i < (table)->data.size; i++) {\
-        type current = elements[i];\
         __VA_ARGS__\
     }\
 } while(false)

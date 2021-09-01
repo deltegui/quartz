@@ -3,6 +3,8 @@
 #include "token.h" // for Vector<Token>
 #include "object.h" // for hash function
 
+#include "ctable.h"
+
 #define LOAD_FACTOR 0.7
 
 #define IS_EMPTY(symbol) ((symbol)->name.length == 0)
@@ -16,15 +18,11 @@ static void grow_symbol_table(SymbolTable* const table);
 static SymbolKind kind_from_type(Type* type);
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
 
-SymbolName create_symbol_name(const char* str, int length) {
-    assert(length != 0);
-    assert(str != NULL);
-    SymbolName name = (SymbolName){
-        .str = str,
-        .length = length,
-        .hash = hash_string(str, length),
+SymbolName create_symbol_name(const char* start, int length) {
+    CTableKey key = create_ctable_key(start, length);
+    return (SymbolName) {
+        .key = key,
     };
-    return name;
 }
 
 static bool symbol_name_equals(const SymbolName* first, const SymbolName* second) {
@@ -34,7 +32,7 @@ static bool symbol_name_equals(const SymbolName* first, const SymbolName* second
     ) {
         return false;
     }
-    return memcmp(first->str, second->str, first->length) == 0;
+    return memcmp(first->start, second->start, first->length) == 0;
 }
 
 Symbol create_symbol_from_token(Token* token, Type* type) {
@@ -112,19 +110,14 @@ int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue) {
 }
 
 void init_symbol_table(SymbolTable* const table) {
-    table->size = 0;
-    table->capacity = 0;
-    table->entries = NULL;
+    init_ctable(table, sizeof(Symbol));
 }
 
 void free_symbol_table(SymbolTable* const table) {
-    for (int i = 0; i < table->capacity; i++) {
-        if (! IS_EMPTY(&table->entries[i])) {
-            free_symbol(&table->entries[i]);
-        }
-    }
-    free(table->entries);
-    init_symbol_table(table);
+    CTABLE_FOREACH(table, Symbol, {
+        free_symbol(&elements[i]);
+    });
+    free_ctable(table);
 }
 
 Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name) {

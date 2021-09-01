@@ -5,12 +5,10 @@
 #include "vector.h"
 
 typedef struct {
-    const char* str;
-    int length;
-    uint32_t hash;
+    CTableKey;
 } SymbolName;
 
-SymbolName create_symbol_name(const char* str, int length);
+SymbolName create_symbol_name(const char* start, int length);
 
 typedef enum {
     SYMBOL_FUNCTION,
@@ -62,9 +60,7 @@ int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 #define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (SYMBOL_SET_SIZE(sym->function.upvalues))
 
 typedef struct {
-    Symbol* entries;
-    int size;
-    int capacity;
+    CTable;
 } SymbolTable;
 
 void init_symbol_table(SymbolTable* const table);

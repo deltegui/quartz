@@ -13,9 +13,9 @@
     __VA_ARGS__\
     printf(\
         "SymbolTable size: %d, capacity: %d, load factor: %f\n",\
-        table.size,\
-        table.capacity,\
-        (double)table.size / (double)table.capacity);\
+        table.table.size,\
+        table.table.capacity,\
+        (double)table.table.size / (double)table.table.capacity);\
     free_symbol_table(&table);\
     free_type_pool();\
 } while (false)
@@ -37,9 +37,14 @@ typedef struct {
 } symbol_t;
 
 static void assert_key(SymbolName* first, SymbolName* second) {
-    assert_int_equal(first->length, second->length);
-    assert_int_equal(memcmp(first->str, second->str, first->length), 0);
-    assert_int_equal(first->hash, second->hash);
+    assert_int_equal(SYMBOL_NAME_LENGTH(*first), SYMBOL_NAME_LENGTH(*second));
+    assert_int_equal(
+        memcmp(
+            SYMBOL_NAME_START(*first),
+            SYMBOL_NAME_START(*second),
+            SYMBOL_NAME_LENGTH(*first)),
+        0);
+    assert_int_equal(SYMBOL_NAME_HASH(*first), SYMBOL_NAME_HASH(*second));
 }
 
 static void assert_entry(Symbol* first, Symbol* second) {
@@ -442,7 +447,7 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
         // The first one should be a
         Symbol* sym_a_upvalue = upvalue_iterator_next(&it);
         assert_non_null(sym_a_upvalue);
-        assert_true(memcmp(sym_a_upvalue->name.str, a.str, sizeof(char)) == 0);
+        assert_key(&sym_a_upvalue->name, &a);
 
         // And that's it, it should be empty.
         Symbol* this_is_null = upvalue_iterator_next(&it);
@@ -463,7 +468,7 @@ void symbol_set_should_not_repeat_elements() {
     Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
     int size = SYMBOL_SET_SIZE(set);
     assert_true(size == 1);
-    assert_true(elements[0]->name.hash == a.hash);
+    assert_key(&elements[0]->name, &a);
     free_symbol_set(set);
 }
 
@@ -480,8 +485,8 @@ void symbol_set_should_insert_more_than_one() {
     Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
     int size = SYMBOL_SET_SIZE(set);
     assert_true(size == 2);
-    assert_true(elements[0]->name.hash == a.hash);
-    assert_true(elements[1]->name.hash == bebe.hash);
+    assert_key(&elements[0]->name, &a);
+    assert_key(&elements[1]->name, &bebe);
     free_symbol_set(set);
 }
 

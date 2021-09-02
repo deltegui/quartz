@@ -28,6 +28,16 @@ CTableKey create_ctable_key(const char* start, int length) {
     return name;
 }
 
+bool ctable_key_equals(CTableKey* first, CTableKey* second) {
+    if (
+        first->hash != second->hash ||
+        first->length != second->length
+    ) {
+        return false;
+    }
+    return memcmp(first->start, second->start, first->length) == 0;
+}
+
 static void reset_data(CTable* const table, size_t element_size) {
     table->size = 0;
     table->capacity = 0;

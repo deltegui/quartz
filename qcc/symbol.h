@@ -3,12 +3,16 @@
 
 #include "type.h"
 #include "vector.h"
+#include "ctable.h"
 
 typedef struct {
-    CTableKey;
+    CTableKey key;
 } SymbolName;
 
 SymbolName create_symbol_name(const char* start, int length);
+
+#define SYMBOL_NAME_START(name) (name.key.start)
+#define SYMBOL_NAME_LENGTH(name) (name.key.length)
 
 typedef enum {
     SYMBOL_FUNCTION,
@@ -60,7 +64,7 @@ int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 #define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (SYMBOL_SET_SIZE(sym->function.upvalues))
 
 typedef struct {
-    CTable;
+    CTable table; // CTable<Symbol>
 } SymbolTable;
 
 void init_symbol_table(SymbolTable* const table);
@@ -69,9 +73,12 @@ Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name);
 Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length);
 void symbol_insert(SymbolTable* const table, Symbol entry);
 
+#define SYMBOL_TABLE_FOREACH(symbols, block) CTABLE_FOREACH(&(symbols)->table, Symbol, block)
+
 typedef struct _SymbolNode {
     SymbolTable symbols;
     struct _SymbolNode* father;
+    // TODO childs should be a Vector type
     struct _SymbolNode* childs;
     int size;
     int capacity;
@@ -104,15 +111,16 @@ void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);
 
 typedef struct _SymbolSet {
-    SymbolTable hash;
-    Vector elements; // Vector<Symbol*>
+    CTable table; // CTable<Symbol*>
 } SymbolSet;
 
 SymbolSet* create_symbol_set();
 void free_symbol_set(SymbolSet* const set);
 void symbol_set_add(SymbolSet* const set, Symbol* symbol);
-#define SYMBOL_SET_GET_ELEMENTS(set) VECTOR_AS(&(set)->elements, Symbol*)
-#define SYMBOL_SET_SIZE(set) ((set)->elements.size)
+
+#define SYMBOL_SET_GET_ELEMENTS(set) ((Symbol**) set->table.data.elements)
+#define SYMBOL_SET_SIZE(set) (set->table.data.size)
+#define SYMBOL_SET_FOREACH(set, block) CTABLE_FOREACH((CTable*)set, Symbol*, block)
 
 typedef struct {
     SymbolNode* current;

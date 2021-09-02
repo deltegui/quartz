@@ -1,21 +1,10 @@
 #include "symbol.h"
 #include <string.h>
 #include "token.h" // for Vector<Token>
-#include "object.h" // for hash function
 
-#include "ctable.h"
-
-#define LOAD_FACTOR 0.7
-
-#define IS_EMPTY(symbol) ((symbol)->name.length == 0)
-#define S_GROW_CAPACITY(cap) (cap < 8 ? 8 : cap * 2)
-#define SHOULD_GROW(table) (table->size + 1 > table->capacity * LOAD_FACTOR)
-
-static bool symbol_name_equals(const SymbolName* first, const SymbolName* second);
-static void create_function_symbol(Symbol* const symbol);
-static Symbol* find(SymbolTable* const table, const SymbolName* name);
-static void grow_symbol_table(SymbolTable* const table);
+static bool symbol_name_equals(SymbolName* first, SymbolName* second);
 static SymbolKind kind_from_type(Type* type);
+static void create_function_symbol(Symbol* const symbol);
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
 
 SymbolName create_symbol_name(const char* start, int length) {
@@ -25,14 +14,8 @@ SymbolName create_symbol_name(const char* start, int length) {
     };
 }
 
-static bool symbol_name_equals(const SymbolName* first, const SymbolName* second) {
-    if (
-        first->hash != second->hash ||
-        first->length != second->length
-    ) {
-        return false;
-    }
-    return memcmp(first->start, second->start, first->length) == 0;
+static bool symbol_name_equals(SymbolName* first, SymbolName* second) {
+    return ctable_key_equals((CTableKey*)first, (CTableKey*)second);
 }
 
 Symbol create_symbol_from_token(Token* token, Type* type) {
@@ -87,48 +70,44 @@ void free_symbol(Symbol* const symbol) {
 }
 
 bool symbol_is_closed(Symbol* const symbol, Symbol* fn_sym) {
-    Symbol** symbols = SYMBOL_SET_GET_ELEMENTS(symbol->upvalue_fn_refs);
-    uint32_t size = SYMBOL_SET_SIZE(symbol->upvalue_fn_refs);
-    for (uint32_t i = 0; i < size; i++) {
-        if (symbol_name_equals(&symbols[i]->name, &fn_sym->name)) {
+    SYMBOL_SET_FOREACH(symbol->upvalue_fn_refs, {
+        if (symbol_name_equals(&elements[i]->name, &fn_sym->name)) {
             return true;
         }
-    }
+    });
     return false;
 }
 
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue) {
     assert(symbol->kind == SYMBOL_FUNCTION);
-    Symbol** symbols = SYMBOL_SET_GET_ELEMENTS(symbol->function.upvalues);
-    uint32_t size = SYMBOL_SET_SIZE(symbol->function.upvalues);
-    for (uint32_t i = 0; i < size; i++) {
-        if (symbol_name_equals(&symbols[i]->name, &upvalue->name)) {
+    SYMBOL_SET_FOREACH(symbol->upvalue_fn_refs, {
+        if (symbol_name_equals(&elements[i]->name, &upvalue->name)) {
             return i;
         }
-    }
+    });
     return -1;
 }
 
 void init_symbol_table(SymbolTable* const table) {
-    init_ctable(table, sizeof(Symbol));
+    init_ctable((CTable*)table, sizeof(Symbol));
 }
 
 void free_symbol_table(SymbolTable* const table) {
-    CTABLE_FOREACH(table, Symbol, {
+    CTable* ctable = (CTable*) table;
+    CTABLE_FOREACH(ctable, Symbol, {
         free_symbol(&elements[i]);
     });
-    free_ctable(table);
+    free_ctable(ctable);
 }
 
 Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name) {
-    if (table->capacity == 0) {
+    CTable* ctable = (CTable*) table;
+    CTableEntry* entry = ctable_find(ctable, (CTableKey*)name);
+    if (entry == NULL) {
         return NULL;
     }
-    Symbol* symbol = find(table, name);
-    if (IS_EMPTY(symbol)) {
-        return NULL;
-    }
-    return symbol;
+    Symbol* elements = (Symbol*) ctable->data.elements;
+    return &elements[entry->vector_pos];
 }
 
 Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length) {
@@ -137,61 +116,7 @@ Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length
 }
 
 void symbol_insert(SymbolTable* const table, Symbol symbol) {
-    if (SHOULD_GROW(table)) {
-        grow_symbol_table(table);
-    }
-    assert(table->size + 1 < table->capacity);
-    Symbol* destination = find(table, &symbol.name);
-    (*destination) = symbol;
-    table->size++;
-}
-
-static void grow_symbol_table(SymbolTable* const table) {
-    Symbol* old_entries = table->entries;
-    int old_capacity = table->capacity;
-    table->capacity = S_GROW_CAPACITY(old_capacity);
-    table->entries = (Symbol*) malloc(sizeof(Symbol) * table->capacity);
-
-    for (int i = 0; i < table->capacity; i++) {
-        Symbol* symbol = &table->entries[i];
-        symbol->name.length = 0;
-    }
-
-    for (int i = 0; i < old_capacity; i++) {
-        if (IS_EMPTY(&old_entries[i])) {
-            continue;
-        }
-        Symbol* symbol = find(table, &old_entries[i].name);
-        *symbol = old_entries[i];
-    }
-
-    // Just free the array if wasnt NULL. Do not free key str.
-    // old_entries is NULL if is the first time that is initialized.
-    if (old_entries != NULL) {
-        free(old_entries);
-    }
-}
-
-static Symbol* find(SymbolTable* const table, const SymbolName* name) {
-    assert(table != NULL);
-    assert(name != NULL);
-    assert(name->str != NULL);
-    assert(name->length != 0);
-    int index = name->hash & (table->capacity - 1);
-    for (;;) {
-        Symbol* current = &table->entries[index];
-        if (IS_EMPTY(current)) {
-            return current;
-        }
-        if (
-            current->name.hash == name->hash &&
-            current->name.length == name->length &&
-            memcmp(current->name.str, name->str, name->length) == 0
-        ) {
-            return current;
-        }
-        index = index + 1 & (table->capacity - 1);
-    }
+    CTABLE_SET((CTable*)table, symbol.name.key, symbol, Symbol);
 }
 
 #define NODE_CHILDS_SHOULD_GROW(node) (node->size + 1 > node->capacity)
@@ -330,27 +255,23 @@ void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* v
 
 SymbolSet* create_symbol_set() {
     SymbolSet* set = (SymbolSet*) malloc(sizeof(SymbolSet));
-    init_symbol_table(&set->hash);
-    init_vector(&set->elements, sizeof(Symbol*));
+    init_ctable((CTable*)set, sizeof(Symbol*));
     return set;
 }
 
 void free_symbol_set(SymbolSet* const set) {
-    free_symbol_table(&set->hash);
-    free_vector(&set->elements);
+    free_ctable((CTable*)set);
     free(set);
+    // Dont free the table symbols. We dont own that.
 }
 
 void symbol_set_add(SymbolSet* const set, Symbol* symbol) {
-    Symbol* existing = symbol_lookup(&set->hash, &symbol->name);
+    CTable* ctable = (CTable*) set;
+    CTableEntry* existing = ctable_find(ctable, (CTableKey*)&symbol->name);
     if (existing != NULL) {
         return;
     }
-    symbol_insert(&set->hash, *symbol);
-    // TODO is needed?
-    Symbol* inserted = symbol_lookup(&set->hash, &symbol->name);
-    assert(inserted != NULL);
-    VECTOR_ADD(&set->elements, inserted, Symbol*);
+    CTABLE_SET(ctable, symbol->name.key, symbol, Symbol*);
 }
 
 void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* table, int depth) {
@@ -366,17 +287,16 @@ Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
         return NULL;
     }
     for (;;) {
-        if (iterator->current_upvalue >= iterator->current->symbols.capacity) {
+        int size = CTABLE_SIZE(iterator->current->symbols.table);
+        if (iterator->current_upvalue >= size) {
             if (! find_next_scope_with_upvalues(iterator)) {
                 return NULL;
             }
         }
-        assert(iterator->current->symbols.size > 0);
-        Symbol* sym = &iterator->current->symbols.entries[iterator->current_upvalue];
+        assert(CTABLE_SIZE(iterator->current->symbols.table) > 0);
+        Symbol* symbols = CTABLE_AS(iterator->current->symbols.table, Symbol);
+        Symbol* sym = &symbols[iterator->current_upvalue];
         iterator->current_upvalue++;
-        if (IS_EMPTY(sym)) {
-            continue;
-        }
         if (SYMBOL_SET_SIZE(sym->upvalue_fn_refs) > 0) {
             return sym;
         }
@@ -389,7 +309,9 @@ static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator) {
         iterator->depth--;
         iterator->current = iterator->current->father;
         iterator->current_upvalue = 0;
-        if (iterator->current->symbols.size > 0) {
+
+        int size = CTABLE_SIZE(iterator->current->symbols.table);
+        if (size > 0) {
             return true;
         }
     }

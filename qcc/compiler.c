@@ -332,8 +332,8 @@ static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_n
 static Token symbol_to_token_identifier(Symbol* symbol) {
     return (Token){
         .kind = TOKEN_IDENTIFIER,
-        .start = symbol->name.str,
-        .length = symbol->name.length,
+        .start = SYMBOL_NAME_START(symbol->name),
+        .length = SYMBOL_NAME_LENGTH(symbol->name),
         .line = symbol->declaration_line,
     };
 }

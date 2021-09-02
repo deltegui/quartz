@@ -11,6 +11,7 @@ typedef struct {
 } CTableKey;
 
 CTableKey create_ctable_key(const char* start, int length);
+bool ctable_key_equals(CTableKey* first, CTableKey* second);
 
 typedef struct {
     CTableKey key;
@@ -51,5 +52,8 @@ CTableEntry* ctable_next_add_position(CTable* const table, CTableKey key);
     type* elements = (type*) (table)->data.elements;\
     *(dst) = elements[entry->vector_pos];\
 } while(false)
+
+#define CTABLE_SIZE(table) ((table).data.size)
+#define CTABLE_AS(table, type) VECTOR_AS(&(table).data, type)
 
 #endif

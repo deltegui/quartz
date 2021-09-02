@@ -46,9 +46,10 @@ static void reset_data(CTable* const table, size_t element_size) {
     table->element_size = element_size;
 }
 
+// TODO check if element_size is needed for the hash or its only used here
 void init_ctable(CTable* const table, size_t element_size) {
     reset_data(table, element_size);
-    init_vector(&table->data, sizeof(void*));
+    init_vector(&table->data, element_size);
 }
 
 void free_ctable(CTable* const table) {
@@ -134,7 +135,7 @@ static void grow_symbol_table(CTable* const table) {
 static CTableEntry* find(CTable* const table, CTableKey* key) {
     assert(table != NULL);
     assert(key != NULL);
-    assert(key->str != NULL);
+    assert(key->start != NULL);
     assert(key->length != 0);
     int index = key->hash & table->mask;
     for (;;) {

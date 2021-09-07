@@ -513,6 +513,16 @@ static void should_fail_if_you_use_reserved_words_as_identifiers() {
     assert_has_errors(" fn {} () {} ");
 }
 
+static int test_setup(void** args) {
+    init_type_pool();
+    return 0;
+}
+
+static int test_teardown(void** args) {
+    free_type_pool();
+    return 0;
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_returns),
@@ -532,5 +542,5 @@ int main(void) {
         cmocka_unit_test(should_fail_if_you_use_reserved_words_as_identifiers),
         cmocka_unit_test(should_fail_if_return_is_not_inside_a_function)
     };
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

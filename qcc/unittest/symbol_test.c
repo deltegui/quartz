@@ -197,6 +197,7 @@ static void should_insert_sixteen_elements() {
                 &symbol->type);
             Symbol* actual = symbol_lookup(&table, &key);
             assert_entry(&expected, actual);
+            free_symbol(&expected);
         }
     });
 }
@@ -470,6 +471,9 @@ void symbol_set_should_not_repeat_elements() {
     assert_true(size == 1);
     assert_key(&elements[0]->name, &a);
     free_symbol_set(set);
+
+    free_symbol(&sym_a);
+    free_symbol(&sym_a_clone);
 }
 
 void symbol_set_should_insert_more_than_one() {
@@ -488,6 +492,9 @@ void symbol_set_should_insert_more_than_one() {
     assert_key(&elements[0]->name, &a);
     assert_key(&elements[1]->name, &bebe);
     free_symbol_set(set);
+
+    free_symbol(&sym_a);
+    free_symbol(&sym_bebe);
 }
 
 int main(void) {

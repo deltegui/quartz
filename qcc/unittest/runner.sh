@@ -1,5 +1,6 @@
 if [ "$1" = "--help" ]; then
     echo "Use -ed to enable debug"
+    echo "Use -cov to enable coverage reports"
     exit 0
 fi
 
@@ -13,9 +14,13 @@ if [ "$1" = "-ed" ]; then
     MACROS="-D DEBUG"
 fi
 
+if [ "$1" = "-cov" ]; then
+    CC="$CC -fprofile-arcs -ftest-coverage"
+fi
+
 KERNEL=`uname -s`
 if [ $KERNEL = "Linux" ]; then
-    LIBS="-lcmocka -lm"
+    LIBS="$LIBS -lm"
 fi
 
 SOURCES=`find ../*.c -maxdepth 1 ! -name qcc.c | tr '\n' ' '`

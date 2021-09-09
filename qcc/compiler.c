@@ -306,7 +306,7 @@ static void emit_closed_variables(Compiler* const compiler, int depth) {
         emit_close_stack_upvalue(compiler, var_sym);
         Symbol** refs = SYMBOL_SET_GET_ELEMENTS(var_sym->upvalue_fn_refs);
         int size = SYMBOL_SET_SIZE(var_sym->upvalue_fn_refs);
-        for (uint32_t i = 0; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             int index = get_upvalue_index_in_function(compiler, var_sym, refs[i]);
             number_constant_use(compiler, index);
             identifier_use_symbol(compiler, refs[i], &ops_get_identifier);

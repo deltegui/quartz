@@ -112,7 +112,7 @@ static void grow_symbol_table(CTable* const table) {
     table->mask = table->capacity - 1;
     table->entries = (CTableEntry*) malloc(sizeof(CTableEntry) * table->capacity);
 
-    for (int i = 0; i < table->capacity; i++) {
+    for (uint32_t i = 0; i < table->capacity; i++) {
         CTableEntry* entry = (CTableEntry*) &table->entries[i];
         entry->key.length = 0;
     }
@@ -149,3 +149,4 @@ static CTableEntry* find(CTable* const table, CTableKey* key) {
         index = index + 1 & table->mask;
     }
 }
+

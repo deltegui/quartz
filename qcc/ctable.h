@@ -23,8 +23,8 @@ typedef struct {
     size_t element_size;
 
     CTableEntry* entries;
-    int size;
-    int capacity;
+    uint32_t size;
+    uint32_t capacity;
     int mask;
 } CTable;
 
@@ -35,7 +35,7 @@ CTableEntry* ctable_next_add_position(CTable* const table, CTableKey key);
 
 #define CTABLE_FOREACH(table, type, ...) do {\
     type* elements = (type*) (table)->data.elements;\
-    for (int i = 0; i < (table)->data.size; i++) {\
+    for (uint32_t i = 0; i < (table)->data.size; i++) {\
         __VA_ARGS__\
     }\
 } while(false)
@@ -57,3 +57,4 @@ CTableEntry* ctable_next_add_position(CTable* const table, CTableKey key);
 #define CTABLE_AS(table, type) VECTOR_AS(&(table).data, type)
 
 #endif
+

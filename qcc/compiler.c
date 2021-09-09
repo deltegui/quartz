@@ -47,6 +47,7 @@ static Chunk* current_chunk(Compiler* const compiler);
 static void start_scope(Compiler* const compiler);
 static void end_scope(Compiler* const compiler);
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
+static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length);
 
 static void emit(Compiler* const compiler, uint8_t bytecode);
 static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param);
@@ -221,6 +222,10 @@ static Symbol* lookup_str(Compiler* const compiler, const char* name, int length
     return scoped_symbol_lookup_str(&compiler->symbols, name, length);
 }
 
+static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length) {
+    return scoped_symbol_lookup_function_str(&compiler->symbols, name, length);
+}
+
 static void emit(Compiler* const compiler, uint8_t bytecode) {
     chunk_write(current_chunk(compiler), bytecode, compiler->last_line);
 }
@@ -323,7 +328,7 @@ static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_sym) 
 
 static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_name, Symbol* fn_ref) {
     // TODO check that this is not needed
-    // Symbol* fn_sym = lookup(compiler, fn_ref->name);
+    // Symbol* fn_sym = lookup_str(compiler, SYMBOL_NAME_START(fn_ref->name), SYMBOL_NAME_LENGTH(fn_ref->name));
     // assert(fn_sym != NULL);
     // assert(fn_sym->kind == SYMBOL_FUNCTION);
     return symbol_get_function_upvalue_index(fn_ref, var_name);
@@ -496,6 +501,7 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
     emit_short(compiler, ops->op_local, symbol->constant_index);
 }
 
+// TODO delete this dead code
 // static int symbol_is_closed(Compiler* const compiler, Symbol* symbol) {
 //     Token fn_token = (Token){
 //         .kind = TOKEN_IDENTIFIER,
@@ -510,7 +516,8 @@ static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* 
     if (compiler->mode == MODE_SCRIPT) {
         return -1;
     }
-    Symbol* fn_sym = lookup_str(
+
+    Symbol* fn_sym = fn_lookup_str(
         compiler,
         compiler->func->name->chars,
         compiler->func->name->length);

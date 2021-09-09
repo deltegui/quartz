@@ -216,6 +216,26 @@ Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* nam
     return scoped_symbol_lookup(table, &symbol_name);
 }
 
+// TODO this function is like scoped_symbol_lookup
+static Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName* name) {
+    assert(table->current != NULL);
+    SymbolNode* current = table->current;
+    Symbol* symbol = NULL;
+    while (current != NULL) {
+        symbol = symbol_lookup(&current->symbols, name);
+        if (symbol != NULL && symbol->kind == SYMBOL_FUNCTION) {
+            return symbol;
+        }
+        current = current->father;
+    }
+    return NULL;
+}
+
+Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return scoped_symbol_lookup_function(table, &symbol_name);
+}
+
 // TODO merge this with traditional scoped_symbol_lookup
 Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels) {
     assert(table->current != NULL);

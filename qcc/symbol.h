@@ -108,6 +108,7 @@ Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name);
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length);
 Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels);
 Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels);
+Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);
 

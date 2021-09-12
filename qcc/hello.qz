@@ -1,7 +1,12 @@
 fn hola() {
-    print "hola";
-    var hola = 5;
-    hola();
+    print "exec hola";
+    var a = 5;
+    a = a + 1;
+    print a;
+    fn pipo() {
+        print a;
+    }
+    pipo();
 }
 
 hola();

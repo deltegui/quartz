@@ -120,9 +120,9 @@ SymbolSet* create_symbol_set();
 void free_symbol_set(SymbolSet* const set);
 void symbol_set_add(SymbolSet* const set, Symbol* symbol);
 
-#define SYMBOL_SET_GET_ELEMENTS(set) ((Symbol**) set->table.data.elements)
-#define SYMBOL_SET_SIZE(set) (set->table.data.size)
-#define SYMBOL_SET_FOREACH(set, block) CTABLE_FOREACH((CTable*)set, Symbol*, block)
+#define SYMBOL_SET_GET_ELEMENTS(set) ((Symbol**) ((set)->table.data.elements))
+#define SYMBOL_SET_SIZE(set) ((set)->table.data.size)
+#define SYMBOL_SET_FOREACH(set, block) CTABLE_FOREACH((CTable*)(set), Symbol*, block)
 
 typedef struct {
     SymbolNode* current;

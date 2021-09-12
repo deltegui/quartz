@@ -49,10 +49,9 @@ static SymbolKind kind_from_type(Type* type) {
 }
 
 static void create_function_symbol(Symbol* const symbol) {
-    FunctionSymbol fn_sym;
-    init_vector(&fn_sym.param_names, sizeof(Token));
-    fn_sym.upvalues = create_symbol_set();
-    symbol->function = fn_sym;
+    FunctionSymbol* fn_sym = &symbol->function;
+    init_vector(&fn_sym->param_names, sizeof(Token));
+    fn_sym->upvalues = create_symbol_set();
 }
 
 void free_symbol(Symbol* const symbol) {

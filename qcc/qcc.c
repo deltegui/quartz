@@ -35,7 +35,7 @@ const char* read_file(const char* source_name) {
     return buffer;
 }
 
-int compile_file(const char* file) {
+int run(const char* file) {
     const char* source = read_file(file);
 
 #ifdef DEBUG
@@ -48,7 +48,7 @@ int compile_file(const char* file) {
     ObjFunction* main_func;
     init_qvm();
     if (compile(source, &main_func) == COMPILATION_OK) {
-        qvm_execute(main_func);
+        // qvm_execute(main_func);
     }
     free_qvm();
     free((char*) source);
@@ -74,7 +74,7 @@ void repl() {
         }
         init_qvm();
         if (compile(input_buffer, &main_func) == COMPILATION_OK) {
-            qvm_execute(main_func);
+            // qvm_execute(main_func);
         }
         free_qvm();
     }
@@ -85,5 +85,5 @@ int main(int argc, char** argv) {
     if (argc <= 1) {
         repl();
     }
-    return compile_file(argv[1]);
+    return run(argv[1]);
 }

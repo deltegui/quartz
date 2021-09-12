@@ -497,6 +497,21 @@ void symbol_set_should_insert_more_than_one() {
     free_symbol(&sym_bebe);
 }
 
+void symbol_set_should_not_iterate_over_empty_set() {
+    SymbolSet* set = create_symbol_set();
+
+    int size = SYMBOL_SET_SIZE(set);
+    assert_true(size == 0);
+
+    int counter = 0;
+    SYMBOL_SET_FOREACH(set, {
+        counter = i;
+    });
+    assert_true(counter == 0);
+
+    free_symbol_set(set);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(scoped_symbol_should_insert_locals),
@@ -508,7 +523,8 @@ int main(void) {
         cmocka_unit_test(should_insert_sixteen_elements),
         cmocka_unit_test(upvalue_iterator_should_iterate_over_upvalues),
         cmocka_unit_test(symbol_set_should_not_repeat_elements),
-        cmocka_unit_test(symbol_set_should_insert_more_than_one)
+        cmocka_unit_test(symbol_set_should_insert_more_than_one),
+        cmocka_unit_test(symbol_set_should_not_iterate_over_empty_set)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

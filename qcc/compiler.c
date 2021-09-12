@@ -492,12 +492,12 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
         emit_param(compiler, ops->op_global, ops->op_global_long, symbol->constant_index);
         return;
     }
+    assert(symbol->constant_index < UINT8_MAX);
     int index = get_current_function_upvalue_index(compiler, symbol);
     if (index != -1) {
         emit_short(compiler, ops->op_upvalue, index);
         return;
     }
-    assert(symbol->constant_index < UINT8_MAX);
     emit_short(compiler, ops->op_local, symbol->constant_index);
 }
 
@@ -516,7 +516,6 @@ static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* 
     if (compiler->mode == MODE_SCRIPT) {
         return -1;
     }
-
     Symbol* fn_sym = fn_lookup_str(
         compiler,
         compiler->func->name->chars,

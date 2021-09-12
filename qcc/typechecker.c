@@ -30,7 +30,6 @@ static FuncMeta* function_stack_peek(Typechecker* const checker);
 static void function_stack_push(Typechecker* const checker, Token fn_token);
 static void function_stack_start_scope(Typechecker* const checker);
 static void function_stack_end_scope(Typechecker* const checker);
-
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
 
@@ -132,12 +131,10 @@ static void error(Typechecker* const checker, Token* token, const char* message,
 }
 
 static void start_scope(Typechecker* const checker) {
-    function_stack_start_scope(checker);
     symbol_start_scope(checker->symbols);
 }
 
 static void end_scope(Typechecker* const checker) {
-    function_stack_end_scope(checker);
     symbol_end_scope(checker->symbols);
 }
 
@@ -325,17 +322,21 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 }
 
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
+    printf("Checking variable '%.*s'\n Upvalue? ", SYMBOL_NAME_LENGTH(var->name), SYMBOL_NAME_START(var->name));
     if (checker->function_stack_top == 0) {
+        printf("No, you are using it in global.\n");
         return;
     }
     if (var_is_current_function_local(checker, var)) {
+        printf("No, is local to current function.\n");
         return;
     }
-    FuncMeta* meta = function_stack_peek(checker);
     if (var->global) {
+        printf("No, is defined in global\n");
         return;
     }
-    // SymbolName fn_name = create_symbol_name(meta->name.start, meta->name.length);
+    printf("Yes\n");
+    FuncMeta* meta = function_stack_peek(checker);
     Symbol* fn_sym = lookup_str(checker, meta->name.start, meta->name.length);
     assert(fn_sym != NULL);
     assert(fn_sym->kind == SYMBOL_FUNCTION);
@@ -344,6 +345,7 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
 
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var) {
     FuncMeta* meta = function_stack_peek(checker);
+    printf("(Scope distance %d) ", meta->scope_distance);
     Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance);
     return var_sym != NULL;
 }
@@ -353,9 +355,10 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_push(checker, function->identifier);
 
     start_scope(checker);
+    function_stack_start_scope(checker);
     ACCEPT_STMT(ctx, function->body);
-    end_scope(checker);
-
+    function_stack_end_scope(checker);
+   
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);

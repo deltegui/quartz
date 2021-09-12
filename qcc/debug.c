@@ -17,10 +17,25 @@ void table_print(const Table* table) {
     printf("\n\n");
 }
 
+static void fn_upvalues_print(const Symbol* symbol) {
+    if (symbol->kind != SYMBOL_FUNCTION) {
+        return;
+    }
+    printf("size %d | ", SYMBOL_SET_SIZE(&symbol->function.upvalues));
+    SYMBOL_SET_FOREACH(&symbol->function.upvalues, {
+        Symbol* current = elements[i];
+        printf(
+            "'%.*s' (Declared: %d), ",
+            SYMBOL_NAME_LENGTH(current->name),
+            SYMBOL_NAME_START(current->name),
+            current->declaration_line);
+    });
+}
+
 static void symbol_table_print(const SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
-    printf("| Name\t| Line\t| Type\n");
-    printf("|-------|-------|------------\n");
+    printf("| Name\t| Line\t| Type  \t| FN upvalues\n");
+    printf("|-------|-------|---------------|------------\n");
     SYMBOL_TABLE_FOREACH(table, {
         Symbol* current = &elements[i];
         printf(
@@ -29,6 +44,8 @@ static void symbol_table_print(const SymbolTable* table) {
             SYMBOL_NAME_START(current->name),
             current->declaration_line);
         type_print(current->type);
+        printf("\t| ");
+        fn_upvalues_print(current);
         printf("\n");
     });
     printf("\n\n");
@@ -98,7 +115,7 @@ static const char* OpCodeStrings[] = {
 };
 
 void opcode_print(uint8_t op) {
-    // @warning this be out of range.
+    // TODO warning this be out of range.
     printf("%s\n", OpCodeStrings[op]);
 }
 
@@ -217,8 +234,8 @@ static void standalone_chunk_print(const Chunk* chunk) {
     printf("\n");
 }
 
-void chunk_print(const Chunk* chunk) {
-    printf("--------[ CHUNK DUMP: <GLOBAL> ]--------\n\n");
+static void chunk_print_with_name(const Chunk* chunk, const char* name) {
+    printf("--------[ CHUNK DUMP: %s ]--------\n\n", name);
     valuearray_print(&chunk->constants);
     standalone_chunk_print(chunk);
     for (int i = 0; i < chunk->constants.size; i++) {
@@ -226,12 +243,15 @@ void chunk_print(const Chunk* chunk) {
             Obj* obj = VALUE_AS_OBJ(chunk->constants.values[i]);
             if (OBJ_IS_FUNCTION(obj)) {
                 ObjFunction* fn = OBJ_AS_FUNCTION(obj);
-                printf("--------[ CHUNK DUMP: '%s' ]--------\n\n", OBJ_AS_CSTRING(fn->name));
-                valuearray_print(&fn->chunk.constants);
-                standalone_chunk_print(&fn->chunk);
+                char* name = OBJ_AS_CSTRING(fn->name);
+                chunk_print_with_name(&fn->chunk, name);
             }
         }
     }
+}
+
+void chunk_print(const Chunk* chunk) {
+    chunk_print_with_name(chunk, "<GLOBAL>");
 }
 
 static const char* token_type_print(TokenKind kind) {

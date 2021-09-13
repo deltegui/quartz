@@ -301,6 +301,7 @@ static void compile_block(void* ctx, BlockStmt* block) {
 }
 
 static void emit_closed_variables(Compiler* const compiler, int depth) {
+    /*
     UpvalueIterator it;
     init_upvalue_iterator(&it, &compiler->symbols, depth);
     for (;;) {
@@ -308,17 +309,17 @@ static void emit_closed_variables(Compiler* const compiler, int depth) {
         if (var_sym == NULL) {
             break;
         }
+
         emit_close_stack_upvalue(compiler, var_sym);
-        Symbol** refs = SYMBOL_SET_GET_ELEMENTS(var_sym->upvalue_fn_refs);
-        int size = SYMBOL_SET_SIZE(var_sym->upvalue_fn_refs);
-        for (int i = 0; i < size; i++) {
-            int index = get_upvalue_index_in_function(compiler, var_sym, refs[i]);
+        SYMBOL_SET_FOREACH(var_sym->upvalue_fn_refs, {
+            int index = get_upvalue_index_in_function(compiler, var_sym, elements[i]);
             number_constant_use(compiler, index);
-            identifier_use_symbol(compiler, refs[i], &ops_get_identifier);
+            identifier_use_symbol(compiler, elements[i], &ops_get_identifier);
             emit(compiler, OP_BIND_CLOSED);
-        }
+        });
         emit(compiler, OP_POP);
     }
+    */
 }
 
 static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_sym) {
@@ -386,6 +387,13 @@ static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token f
         // Symbol* upvalue_sym = lookup_str(compiler, upvalues[i].start, upvalues[i].length);
         // assert(upvalue_sym != NULL);
         Symbol* upvalue_sym = upvalues[i];
+        // TODO document this shit in latex
+        // OP_BIND_UPVALUE have three params:
+        // +---------------------------------+
+        // | Function to bind                |
+        // | Index of upvalue in runtime ds  |
+        // | Value's call frame stack index  |
+        // +---------------------------------+
         number_constant_use(compiler, upvalue_sym->constant_index);
         number_constant_use(compiler, i);
         identifier_use(compiler, fn, &ops_get_identifier);
@@ -485,8 +493,9 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
     assert(symbol != NULL);
     assert(symbol->constant_index < UINT16_MAX);
 #ifdef COMPILER_DEBUG
+    printf("[COMPILER DEBUG] Identifier use: ");
     token_print(identifier);
-    printf("Index %d\n", symbol->constant_index);
+    printf("[COMPILER DEBUG] Index %d\n", symbol->constant_index);
 #endif
     if (symbol->global) {
         emit_param(compiler, ops->op_global, ops->op_global_long, symbol->constant_index);
@@ -500,17 +509,6 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
     }
     emit_short(compiler, ops->op_local, symbol->constant_index);
 }
-
-// TODO delete this dead code
-// static int symbol_is_closed(Compiler* const compiler, Symbol* symbol) {
-//     Token fn_token = (Token){
-//         .kind = TOKEN_IDENTIFIER,
-//         .start = compiler->func->name->chars,
-//         .length = compiler->func->name->length,
-//         .line = 0, // doesnt matter. TODO if so, search for the symbol.
-//     };
-//     return symbol_is_closed(symbol, fn_token);
-// }
 
 static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var) {
     if (compiler->mode == MODE_SCRIPT) {

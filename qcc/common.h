@@ -17,6 +17,7 @@
 #ifdef DEBUG
 #define LEXER_DEBUG
 #define PARSER_DEBUG
+#define TYPECHECKER_DEBUG
 #define COMPILER_DEBUG
 #define VM_DEBUG
 #endif

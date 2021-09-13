@@ -322,20 +322,33 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 }
 
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
-    printf("Checking variable '%.*s'\n Upvalue? ", SYMBOL_NAME_LENGTH(var->name), SYMBOL_NAME_START(var->name));
+#ifdef TYPECHECKER_DEBUG
+    printf(
+        "[TYPECHECKER DEBUG] Checking variable '%.*s'\n[TYPECHECKER DEBUG] Upvalue? ",
+        SYMBOL_NAME_LENGTH(var->name),
+        SYMBOL_NAME_START(var->name));
+#endif
     if (checker->function_stack_top == 0) {
+#ifdef TYPECHECKER_DEBUG
         printf("No, you are using it in global.\n");
+#endif
         return;
     }
     if (var_is_current_function_local(checker, var)) {
+#ifdef TYPECHECKER_DEBUG
         printf("No, is local to current function.\n");
+#endif
         return;
     }
     if (var->global) {
+#ifdef TYPECHECKER_DEBUG
         printf("No, is defined in global\n");
+#endif
         return;
     }
+#ifdef TYPECHECKER_DEBUG
     printf("Yes\n");
+#endif
     FuncMeta* meta = function_stack_peek(checker);
     Symbol* fn_sym = lookup_str(checker, meta->name.start, meta->name.length);
     assert(fn_sym != NULL);

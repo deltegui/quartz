@@ -81,11 +81,9 @@ int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue) {
     assert(symbol->kind == SYMBOL_FUNCTION);
     SYMBOL_SET_FOREACH(symbol->function.upvalues, {
         if (symbol_name_equals(&elements[i]->name, &upvalue->name)) {
-            printf("OKI\n");
             return i;
         }
     });
-    printf("NEPE\n");
     return -1;
 }
 

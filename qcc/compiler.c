@@ -387,17 +387,10 @@ static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token f
         // Symbol* upvalue_sym = lookup_str(compiler, upvalues[i].start, upvalues[i].length);
         // assert(upvalue_sym != NULL);
         Symbol* upvalue_sym = upvalues[i];
-        // TODO document this shit in latex
-        // OP_BIND_UPVALUE have three params:
-        // +---------------------------------+
-        // | Function to bind                |
-        // | Index of upvalue in runtime ds  |
-        // | Value's call frame stack index  |
-        // +---------------------------------+
-        number_constant_use(compiler, upvalue_sym->constant_index);
-        number_constant_use(compiler, i);
         identifier_use(compiler, fn, &ops_get_identifier);
         emit(compiler, OP_BIND_UPVALUE);
+        emit(compiler, upvalue_sym->constant_index);
+        emit(compiler, i);
     }
 }
 

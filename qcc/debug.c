@@ -173,7 +173,6 @@ static int chunk_opcode_print(const Chunk* chunk, int i) {
 }
 
 static int chunk_short_print(const Chunk* chunk, int i) {
-    i = chunk_opcode_print(chunk, i);
     chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
     if (chunk->code[i] < chunk->constants.size) {
         chunk_value_print(chunk, chunk->code[i]);
@@ -184,7 +183,6 @@ static int chunk_short_print(const Chunk* chunk, int i) {
 }
 
 static int chunk_long_print(const Chunk* chunk, int i) {
-    i = chunk_opcode_print(chunk, i);
     uint8_t* pc = &chunk->code[i];
     uint16_t num = read_long(&pc);
     i++;
@@ -220,7 +218,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_POP:
         case OP_PRINT:
         case OP_GREATER:
-        case OP_BIND_UPVALUE:
         case OP_BIND_CLOSED:
         case OP_CLOSE:
         case OP_END: {
@@ -236,6 +233,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_SET_UPVALUE:
         case OP_CONSTANT:
         case OP_CALL: {
+            i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
             break;
         }
@@ -243,7 +241,14 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:
         case OP_CONSTANT_LONG: {
+            i = chunk_opcode_print(chunk, i);
             i = chunk_long_print(chunk, i);
+            break;
+        }
+        case OP_BIND_UPVALUE: {
+            i = chunk_opcode_print(chunk, i);
+            i = chunk_short_print(chunk, i);
+            i = chunk_short_print(chunk, i);
             break;
         }
         }

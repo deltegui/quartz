@@ -249,6 +249,20 @@ static void run(ObjFunction* func) {
             qvm.frame->slots[slot] = stack_peek(0);
             break;
         }
+        case OP_SET_UPVALUE: {
+            // TODO Adapt for closed too
+            uint8_t slot = READ_BYTE();
+            Value* stack_ptr = qvm.frame->func->upvalues[slot].open;
+            *stack_ptr = stack_peek(0);
+            break;
+        }
+        case OP_GET_UPVALUE: {
+            // TODO Adapt for closed too
+            uint8_t slot = READ_BYTE();
+            Value* stack_ptr = qvm.frame->func->upvalues[slot].open;
+            stack_push(*stack_ptr);
+            break;
+        }
         case OP_CALL: {
             uint8_t param_count = READ_BYTE();
             call(param_count);
@@ -275,6 +289,16 @@ static void run(ObjFunction* func) {
         }
         case OP_END: {
             return;
+        }
+        case OP_BIND_UPVALUE: {
+            uint8_t slot = READ_BYTE();
+            uint8_t upvalue = READ_BYTE();
+            Value* stack_ptr = &qvm.frame->slots[slot];
+            Obj* function_obj = VALUE_AS_OBJ(stack_pop());
+            ObjFunction* function = OBJ_AS_FUNCTION(function_obj);
+            function->upvalues[upvalue].is_closed = false;
+            function->upvalues[upvalue].open = stack_ptr;
+            break;
         }
         }
 #ifdef VM_DEBUG

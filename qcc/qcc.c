@@ -48,7 +48,7 @@ int run(const char* file) {
     ObjFunction* main_func;
     init_qvm();
     if (compile(source, &main_func) == COMPILATION_OK) {
-        // qvm_execute(main_func);
+        qvm_execute(main_func);
     }
     free_qvm();
     free((char*) source);
@@ -74,7 +74,7 @@ void repl() {
         }
         init_qvm();
         if (compile(input_buffer, &main_func) == COMPILATION_OK) {
-            // qvm_execute(main_func);
+            qvm_execute(main_func);
         }
         free_qvm();
     }

@@ -358,7 +358,6 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
 
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var) {
     FuncMeta* meta = function_stack_peek(checker);
-    printf("(Scope distance %d) ", meta->scope_distance);
     Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance);
     return var_sym != NULL;
 }

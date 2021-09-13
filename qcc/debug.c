@@ -17,25 +17,37 @@ void table_print(const Table* table) {
     printf("\n\n");
 }
 
-static void fn_upvalues_print(const Symbol* symbol) {
-    if (symbol->kind != SYMBOL_FUNCTION) {
+static void upvalues_print(const SymbolSet* set) {
+    if (SYMBOL_SET_SIZE(set) == 0) {
+        printf("Empty\t");
         return;
     }
-    printf("size %d | ", SYMBOL_SET_SIZE(&symbol->function.upvalues));
-    SYMBOL_SET_FOREACH(&symbol->function.upvalues, {
+    SYMBOL_SET_FOREACH(set, {
         Symbol* current = elements[i];
         printf(
-            "'%.*s' (Declared: %d), ",
+            "'%.*s'(%d), ",
             SYMBOL_NAME_LENGTH(current->name),
             SYMBOL_NAME_START(current->name),
             current->declaration_line);
     });
 }
 
+static void symbol_upvalues_print(const Symbol* symbol) {
+    upvalues_print(symbol->upvalue_fn_refs);
+}
+
+static void fn_upvalues_print(const Symbol* symbol) {
+    if (symbol->kind != SYMBOL_FUNCTION) {
+        printf("Not a function");
+        return;
+    }
+    upvalues_print(symbol->function.upvalues);
+}
+
 static void symbol_table_print(const SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
-    printf("| Name\t| Line\t| Type  \t| FN upvalues\n");
-    printf("|-------|-------|---------------|------------\n");
+    printf("| Name\t| Line\t| Type  \t| Symbol upvalues \t | Function upvalues\n");
+    printf("|-------|-------|---------------|------------------------|------------\n");
     SYMBOL_TABLE_FOREACH(table, {
         Symbol* current = &elements[i];
         printf(
@@ -44,8 +56,13 @@ static void symbol_table_print(const SymbolTable* table) {
             SYMBOL_NAME_START(current->name),
             current->declaration_line);
         type_print(current->type);
+
+        printf("\t| ");
+        symbol_upvalues_print(current);
+
         printf("\t| ");
         fn_upvalues_print(current);
+
         printf("\n");
     });
     printf("\n\n");

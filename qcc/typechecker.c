@@ -370,7 +370,8 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_start_scope(checker);
     ACCEPT_STMT(ctx, function->body);
     function_stack_end_scope(checker);
-   
+    end_scope(checker);
+
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);

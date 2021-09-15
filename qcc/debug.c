@@ -218,7 +218,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_POP:
         case OP_PRINT:
         case OP_GREATER:
-        case OP_BIND_CLOSED:
         case OP_CLOSE:
         case OP_END: {
             i = chunk_opcode_print(chunk, i);
@@ -248,6 +247,11 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_BIND_UPVALUE: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
+            i = chunk_short_print(chunk, i);
+            break;
+        }
+        case OP_BIND_CLOSED: {
+            i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
             break;
         }

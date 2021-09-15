@@ -301,7 +301,6 @@ static void compile_block(void* ctx, BlockStmt* block) {
 }
 
 static void emit_closed_variables(Compiler* const compiler, int depth) {
-    /*
     UpvalueIterator it;
     init_upvalue_iterator(&it, &compiler->symbols, depth);
     for (;;) {
@@ -313,13 +312,12 @@ static void emit_closed_variables(Compiler* const compiler, int depth) {
         emit_close_stack_upvalue(compiler, var_sym);
         SYMBOL_SET_FOREACH(var_sym->upvalue_fn_refs, {
             int index = get_upvalue_index_in_function(compiler, var_sym, elements[i]);
-            number_constant_use(compiler, index);
             identifier_use_symbol(compiler, elements[i], &ops_get_identifier);
             emit(compiler, OP_BIND_CLOSED);
+            emit(compiler, index);
         });
         emit(compiler, OP_POP);
     }
-    */
 }
 
 static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_sym) {

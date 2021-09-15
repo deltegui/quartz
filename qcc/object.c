@@ -26,6 +26,12 @@ ObjFunction* new_function(const char* name, int length, int upvalues) {
     return func;
 }
 
+ObjClosed* new_closed(Value value) {
+    ObjClosed* closed = ALLOC_OBJ(ObjClosed, OBJ_CLOSED);
+    closed->value = value;
+    return closed;
+}
+
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
     ObjString* obj_str = ALLOC_STR(length + 1);
     obj_str->length = length;
@@ -72,6 +78,13 @@ void print_object(Obj* obj) {
     case OBJ_FUNCTION: {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
         printf("<fn '%s'>", OBJ_AS_CSTRING(fn->name));
+        break;
+    }
+    case OBJ_CLOSED: {
+        ObjClosed* closed = OBJ_AS_CLOSED(obj);
+        printf("<Closed [");
+        value_print(closed->value);
+        printf("]>");
         break;
     }
     }

@@ -15,6 +15,10 @@ static void free_object(Obj* obj) {
         FREE(ObjFunction, obj);
         break;
     }
+    case OBJ_CLOSED: {
+        FREE(ObjClosed, obj);
+        break;
+    }
     }
 }
 

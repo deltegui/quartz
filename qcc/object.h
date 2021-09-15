@@ -19,6 +19,7 @@ typedef struct s_obj_string {
 
 typedef struct {
     Obj obj;
+    Value value;
 } ObjClosed;
 
 typedef struct {
@@ -52,5 +53,10 @@ ObjString* concat_string(ObjString* first, ObjString* second);
 #define OBJ_AS_FUNCTION(obj) ((ObjFunction*) obj)
 
 ObjFunction* new_function(const char* name, int length, int upvalues);
+
+#define OBJ_IS_CLOSED(obj) (is_obj_kind(obj, OBJ_CLOSED))
+#define OBJ_AS_CLOSED(obj) ((ObjClosed*) obj)
+
+ObjClosed* new_closed(Value value);
 
 #endif

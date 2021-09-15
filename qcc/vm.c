@@ -250,17 +250,27 @@ static void run(ObjFunction* func) {
             break;
         }
         case OP_SET_UPVALUE: {
-            // TODO Adapt for closed too
+            // TODO Refactor this
             uint8_t slot = READ_BYTE();
-            Value* stack_ptr = qvm.frame->func->upvalues[slot].open;
-            *stack_ptr = stack_peek(0);
+            Value* target;
+            if (qvm.frame->func->upvalues[slot].is_closed) {
+                target = &qvm.frame->func->upvalues[slot].closed->value;
+            } else {
+                target = qvm.frame->func->upvalues[slot].open;
+            }
+            *target = stack_peek(0);
             break;
         }
         case OP_GET_UPVALUE: {
-            // TODO Adapt for closed too
+            // TODO Refactor this
             uint8_t slot = READ_BYTE();
-            Value* stack_ptr = qvm.frame->func->upvalues[slot].open;
-            stack_push(*stack_ptr);
+            Value* readed;
+            if (qvm.frame->func->upvalues[slot].is_closed) {
+                readed = &qvm.frame->func->upvalues[slot].closed->value;
+            } else {
+                readed = qvm.frame->func->upvalues[slot].open;
+            }
+            stack_push(*readed);
             break;
         }
         case OP_CALL: {
@@ -291,6 +301,7 @@ static void run(ObjFunction* func) {
             return;
         }
         case OP_BIND_UPVALUE: {
+            // TODO Refactor this
             uint8_t slot = READ_BYTE();
             uint8_t upvalue = READ_BYTE();
             Value* stack_ptr = &qvm.frame->slots[slot];
@@ -298,6 +309,27 @@ static void run(ObjFunction* func) {
             ObjFunction* function = OBJ_AS_FUNCTION(function_obj);
             function->upvalues[upvalue].is_closed = false;
             function->upvalues[upvalue].open = stack_ptr;
+            break;
+        }
+        case OP_CLOSE: {
+            // TODO Refactor this
+            Value val = stack_pop();
+            ObjClosed* closed = new_closed(val);
+            // TODO Which type should be for a ObjClosed?
+            Value obj_closed = OBJ_VALUE(closed, CREATE_TYPE_UNKNOWN());
+            stack_push(obj_closed);
+            break;
+        }
+        case OP_BIND_CLOSED: {
+            // TODO Refactor this
+            uint32_t upvalue = READ_BYTE();
+            Obj* function_obj = VALUE_AS_OBJ(stack_pop());
+            // TODO should we add runtime errors before object conversions?
+            ObjFunction* function = OBJ_AS_FUNCTION(function_obj);
+            Obj* closed_obj = VALUE_AS_OBJ(stack_peek(0));
+            ObjClosed* closed = OBJ_AS_CLOSED(closed_obj);
+            function->upvalues[upvalue].is_closed = true;
+            function->upvalues[upvalue].closed = closed;
             break;
         }
         }

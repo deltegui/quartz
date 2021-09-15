@@ -77,6 +77,8 @@ void print_object(Obj* obj) {
     }
     case OBJ_FUNCTION: {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
+        // TODO I wanted to print the function type, but Obj does not hold
+        // its own type!!! Fix that shit.
         printf("<fn '%s'>", OBJ_AS_CSTRING(fn->name));
         break;
     }

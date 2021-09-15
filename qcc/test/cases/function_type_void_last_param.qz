@@ -1,0 +1,2 @@
+[Line 1] Error at ')': You can only use Void type in function type declaration to declare a 0 arity function
+[Line 9] Error at end: Expected block to end with '}'

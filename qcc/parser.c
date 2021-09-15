@@ -473,6 +473,13 @@ static Type* parse_function_type(Parser* const parser) {
         if (TYPE_IS_UNKNOWN(param)) {
             error(parser, "Unkown type in param in function type declaration");
         }
+        // TODO should void be in param list to reflect that a function takes 0 parameters?
+        if (TYPE_IS_VOID(param)) {
+            if (TYPE_FN_PARAMS(fn_type).size != 0) {
+                error(parser, "You can only use Void type in function type declaration to declare a 0 arity function");
+            }
+            break;
+        }
         VECTOR_ADD_TYPE(& TYPE_FN_PARAMS(fn_type), param);
         if (parser->current.kind != TOKEN_COMMA) {
             break;

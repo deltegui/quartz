@@ -1,6 +1,6 @@
-fn hola(): (Number): Void {
+fn hola(): (Void): Void {
     var a = 0;
-    fn pipo(b: Number) {
+    fn pipo() {
         print a;
         a = a + 1;
     }
@@ -8,9 +8,10 @@ fn hola(): (Number): Void {
 }
 
 var p = hola();
-p(0);
-p(0);
-p(0);
-p(0);
-p(0);
-p(0);
+p();
+p();
+p();
+p();
+p();
+p();
+print p;

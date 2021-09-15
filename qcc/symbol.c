@@ -33,6 +33,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .type = type,
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
+        .assigned = true, // normally is
     };
     symbol.upvalue_fn_refs = create_symbol_set();
     if (symbol.kind == SYMBOL_FUNCTION) {

@@ -363,7 +363,10 @@ static Stmt* variable_decl(Parser* const parser) {
         var.definition = expression(parser);
     }
 
-    register_symbol(parser, create_symbol_from_token(&var.identifier, var_type));
+
+    Symbol symbol = create_symbol_from_token(&var.identifier, var_type);
+    symbol.assigned = var.definition != NULL;
+    register_symbol(parser, symbol);
 
     consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
     return CREATE_STMT_VAR(var);
@@ -684,6 +687,10 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
 
     Expr* expr = NULL;
     if (can_assign && parser->current.kind == TOKEN_EQUAL) {
+        // The variable might not be assigned before. We need to ensure
+        // that the Symbol table knows that it already does.
+        existing->assigned = true;
+
         advance(parser); //consume =
         Expr* value = parse_precendence(parser, PREC_ASSIGNMENT);
         AssignmentExpr node = (AssignmentExpr){

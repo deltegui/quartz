@@ -116,6 +116,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_BLOCK: DISPATCH(visit_block, block); break;
     case STMT_FUNCTION: DISPATCH(visit_function, function); break;
     case STMT_RETURN: DISPATCH(visit_return, return_); break;
+    default: assert(false);
     }
 #undef DISPATCH
 }

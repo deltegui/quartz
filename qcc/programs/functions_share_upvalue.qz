@@ -1,0 +1,25 @@
+var inc: (Void): Void;
+var get: (Void): Number;
+
+{
+    var a = 0;
+
+    fn a_inc() {
+        a = a + 1;
+    }
+
+    fn a_get(): Number {
+        return a;
+    }
+
+    get = a_get;
+    inc = a_inc;
+}
+
+inc();
+print get();
+inc();
+print get();
+print get();
+inc();
+print get();

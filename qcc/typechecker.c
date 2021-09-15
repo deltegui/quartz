@@ -78,7 +78,9 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
 
 static void function_stack_pop(Typechecker* const checker) {
     assert(checker->function_stack_top > 0);
+    // TODO function_stack_top is needed?
     checker->function_stack_top--;
+    checker->function_stack.size--;
 }
 
 static FuncMeta* function_stack_peek(Typechecker* const checker) {
@@ -277,6 +279,16 @@ static void typecheck_call(void* ctx, CallExpr* call) {
             checker,
             &call->identifier,
             "Calling '%.*s' which is not a function\n",
+            call->identifier.length,
+            call->identifier.start);
+        return;
+    }
+
+    if (! symbol->assigned) {
+        error(
+            checker,
+            &call->identifier,
+            "Calling '%.*s' which is not assigned\n",
             call->identifier.length,
             call->identifier.start);
         return;

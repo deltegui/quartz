@@ -148,7 +148,7 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
-    init_vector(&checker.function_stack, sizeof(Token));
+    init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
     free_vector(&checker.function_stack);

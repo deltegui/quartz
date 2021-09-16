@@ -45,7 +45,7 @@ static void end_scope(Parser* const parser);
 static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
 static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
-static void register_symbol(Parser* const parser, Symbol symbol);
+static bool register_symbol(Parser* const parser, Symbol symbol);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
@@ -230,13 +230,14 @@ static void insert(Parser* const parser, Symbol entry){
     scoped_symbol_insert(parser->symbols, entry);
 }
 
-static void register_symbol(Parser* const parser, Symbol symbol) {
+static bool register_symbol(Parser* const parser, Symbol symbol) {
     Symbol* exsting = current_scope_lookup(parser, &symbol.name);
     if (exsting) {
         error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
-        return;
+        return false;
     }
     insert(parser, symbol);
+    return true;
 }
 
 static void advance(Parser* const parser) {
@@ -366,7 +367,9 @@ static Stmt* variable_decl(Parser* const parser) {
 
     Symbol symbol = create_symbol_from_token(&var.identifier, var_type);
     symbol.assigned = var.definition != NULL;
-    register_symbol(parser, symbol);
+    if (! register_symbol(parser, symbol)) {
+        free_symbol(&symbol);
+    }
 
     consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
     return CREATE_STMT_VAR(var);
@@ -406,7 +409,9 @@ static Stmt* function_decl(Parser* const parser) {
 
     // Insert symbol before parsing the function body
     // so you can call the founction inside the function
-    register_symbol(parser, symbol);
+    if (! register_symbol(parser, symbol)) {
+        free_symbol(&symbol);
+    }
     Symbol* registered = lookup_str(parser, fn.identifier.start, fn.identifier.length);
     assert(registered != NULL);
 
@@ -452,7 +457,9 @@ static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
         Symbol param = create_symbol_from_token(
             &param_names[i],
             param_types[i]);
-        register_symbol(parser, param);
+        if (! register_symbol(parser, param)) {
+            free_symbol(&param);
+        }
     }
 }
 

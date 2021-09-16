@@ -11,7 +11,7 @@ void init_vector(Vector* const vect, size_t element_size) {
 }
 
 void free_vector(Vector* const vect) {
-    if (vect->size == 0) {
+    if (vect->capacity == 0) {
         return;
     }
     free(vect->elements);

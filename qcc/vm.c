@@ -306,7 +306,6 @@ static void run(ObjFunction* func) {
         case OP_BIND_CLOSED: {
             uint8_t upvalue = READ_BYTE();
             Obj* function_obj = VALUE_AS_OBJ(stack_pop());
-            // TODO should we add runtime errors before object conversions?
             ObjFunction* function = OBJ_AS_FUNCTION(function_obj);
             Obj* closed_obj = VALUE_AS_OBJ(stack_peek(0));
             ObjClosed* closed = OBJ_AS_CLOSED(closed_obj);

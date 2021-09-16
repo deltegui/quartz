@@ -1,11 +1,15 @@
 #include "symbol.h"
 #include <string.h>
+#include <limits.h> // for INT_MAX
 #include "token.h" // for Vector<Token>
+
+typedef bool (*ExitCondition) (Symbol*);
 
 static bool symbol_name_equals(SymbolName* first, SymbolName* second);
 static SymbolKind kind_from_type(Type* type);
 static void create_function_symbol(Symbol* const symbol);
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
+static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, ExitCondition test_condition);
 
 SymbolName create_symbol_name(const char* start, int length) {
     CTableKey key = create_ctable_key(start, length);
@@ -67,15 +71,6 @@ void free_symbol(Symbol* const symbol) {
         break;
     }
     free_symbol_set(symbol->upvalue_fn_refs);
-}
-
-bool symbol_is_closed(Symbol* const symbol, Symbol* fn_sym) {
-    SYMBOL_SET_FOREACH(symbol->upvalue_fn_refs, {
-        if (symbol_name_equals(&elements[i]->name, &fn_sym->name)) {
-            return true;
-        }
-    });
-    return false;
 }
 
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue) {
@@ -197,18 +192,31 @@ void symbol_reset_scopes(ScopedSymbolTable* const table) {
     table->current = &table->global;
 }
 
-Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name) {
+bool test_all(Symbol* symbol) {
+    return true;
+}
+
+bool test_only_functions(Symbol* symbol) {
+    return symbol->kind == SYMBOL_FUNCTION;
+}
+
+static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, ExitCondition test_condition) {
     assert(table->current != NULL);
     SymbolNode* current = table->current;
     Symbol* symbol = NULL;
-    while (current != NULL) {
+    while (current != NULL && levels >= 0) {
         symbol = symbol_lookup(&current->symbols, name);
-        if (symbol != NULL) {
+        if (symbol != NULL && test_condition(symbol)) {
             return symbol;
         }
         current = current->father;
+        levels--;
     }
     return NULL;
+}
+
+Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name) {
+    return scoped_symbol_lookup_levels_conditional(table, name, INT_MAX, test_all);
 }
 
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length) {
@@ -216,19 +224,8 @@ Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* nam
     return scoped_symbol_lookup(table, &symbol_name);
 }
 
-// TODO this function is like scoped_symbol_lookup
-static Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName* name) {
-    assert(table->current != NULL);
-    SymbolNode* current = table->current;
-    Symbol* symbol = NULL;
-    while (current != NULL) {
-        symbol = symbol_lookup(&current->symbols, name);
-        if (symbol != NULL && symbol->kind == SYMBOL_FUNCTION) {
-            return symbol;
-        }
-        current = current->father;
-    }
-    return NULL;
+Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName* name) {
+    return scoped_symbol_lookup_levels_conditional(table, name, INT_MAX, test_only_functions);
 }
 
 Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length) {
@@ -236,20 +233,8 @@ Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const 
     return scoped_symbol_lookup_function(table, &symbol_name);
 }
 
-// TODO merge this with traditional scoped_symbol_lookup
 Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels) {
-    assert(table->current != NULL);
-    SymbolNode* current = table->current;
-    Symbol* symbol = NULL;
-    while (current != NULL && levels >= 0) {
-        symbol = symbol_lookup(&current->symbols, name);
-        if (symbol != NULL) {
-            return symbol;
-        }
-        current = current->father;
-        levels--;
-    }
-    return NULL;
+    return scoped_symbol_lookup_levels_conditional(table, name, levels, test_all);
 }
 
 Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels) {
@@ -263,13 +248,10 @@ void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
 }
 
 void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* var_upvalue) {
-    // TODO esto no es necesario no?
-    // Symbol* fn_sym = scoped_symbol_lookup(table, &fn->name);
-    // assert(fn_sym != NULL);
-    // assert(fn_sym->kind == SYMBOL_FUNCTION);
+    assert(fn != NULL);
+    assert(fn->kind == SYMBOL_FUNCTION);
+    assert(var_upvalue != NULL);
     symbol_set_add(fn->function.upvalues, var_upvalue);
-    // Symbol* var_sym = scoped_symbol_lookup(table, &var_upvalue->name);
-    // assert(var_sym != NULL);
     symbol_set_add(var_upvalue->upvalue_fn_refs, fn);
 }
 
@@ -300,8 +282,6 @@ void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* t
     iterator->depth = depth;
 }
 
-// TODO maybe this is a mistake. This should iterate over the capacity of every
-// symbol table inside the specified depth. Maybe is expensive.
 Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
     if (iterator->depth < 0) {
         return NULL;

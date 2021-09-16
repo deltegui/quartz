@@ -1,2 +1,3 @@
-var inc: (Void): Void;
-inc();
+var a: Number;
+
+print a + 1;

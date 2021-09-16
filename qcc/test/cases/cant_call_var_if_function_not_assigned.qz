@@ -1,1 +1,1 @@
-[Line 2] Type error: Calling 'inc' which is not assigned
+[Line 2] Error at 'inc': Use of unassigned variable

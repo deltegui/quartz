@@ -13,7 +13,7 @@
     (first).length == (second).length &&\
     memcmp((first).start, (second).start, (second).length) == 0
 
-static void reset_data(CTable* const table, size_t element_size);
+static void reset_data(CTable* const table);
 static void grow_symbol_table(CTable* const table);
 static CTableEntry* find(CTable* const table, CTableKey* name);
 
@@ -38,17 +38,15 @@ bool ctable_key_equals(CTableKey* first, CTableKey* second) {
     return memcmp(first->start, second->start, first->length) == 0;
 }
 
-static void reset_data(CTable* const table, size_t element_size) {
+static void reset_data(CTable* const table) {
     table->size = 0;
     table->capacity = 0;
     table->mask = 1;
     table->entries = NULL;
-    table->element_size = element_size;
 }
 
-// TODO check if element_size is needed for the hash or its only used here
 void init_ctable(CTable* const table, size_t element_size) {
-    reset_data(table, element_size);
+    reset_data(table);
     init_vector(&table->data, element_size);
 }
 
@@ -58,7 +56,7 @@ void free_ctable(CTable* const table) {
     }
     free(table->entries);
     free_vector(&table->data);
-    reset_data(table, table->element_size);
+    reset_data(table);
 }
 
 CTableEntry* ctable_find(CTable* const table, CTableKey* key) {
@@ -85,24 +83,6 @@ CTableEntry* ctable_next_add_position(CTable* const table, CTableKey key) {
 
     return destination;
 }
-
-/*
-void ctable_set(CTable* const table, CTableKey key, void* value) {
-    if (SHOULD_GROW(table)) {
-        grow_symbol_table(table);
-    }
-    assert(table->size + 1 < table->capacity);
-
-    uint32_t vector_pos = vector_next_add_position(&table->data);
-    void** elements = (void**) table->data.elements;
-    elements[vector_pos] = value;
-
-    CTableEntry* destination = (CTableEntry*) find(table, &key);
-    destination->key = key;
-    destination->vector_pos = vector_pos;
-    table->size++;
-}
-*/
 
 static void grow_symbol_table(CTable* const table) {
     CTableEntry* old_entries = table->entries;

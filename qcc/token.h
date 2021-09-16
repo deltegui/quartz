@@ -65,6 +65,4 @@ typedef struct {
 #define VECTOR_AS_TOKENS(vect) VECTOR_AS(vect, Token)
 #define VECTOR_ADD_TOKEN(vect, token) VECTOR_ADD(vect, token, Token)
 
-bool token_equals(const Token* const first, const Token* const second);
-
 #endif

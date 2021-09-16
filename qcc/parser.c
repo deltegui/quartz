@@ -670,6 +670,7 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
 #endif
 
     Token identifier = parser->prev;
+
     // Why you shouldn't change this line?
     // Well, you may think it's strange that a language that has
     // a complete compiler cant be smart enough to realize that
@@ -679,7 +680,6 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
     // The AST order is relevant for the compiler phase, so it won't
     // realize that the function is declared before, generating bad
     // bytecode (chunk constant index).
-    // TODO try to change that.
     Symbol* existing = get_identifier_symbol(parser, identifier);
     if (!existing) {
         return NULL;
@@ -699,6 +699,10 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
         };
         expr = CREATE_ASSIGNMENT_EXPR(node);
     } else {
+        if (! existing->assigned) {
+            error_prev(parser, "Use of unassigned variable");
+        }
+
         IdentifierExpr node = (IdentifierExpr){
             .name = identifier,
         };

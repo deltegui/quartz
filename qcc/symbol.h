@@ -58,12 +58,8 @@ typedef struct {
 Symbol create_symbol_from_token(Token* token, Type* type);
 Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* const symbol);
-// TODO check if this functoin can be used. delete instead
-bool symbol_is_closed(Symbol* const symbol, Symbol* fn_name);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
-// TODO should this be deleted?
-#define SYMBOL_GET_FUNCTION_UPVALUE_SIZE(sym) (SYMBOL_SET_SIZE(sym->function.upvalues))
 
 typedef struct {
     CTable table; // CTable<Symbol>
@@ -109,6 +105,7 @@ Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name);
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length);
 Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels);
 Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels);
+Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName* name);
 Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);

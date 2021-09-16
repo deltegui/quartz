@@ -20,10 +20,9 @@ typedef struct {
     bool has_error;
 
     Vector function_stack; // Vector<FuncMeta>
-    int function_stack_top;
 } Typechecker;
 
-#define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack_top == 0)
+#define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack.size == 0)
 
 static void function_stack_pop(Typechecker* const checker);
 static FuncMeta* function_stack_peek(Typechecker* const checker);
@@ -77,16 +76,14 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
 #define ACCEPT_EXPR(typechecker, expr) expr_dispatch(&typechecker_expr_visitor, typechecker, expr)
 
 static void function_stack_pop(Typechecker* const checker) {
-    assert(checker->function_stack_top > 0);
-    // TODO function_stack_top is needed?
-    checker->function_stack_top--;
+    assert(checker->function_stack.size > 0);
     checker->function_stack.size--;
 }
 
 static FuncMeta* function_stack_peek(Typechecker* const checker) {
     assert(checker->function_stack.size > 0);
     FuncMeta* meta = VECTOR_AS_FUNC_META(&checker->function_stack);
-    return &meta[checker->function_stack_top - 1];
+    return &meta[checker->function_stack.size - 1];
 }
 
 static void function_stack_push(Typechecker* const checker, Token fn_token) {
@@ -94,7 +91,6 @@ static void function_stack_push(Typechecker* const checker, Token fn_token) {
     meta.name = fn_token;
     meta.scope_distance = 0;
     VECTOR_ADD_FUNC_META(&checker->function_stack, meta);
-    checker->function_stack_top++;
 }
 
 static void function_stack_start_scope(Typechecker* const checker) {
@@ -152,7 +148,6 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
-    checker.function_stack_top = 0;
     init_vector(&checker.function_stack, sizeof(Token));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
@@ -284,20 +279,6 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         return;
     }
 
-    if (! symbol->assigned) {
-        error(
-            checker,
-            &call->identifier,
-            "Calling '%.*s' which is not assigned\n",
-            call->identifier.length,
-            call->identifier.start);
-        return;
-    }
-
-    // TODO here is the first time that the size of param_type is not equal to param_names.
-    // It is correct?
-    // If so, its good idea to search for usages of param_type and param_names to show if you only
-    // check the size of one assuming the other will have the same size.
     uint32_t fn_param_type_size = TYPE_FN_PARAMS(symbol->type).size;
     if (fn_param_type_size != call->params.size) {
         error(
@@ -340,7 +321,7 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
         SYMBOL_NAME_LENGTH(var->name),
         SYMBOL_NAME_START(var->name));
 #endif
-    if (checker->function_stack_top == 0) {
+    if (TYPECHECK_IS_GLOBAL_FN(checker)) {
 #ifdef TYPECHECKER_DEBUG
         printf("No, you are using it in global.\n");
 #endif

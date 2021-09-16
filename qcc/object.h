@@ -53,6 +53,9 @@ ObjString* concat_string(ObjString* first, ObjString* second);
 #define OBJ_AS_FUNCTION(obj) ((ObjFunction*) obj)
 
 ObjFunction* new_function(const char* name, int length, int upvalues);
+void function_close_upvalue(ObjFunction* const function, int upvalue, ObjClosed* closed);
+void function_open_upvalue(ObjFunction* const function, int upvalue, Value* value);
+Value* function_get_upvalue(ObjFunction* const function, int slot);
 
 #define OBJ_IS_CLOSED(obj) (is_obj_kind(obj, OBJ_CLOSED))
 #define OBJ_AS_CLOSED(obj) ((ObjClosed*) obj)

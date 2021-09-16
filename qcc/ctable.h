@@ -20,7 +20,6 @@ typedef struct {
 
 typedef struct {
     Vector data; // Vector <void*>
-    size_t element_size;
 
     CTableEntry* entries;
     uint32_t size;

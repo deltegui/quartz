@@ -62,7 +62,6 @@ static Token symbol_to_token_identifier(Symbol* symbol);
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
 static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
-static void number_constant_use(Compiler* const compiler, int number);
 
 static void update_param_index(Compiler* const compiler, Symbol* symbol);
 static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index);
@@ -271,11 +270,6 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
     return make_constant(compiler, value);
 }
 
-static void number_constant_use(Compiler* const compiler, int number) {
-    uint16_t upvalue_index = make_constant(compiler, NUMBER_VALUE(number));
-    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, upvalue_index);
-}
-
 static void compile_print(void* ctx, PrintStmt* print) {
     Compiler* compiler = (Compiler*)ctx;
     ACCEPT_EXPR(compiler, print->inner);
@@ -326,10 +320,9 @@ static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_sym) 
 }
 
 static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_name, Symbol* fn_ref) {
-    // TODO check that this is not needed
-    // Symbol* fn_sym = lookup_str(compiler, SYMBOL_NAME_START(fn_ref->name), SYMBOL_NAME_LENGTH(fn_ref->name));
-    // assert(fn_sym != NULL);
-    // assert(fn_sym->kind == SYMBOL_FUNCTION);
+    assert(fn_ref != NULL);
+    assert(fn_ref->kind == SYMBOL_FUNCTION);
+    assert(var_name != NULL);
     return symbol_get_function_upvalue_index(fn_ref, var_name);
 }
 
@@ -357,7 +350,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     update_symbol_variable_info(compiler, symbol, fn_index);
 
     Compiler inner;
-    init_inner_compiler(&inner, compiler, &function->identifier, SYMBOL_GET_FUNCTION_UPVALUE_SIZE(symbol));
+    init_inner_compiler(&inner, compiler, &function->identifier, SYMBOL_SET_SIZE(symbol->function.upvalues));
     start_scope(&inner);
     update_param_index(&inner, symbol);
     ACCEPT_STMT(&inner, function->body);
@@ -381,9 +374,6 @@ static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token f
     Symbol** upvalues = SYMBOL_SET_GET_ELEMENTS(fn_sym->function.upvalues);
     int size = SYMBOL_SET_SIZE(fn_sym->function.upvalues);
     for (int i = 0; i < size; i++) {
-        // TODO this shouldn`t be necessary
-        // Symbol* upvalue_sym = lookup_str(compiler, upvalues[i].start, upvalues[i].length);
-        // assert(upvalue_sym != NULL);
         Symbol* upvalue_sym = upvalues[i];
         identifier_use(compiler, fn, &ops_get_identifier);
         emit(compiler, OP_BIND_UPVALUE);

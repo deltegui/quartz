@@ -26,6 +26,26 @@ ObjFunction* new_function(const char* name, int length, int upvalues) {
     return func;
 }
 
+void function_close_upvalue(ObjFunction* const function, int upvalue, ObjClosed* closed) {
+    function->upvalues[upvalue].is_closed = true;
+    function->upvalues[upvalue].closed = closed;
+}
+
+void function_open_upvalue(ObjFunction* const function, int upvalue, Value* value) {
+    function->upvalues[upvalue].is_closed = false;
+    function->upvalues[upvalue].open = value;
+}
+
+Value* function_get_upvalue(ObjFunction* const function, int slot) {
+    Value* target;
+    if (function->upvalues[slot].is_closed) {
+        target = &function->upvalues[slot].closed->value;
+    } else {
+        target = function->upvalues[slot].open;
+    }
+    return target;
+}
+
 ObjClosed* new_closed(Value value) {
     ObjClosed* closed = ALLOC_OBJ(ObjClosed, OBJ_CLOSED);
     closed->value = value;

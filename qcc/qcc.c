@@ -35,7 +35,7 @@ const char* read_file(const char* source_name) {
     return buffer;
 }
 
-int compile_file(const char* file) {
+int run(const char* file) {
     const char* source = read_file(file);
 
 #ifdef DEBUG
@@ -81,10 +81,9 @@ void repl() {
 #undef BUFFER_SIZE
 }
 
-
 int main(int argc, char** argv) {
     if (argc <= 1) {
         repl();
     }
-    return compile_file(argv[1]);
+    return run(argv[1]);
 }

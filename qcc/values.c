@@ -13,14 +13,13 @@ void value_print(Value val) {
     }
 }
 
-Value value_default(Type type) {
-    assert(type != TYPE_UNKNOWN);
-    switch (type) {
+Value value_default(Type* type) {
+    assert(! TYPE_IS_UNKNOWN(type));
+    switch (type->kind) {
     case TYPE_NUMBER: return NUMBER_VALUE(0);
     case TYPE_BOOL: return BOOL_VALUE(false);
     case TYPE_STRING: {
-        Value str = OBJ_VALUE(copy_string("", 0));
-        str.type = TYPE_STRING;
+        Value str = OBJ_VALUE(copy_string("", 0), CREATE_TYPE_STRING());
         return str;
     }
     case TYPE_NIL:
@@ -55,13 +54,13 @@ bool value_equals(Value first, Value second) {
     assert(false); // We should not reach this line
 }
 
-void init_valuearray(ValueArray* arr) {
+void init_valuearray(ValueArray* const arr) {
     arr->size = 0;
     arr->capacity = 0;
     arr->values = NULL;
 }
 
-void free_valuearray(ValueArray* arr) {
+void free_valuearray(ValueArray* const arr) {
     if (arr->values == NULL) {
         return;
     }
@@ -70,7 +69,7 @@ void free_valuearray(ValueArray* arr) {
     arr->capacity = 0;
 }
 
-int valuearray_write(ValueArray* arr, Value value) {
+int valuearray_write(ValueArray* const arr, Value value) {
     if (arr->capacity <= arr->size + 1) {
         size_t old = arr->capacity;
         arr->capacity = GROW_CAPACITY(arr->capacity);

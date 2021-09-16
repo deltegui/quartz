@@ -1,0 +1,12 @@
+fn hola(): (Number): Void {
+    fn mama(a: Number): Void {
+        print a;
+    }
+    return mama;
+}
+
+var a: (Number): Void = hola();
+a(5);
+
+var b = hola();
+b(6);

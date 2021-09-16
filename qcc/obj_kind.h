@@ -4,6 +4,7 @@
 typedef enum {
     OBJ_STRING,
     OBJ_FUNCTION,
+    OBJ_CLOSED,
 } ObjKind;
 
 #endif

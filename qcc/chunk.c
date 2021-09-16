@@ -3,7 +3,7 @@
 // must be managed using vm_memory.h
 #include "vm_memory.h"
 
-void init_chunk(Chunk* chunk) {
+void init_chunk(Chunk* const chunk) {
     chunk->size = 0;
     chunk->capacity = 0;
     chunk->code = NULL;
@@ -11,7 +11,7 @@ void init_chunk(Chunk* chunk) {
     init_valuearray(&chunk->constants);
 }
 
-void free_chunk(Chunk* chunk) {
+void free_chunk(Chunk* const chunk) {
     if (chunk->code != NULL) {
         FREE(uint8_t, chunk->code);
     }
@@ -23,7 +23,7 @@ void free_chunk(Chunk* chunk) {
     free_valuearray(&chunk->constants);
 }
 
-void chunk_write(Chunk* chunk, uint8_t bytecode, int line) {
+void chunk_write(Chunk* const chunk, uint8_t bytecode, int line) {
     if (chunk->capacity < chunk->size + 1) {
         size_t old = chunk->capacity;
         chunk->capacity = GROW_CAPACITY(chunk->capacity);
@@ -43,11 +43,11 @@ void chunk_write(Chunk* chunk, uint8_t bytecode, int line) {
     chunk->size++;
 }
 
-int chunk_add_constant(Chunk* chunk, Value value) {
+int chunk_add_constant(Chunk* const chunk, Value value) {
     return valuearray_write(&chunk->constants, value);
 }
 
-bool chunk_check_last_byte(Chunk* chunk, uint8_t bytecode) {
+bool chunk_check_last_byte(Chunk* const chunk, uint8_t bytecode) {
     if (chunk->size <= 0) {
         return false;
     }

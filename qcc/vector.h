@@ -1,31 +1,25 @@
 #ifndef QUARTZ_VECTOR_H_
 #define QUARTZ_VECTOR_H_
 
-#include "lexer.h"
-#include "type.h"
-
-struct _Expr;
+#include "common.h"
 
 typedef struct {
-    union {
-        Token identifier;
-        Type type;
-        struct _Expr* expr;
-    };
-} VElement;
-
-typedef struct {
-    int size;
-    int capacity;
-    VElement* elements;
+    uint32_t size;
+    uint32_t capacity;
+    size_t element_size;
+    void* elements;
 } Vector;
 
-#define VECTOR_ADD_TYPE(vect, type) vector_add(vect, ((VElement){ .type = type }));
-#define VECTOR_ADD_TOKEN(vect, token) vector_add(vect, ((VElement){ .identifier = token }));
-#define VECTOR_ADD_EXPR(vect, e) vector_add(vect, ((VElement){ .expr = e }))
+void init_vector(Vector* const vect, size_t element_size);
+void free_vector(Vector* const vect);
+uint32_t vector_next_add_position(Vector* const vect);
 
-void init_vector(Vector* vect);
-void free_vector(Vector* vect);
-void vector_add(Vector* vect, VElement element);
+#define VECTOR_AS(vect, element_type) ((element_type*) (vect)->elements)
+
+#define VECTOR_ADD(vect, element, element_type) do {\
+    uint32_t pos = vector_next_add_position(vect);\
+    element_type* transformed = (element_type*) (vect)->elements;\
+    transformed[pos] = element;\
+} while (false)
 
 #endif

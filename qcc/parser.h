@@ -17,7 +17,7 @@ typedef struct {
     int function_deep_count;
 } Parser;
 
-void init_parser(Parser* parser, const char* source, ScopedSymbolTable* symbols);
-Stmt* parse(Parser* parser);
+void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* symbols);
+Stmt* parse(Parser* const parser);
 
 #endif

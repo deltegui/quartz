@@ -1,0 +1,33 @@
+var inc: (): Void;
+var get: (): Number;
+var inc_elements: (Number): Void;
+
+{
+    var a = 0;
+
+    fn a_inc_elements(n: Number): Void {
+        a = a + n;
+    }
+
+    fn a_inc() {
+        a_inc_elements(1);
+    }
+
+    fn a_get(): Number {
+        return a;
+    }
+
+    get = a_get;
+    inc = a_inc;
+    inc_elements = a_inc_elements;
+}
+
+inc();
+print get();
+inc();
+print get();
+print get();
+inc();
+print get();
+inc_elements(5);
+print get();

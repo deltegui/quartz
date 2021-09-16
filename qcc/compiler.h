@@ -14,6 +14,6 @@ typedef enum {
     COMPILATION_OK,
 } CompilationResult;
 
-CompilationResult compile(const char* source, ObjFunction** result);
+CompilationResult compile(const char* source, ObjFunction** const result);
 
 #endif

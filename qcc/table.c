@@ -1,3 +1,11 @@
+// Here is implemented the runtime hash table. It uses
+// OpenAddressing with robin-hood hashing optimization.
+// It's not generic and only is able to store Values.
+// Since is a runtime data structure, must be garbage-collected,
+// so the memory is managed through vm_memory. Here good
+// performance is mandatory. Those are the two reasons why it
+// isn't implemented using CTable.
+
 #include "table.h"
 #include <string.h>
 #include "vm_memory.h"
@@ -13,14 +21,14 @@ static void insert(Table* table, ObjString* key, Value value);
 static void adjust_capacity(Table* table, int capacity);
 static Entry* find_entry(Table* table, ObjString* key);
 
-void init_table(Table* table) {
+void init_table(Table* const table) {
     table->entries = NULL;
     table->size = 0;
     table->capacity = 0;
     table->max_distance = 0;
 }
 
-void free_table(Table* table) {
+void free_table(Table* const table) {
     if (table->entries == NULL) {
         return;
     }
@@ -28,7 +36,7 @@ void free_table(Table* table) {
     init_table(table);
 }
 
-static void insert(Table* table, ObjString* key, Value value) {
+static void insert(Table* const table, ObjString* key, Value value) {
     uint32_t index = key->hash & (table->capacity - 1);
     Entry entry_insert = (Entry){
         .key = key,
@@ -56,13 +64,13 @@ static void insert(Table* table, ObjString* key, Value value) {
             table->max_distance = entry_insert.distance;
         }
         current_index = (current_index + 1) & (table->capacity - 1);
-        // It's garateed that there is at least one empty space. So, returning to
+        // It's guaranteed that there is at least one empty space. So, returning to
         // the start should never happen.
         assert(current_index != index);
     }
 }
 
-static void adjust_capacity(Table* table, int capacity) {
+static void adjust_capacity(Table* const table, int capacity) {
     Entry* old_entries = table->entries;
     int old_capacity = table->capacity;
 
@@ -86,7 +94,7 @@ static void adjust_capacity(Table* table, int capacity) {
     FREE_ARRAY(Entry, old_entries, old_capacity);
 }
 
-void table_set(Table* table, ObjString* key, Value value) {
+void table_set(Table* const table, ObjString* key, Value value) {
     if (TABLE_SHOULD_GROW(table)) {
         int capacity = GROW_CAPACITY(table->capacity);
         adjust_capacity(table, capacity);
@@ -94,7 +102,7 @@ void table_set(Table* table, ObjString* key, Value value) {
     insert(table, key, value);
 }
 
-static Entry* find_entry(Table* table, ObjString* key) {
+static Entry* find_entry(Table* const table, ObjString* key) {
     if (table->size == 0) {
         return NULL;
     }
@@ -113,7 +121,7 @@ static Entry* find_entry(Table* table, ObjString* key) {
     return NULL;
 }
 
-Value table_find(Table* table, ObjString* key) {
+Value table_find(Table* const table, ObjString* key) {
     Entry* entry = find_entry(table, key);
     if (entry == NULL) {
         return NIL_VALUE();
@@ -121,7 +129,7 @@ Value table_find(Table* table, ObjString* key) {
     return entry->value;
 }
 
-bool table_delete(Table* table, ObjString* key) {
+bool table_delete(Table* const table, ObjString* key) {
     Entry* entry = find_entry(table, key);
     if (entry == NULL) {
         return false;
@@ -133,7 +141,7 @@ bool table_delete(Table* table, ObjString* key) {
     return true;
 }
 
-ObjString* table_find_string(Table* table, const char* chars, int length, uint32_t hash) {
+ObjString* table_find_string(Table* const table, const char* chars, int length, uint32_t hash) {
     if (table->size == 0) {
         return NULL;
     }

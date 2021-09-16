@@ -79,8 +79,11 @@ typedef struct {
 #define CREATE_ASSIGNMENT_EXPR(assignment) create_expr(EXPR_ASSIGNMENT, &assignment)
 #define CREATE_CALL_EXPR(call) create_expr(EXPR_CALL, &call);
 
-Expr* create_expr(ExprKind type, void* expr_node);
-void free_expr(Expr* expr);
+Expr* create_expr(ExprKind type, const void* const expr_node);
+void free_expr(Expr* const expr);
 void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr);
+
+#define VECTOR_AS_EXPRS(vect) VECTOR_AS(vect, Expr*)
+#define VECTOR_ADD_EXPR(vect, expr_ptr) VECTOR_ADD(vect, expr_ptr, Expr*)
 
 #endif

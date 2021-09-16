@@ -1,0 +1,8 @@
+version: "3.3"
+services:
+    test:
+        build: .
+        environment:
+            - PROGRAM
+        volumes:
+            - ./test:/data

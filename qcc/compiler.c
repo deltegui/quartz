@@ -40,7 +40,7 @@ static void error(Compiler* const compiler, const char* message);
 
 static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source);
 static void free_compiler(Compiler* const compiler);
-static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, int upvalue_size);
+static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym);
 
 static Chunk* current_chunk(Compiler* const compiler);
 
@@ -130,7 +130,8 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
 
-    compiler->func = new_function("<GLOBAL>", 8, 0);
+    // TODO global is a function but its special: cannot be called. Which type should it have?
+    compiler->func = new_function("<GLOBAL>", 8, 0, CREATE_TYPE_UNKNOWN());
     compiler->mode = mode;
 
     compiler->last_line = 1;
@@ -146,11 +147,15 @@ static void free_compiler(Compiler* const compiler) {
     free_scoped_symbol_table(&compiler->symbols);
 }
 
-static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, int upvalue_size) {
+static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym) {
     inner->symbols = outer->symbols;
     inner->parser = outer->parser;
 
-    inner->func = new_function(fn_identifier->start, fn_identifier->length, upvalue_size);
+    inner->func = new_function(
+        fn_identifier->start,
+        fn_identifier->length,
+        SYMBOL_SET_SIZE(fn_sym->function.upvalues),
+        fn_sym->type);
     inner->mode = MODE_FUNCTION;
 
     inner->last_line = outer->last_line;
@@ -350,7 +355,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     update_symbol_variable_info(compiler, symbol, fn_index);
 
     Compiler inner;
-    init_inner_compiler(&inner, compiler, &function->identifier, SYMBOL_SET_SIZE(symbol->function.upvalues));
+    init_inner_compiler(&inner, compiler, &function->identifier, symbol);
     start_scope(&inner);
     update_param_index(&inner, symbol);
     ACCEPT_STMT(&inner, function->body);

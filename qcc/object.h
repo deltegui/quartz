@@ -4,9 +4,11 @@
 #include "lexer.h"
 #include "chunk.h"
 #include "obj_kind.h"
+#include "type.h"
 
 typedef struct s_obj {
     ObjKind kind;
+    Type* type;
     struct s_obj* next;
 } Obj;
 
@@ -52,7 +54,7 @@ ObjString* concat_string(ObjString* first, ObjString* second);
 #define OBJ_IS_FUNCTION(obj) (is_obj_kind(obj, OBJ_FUNCTION))
 #define OBJ_AS_FUNCTION(obj) ((ObjFunction*) obj)
 
-ObjFunction* new_function(const char* name, int length, int upvalues);
+ObjFunction* new_function(const char* name, int length, int upvalues, Type* type);
 void function_close_upvalue(ObjFunction* const function, int upvalue, ObjClosed* closed);
 void function_open_upvalue(ObjFunction* const function, int upvalue, Value* value);
 Value* function_get_upvalue(ObjFunction* const function, int slot);

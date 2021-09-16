@@ -41,6 +41,7 @@ static void free_pool_node(PoolNode* const node);
 static void free_type(Type* const type);
 static Type* type_pool_add(Type type);
 static PoolNode* alloc_node();
+static void function_type_print(const Type* const type);
 static bool fn_params_equals(FunctionType* first, FunctionType* second);
 
 inline static uint32_t next_capacity() {
@@ -156,10 +157,25 @@ void type_print(const Type* const type) {
     case TYPE_BOOL: printf("Bool"); break;
     case TYPE_NIL: printf("Nil"); break;
     case TYPE_STRING: printf("String"); break;
-    case TYPE_FUNCTION: printf("Function"); break;
+    case TYPE_FUNCTION: function_type_print(type); break;
     case TYPE_UNKNOWN: printf("Unknown"); break;
     case TYPE_VOID: printf("Void"); break;
     }
+}
+
+static void function_type_print(const Type* const type) {
+    assert(type->kind == TYPE_FUNCTION);
+    Type** params = VECTOR_AS_TYPES(&type->function->param_types);
+    uint32_t size = type->function->param_types.size;
+    printf("(");
+    for (uint32_t i = 0; i < size; i++) {
+        type_print(params[i]);
+        if (i < size - 1) {
+            printf(", ");
+        }
+    }
+    printf("): ");
+    type_print(type->function->return_type);
 }
 
 bool type_equals(Type* first, Type* second) {

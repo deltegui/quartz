@@ -4,22 +4,26 @@
 #include "vm.h"
 #include "table.h"
 
-static Obj* alloc_obj(size_t size, ObjKind kind);
+static Obj* alloc_obj(size_t size, ObjKind kind, Type* type);
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash);
 
-#define ALLOC_OBJ(type, kind) (type*) alloc_obj(sizeof(type), kind)
-#define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, OBJ_STRING)
+#define ALLOC_OBJ(obj_type, kind, type) (obj_type*) alloc_obj(sizeof(obj_type), kind, type)
+#define ALLOC_STR(length) (ObjString*) alloc_obj(sizeof(ObjString) + sizeof(char) * length, OBJ_STRING, CREATE_TYPE_STRING())
 
-static Obj* alloc_obj(size_t size, ObjKind kind) {
+static Obj* alloc_obj(size_t size, ObjKind kind, Type* type) {
     Obj* obj = (Obj*) qvm_realloc(NULL, 0, size);
     obj->kind = kind;
+    obj->type = type;
     obj->next = qvm.objects;
     qvm.objects = obj;
     return obj;
 }
 
-ObjFunction* new_function(const char* name, int length, int upvalues) {
-    ObjFunction* func = (ObjFunction*) alloc_obj(sizeof(ObjFunction) + (sizeof(Upvalue) * upvalues), OBJ_FUNCTION);
+ObjFunction* new_function(const char* name, int length, int upvalues, Type* type) {
+    ObjFunction* func = (ObjFunction*) alloc_obj(
+        sizeof(ObjFunction) + (sizeof(Upvalue) * upvalues),
+        OBJ_FUNCTION,
+        type);
     init_chunk(&func->chunk);
     func->arity = 0;
     func->name = copy_string(name, length);
@@ -47,7 +51,8 @@ Value* function_get_upvalue(ObjFunction* const function, int slot) {
 }
 
 ObjClosed* new_closed(Value value) {
-    ObjClosed* closed = ALLOC_OBJ(ObjClosed, OBJ_CLOSED);
+    // TODO again, which type should be a ObjClosed (look vm.c too)
+    ObjClosed* closed = ALLOC_OBJ(ObjClosed, OBJ_CLOSED, CREATE_TYPE_UNKNOWN());
     closed->value = value;
     return closed;
 }
@@ -97,9 +102,9 @@ void print_object(Obj* obj) {
     }
     case OBJ_FUNCTION: {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
-        // TODO I wanted to print the function type, but Obj does not hold
-        // its own type!!! Fix that shit.
-        printf("<fn '%s'>", OBJ_AS_CSTRING(fn->name));
+        printf("<fn '%s' ", OBJ_AS_CSTRING(fn->name));
+        type_print(obj->type);
+        printf(">");
         break;
     }
     case OBJ_CLOSED: {

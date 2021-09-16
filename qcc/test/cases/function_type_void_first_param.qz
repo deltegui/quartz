@@ -1,2 +1,2 @@
-[Line 1] Error at ',': Expected ) at end of function param types declaration
-[Line 5] Error at 'return': Cannot use return outside a function!
+[Line 1] Error at 'Void': You can't use Void type in params of function type declaration
+[Line 9] Error at end: Expected block to end with '}'

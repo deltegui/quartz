@@ -1,3 +1,24 @@
+// This is CTable. CTable stands for "Compiler Table". The
+// reason why is called "CTable" and not just "Table" is
+// that there is another hash table in the compiler (in table.h
+// and table.c, used in runtime). Its main feature is that
+// it's a generic table.
+//
+// This hash table is implemented using just Open Addressing
+// (it does not use other optimizations). But, since it's
+// generic, it has been implemented in a "strange" way.
+// First things first, it uses a Vector (vector.h and vector.c)
+// to store data by value (so, it does not use void* to
+// implement generic code). We don't want to store data outside
+// the array. Data is just stored inside the vector, one after
+// another.
+// Secondly, to search by key, we use a custom array
+// which stores keys and the positions of the data inside the
+// vector. So, this implementation let us to iterate over the
+// values of the hash table easily (just iterate over the vector,
+// used heavily in symbol.c) and take advantage of a traditional
+// hash table.
+
 #include "ctable.h"
 #include <string.h> // for memcmp
 #include "object.h" // for hash function
@@ -105,7 +126,7 @@ static void grow_symbol_table(CTable* const table) {
         *entry = old_entries[i];
     }
 
-    // Just free the array if wasnt NULL. Do not free key str.
+    // Just free the array if wasn't NULL. Do not free key str.
     // old_entries is NULL if is the first time that is initialized.
     if (old_entries != NULL) {
         free(old_entries);

@@ -470,24 +470,22 @@ static Type* parse_type(Parser* const parser) {
 static Type* parse_function_type(Parser* const parser) {
     Type* fn_type = create_type_function();
     consume(parser, TOKEN_LEFT_PAREN, "Expected left paren in function type");
-    for (;;) {
-        Type* param = parse_type(parser);
-        advance(parser); // consume simple type
-        if (TYPE_IS_UNKNOWN(param)) {
-            error(parser, "Unkown type in param in function type declaration");
-        }
-        // TODO should void be in param list to reflect that a function takes 0 parameters?
-        if (TYPE_IS_VOID(param)) {
-            if (TYPE_FN_PARAMS(fn_type).size != 0) {
-                error(parser, "You can only use Void type in function type declaration to declare a 0 arity function");
+    if (parser->current.kind != TOKEN_RIGHT_PAREN) {
+        for (;;) {
+            Type* param = parse_type(parser);
+            advance(parser); // consume simple type
+            if (TYPE_IS_UNKNOWN(param)) {
+                error_prev(parser, "Unkown type in param in function type declaration");
             }
-            break;
+            if (TYPE_IS_VOID(param)) {
+                error_prev(parser, "You can't use Void type in params of function type declaration");
+            }
+            VECTOR_ADD_TYPE(& TYPE_FN_PARAMS(fn_type), param);
+            if (parser->current.kind != TOKEN_COMMA) {
+                break;
+            }
+            advance(parser); // consume comma
         }
-        VECTOR_ADD_TYPE(& TYPE_FN_PARAMS(fn_type), param);
-        if (parser->current.kind != TOKEN_COMMA) {
-            break;
-        }
-        advance(parser); // consume comma
     }
     consume(parser, TOKEN_RIGHT_PAREN, "Expected ) at end of function param types declaration");
     consume(parser, TOKEN_COLON, "Expected return type in function type declaration");

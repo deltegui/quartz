@@ -1,4 +1,4 @@
-fn hola(): (Void): Void {
+fn hola(): (): Void {
     var a = 0;
     fn pipo() {
         print a;

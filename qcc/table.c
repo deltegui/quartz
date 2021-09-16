@@ -1,3 +1,11 @@
+// Here is implemented the runtime hash table. It uses
+// OpenAddressing with robin-hood hashing optimization.
+// It's not generic and only is able to store Values.
+// Since is a runtime data structure, must be garbage-collected,
+// so the memory is managed through vm_memory. Here good
+// performance is mandatory. Those are the two reasons why it
+// isn't implemented using CTable.
+
 #include "table.h"
 #include <string.h>
 #include "vm_memory.h"
@@ -56,7 +64,7 @@ static void insert(Table* const table, ObjString* key, Value value) {
             table->max_distance = entry_insert.distance;
         }
         current_index = (current_index + 1) & (table->capacity - 1);
-        // It's garanteed that there is at least one empty space. So, returning to
+        // It's guaranteed that there is at least one empty space. So, returning to
         // the start should never happen.
         assert(current_index != index);
     }

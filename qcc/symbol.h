@@ -60,7 +60,6 @@ Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* const symbol);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
-
 typedef struct {
     CTable table; // CTable<Symbol>
 } SymbolTable;

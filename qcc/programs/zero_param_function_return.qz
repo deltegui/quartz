@@ -1,4 +1,4 @@
-fn create_void_fn(): (Void): Void {
+fn create_void_fn(): (): Void {
     fn hello() {
         print "Hello";
     }

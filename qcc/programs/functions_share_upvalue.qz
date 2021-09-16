@@ -1,5 +1,5 @@
-var inc: (Void): Void;
-var get: (Void): Number;
+var inc: (): Void;
+var get: (): Number;
 
 {
     var a = 0;

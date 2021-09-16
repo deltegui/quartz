@@ -76,12 +76,12 @@ void symbol_insert(SymbolTable* const table, Symbol entry);
 typedef struct _SymbolNode {
     SymbolTable symbols;
     struct _SymbolNode* father;
-    // TODO childs should be a Vector type
-    struct _SymbolNode* childs;
-    int size;
-    int capacity;
-    int next_node_to_visit;
+    Vector childs; // Vector<SymbolNode>
+    uint32_t next_node_to_visit;
 } SymbolNode;
+
+#define VECTOR_AS_SYMBOL_NODE(vect) VECTOR_AS(vect, SymbolNode)
+#define VECTOR_ADD_SYMBOL_NODE(vect, node) VECTOR_ADD(vect, node, SymbolNode)
 
 void init_symbol_node(SymbolNode* const node);
 void free_symbol_node(SymbolNode* const node);

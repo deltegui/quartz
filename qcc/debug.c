@@ -70,9 +70,10 @@ static void symbol_table_print(const SymbolTable* table) {
 
 static void symbol_node_print(const SymbolNode* node) {
     symbol_table_print(&node->symbols);
-    printf("SCOPE CHILDS: %d\n", node->size);
-    for (int i = 0; i < node->size; i++) {
-        symbol_node_print(&node->childs[i]);
+    printf("SCOPE CHILDS: %d\n", node->childs.size);
+    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
+    for (uint32_t i = 0; i < node->childs.size; i++) {
+        symbol_node_print(&childs[i]);
     }
 }
 
@@ -132,7 +133,6 @@ static const char* OpCodeStrings[] = {
 };
 
 void opcode_print(uint8_t op) {
-    // TODO warning this be out of range.
     printf("%s\n", OpCodeStrings[op]);
 }
 

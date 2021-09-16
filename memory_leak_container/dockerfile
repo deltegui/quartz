@@ -1,0 +1,9 @@
+FROM ubuntu:20.04
+
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install make clang valgrind -y
+RUN mkdir /data
+VOLUME /data
+ENV PROGRAM=
+CMD sh /data/run_test.sh

@@ -2,6 +2,7 @@
 #include "values.h"
 #include "math.h"
 #include "vm_memory.h"
+#include "type.h" // to init and free type_pool
 
 #ifdef VM_DEBUG
 #include "debug.h"
@@ -10,20 +11,32 @@
 QVM qvm;
 
 void init_qvm() {
+    init_type_pool();
     init_table(&qvm.strings);
     init_table(&qvm.globals);
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
     qvm.frame_count = 0;
+    qvm.had_runtime_error = false;
 }
 
 void free_qvm() {
+    free_type_pool();
     free_table(&qvm.strings);
     free_table(&qvm.globals);
     free_objects();
 }
 
+static void runtime_error(const char* message) {
+    qvm.had_runtime_error = true;
+    printf("%s\n", message);
+}
+
 static inline void call(uint8_t param_count) {
+    if (qvm.frame_count + 1 >= FRAMES_MAX) {
+        runtime_error("Frame overflow");
+        return;
+    }
     qvm.frame_count++;
     Value* fn_ptr = (qvm.stack_top - param_count - 1);
     Value fn_value = *fn_ptr;
@@ -35,6 +48,10 @@ static inline void call(uint8_t param_count) {
 }
 
 static inline void stack_push(Value val) {
+    if ((qvm.stack_top - qvm.stack) + 1 >= STACK_MAX) {
+        runtime_error("Stack overflow");
+        return;
+    }
     *(qvm.stack_top++) = val;
 }
 
@@ -60,8 +77,7 @@ static inline Value stack_peek(uint8_t distance) {
     ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
     ObjString* concat = concat_string(a, b);\
-    Value val = OBJ_VALUE(concat);\
-    val.type = TYPE_STRING;\
+    Value val = OBJ_VALUE(concat, CREATE_TYPE_STRING());\
     stack_push(val)
 
 #define CONSTANT_OP(read)\
@@ -104,6 +120,9 @@ static void run(ObjFunction* func) {
     qvm.frame->func = func;
 
     for (;;) {
+        if (qvm.had_runtime_error) {
+            return;
+        }
 #ifdef VM_DEBUG
         opcode_print(*qvm.frame->pc);
 #endif
@@ -111,7 +130,7 @@ static void run(ObjFunction* func) {
         case OP_ADD: {
             Value second = stack_peek(0);
             Value first = stack_peek(1);
-            if (first.type == TYPE_STRING && second.type == TYPE_STRING) {
+            if (TYPE_IS_STRING(first.type) && TYPE_IS_STRING(second.type)) {
                 STRING_CONCAT();
                 break;
             }
@@ -230,6 +249,16 @@ static void run(ObjFunction* func) {
             qvm.frame->slots[slot] = stack_peek(0);
             break;
         }
+        case OP_SET_UPVALUE: {
+            Value* target = function_get_upvalue(qvm.frame->func, READ_BYTE());
+            *target = stack_peek(0);
+            break;
+        }
+        case OP_GET_UPVALUE: {
+            Value* readed = function_get_upvalue(qvm.frame->func, READ_BYTE());
+            stack_push(*readed);
+            break;
+        }
         case OP_CALL: {
             uint8_t param_count = READ_BYTE();
             call(param_count);
@@ -257,6 +286,32 @@ static void run(ObjFunction* func) {
         case OP_END: {
             return;
         }
+        case OP_BIND_UPVALUE: {
+            uint8_t slot = READ_BYTE();
+            uint8_t upvalue = READ_BYTE();
+            Value* stack_ptr = &qvm.frame->slots[slot];
+            Obj* function_obj = VALUE_AS_OBJ(stack_pop());
+            ObjFunction* function = OBJ_AS_FUNCTION(function_obj);
+            function_open_upvalue(function, upvalue, stack_ptr);
+            break;
+        }
+        case OP_CLOSE: {
+            Value val = stack_pop();
+            ObjClosed* closed = new_closed(val);
+            // TODO Which type should be for a ObjClosed?
+            Value obj_closed = OBJ_VALUE(closed, CREATE_TYPE_UNKNOWN());
+            stack_push(obj_closed);
+            break;
+        }
+        case OP_BIND_CLOSED: {
+            uint8_t upvalue = READ_BYTE();
+            Obj* function_obj = VALUE_AS_OBJ(stack_pop());
+            ObjFunction* function = OBJ_AS_FUNCTION(function_obj);
+            Obj* closed_obj = VALUE_AS_OBJ(stack_peek(0));
+            ObjClosed* closed = OBJ_AS_CLOSED(closed_obj);
+            function_close_upvalue(function, upvalue, closed);
+            break;
+        }
         }
 #ifdef VM_DEBUG
         printf("\t");
@@ -269,7 +324,7 @@ static void run(ObjFunction* func) {
 }
 
 void qvm_execute(ObjFunction* func) {
-    stack_push(OBJ_VALUE(func));
+    stack_push(OBJ_VALUE(func, create_type_function()));
     CallFrame* frame = &qvm.frames[qvm.frame_count++];
     frame->func = func;
     frame->pc = func->chunk.code;

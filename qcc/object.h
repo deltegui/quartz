@@ -1,22 +1,17 @@
-#ifndef QUARTZ_OBJECT_H
-#define QUARTZ_OBJECT_H
+#ifndef QUARTZ_OBJECT_H_
+#define QUARTZ_OBJECT_H_
 
 #include "lexer.h"
 #include "chunk.h"
-
-typedef enum {
-    OBJ_STRING,
-    OBJ_FUNCTION,
-} ObjKind;
+#include "obj_kind.h"
+#include "type.h"
 
 typedef struct s_obj {
     ObjKind kind;
+    Type* type;
     struct s_obj* next;
 } Obj;
 
-// Here we use flexible array member. This lets you to
-// avoid double indirection using pointers, which let
-// us have better performance.
 typedef struct s_obj_string {
     Obj obj;
     uint32_t hash;
@@ -26,9 +21,23 @@ typedef struct s_obj_string {
 
 typedef struct {
     Obj obj;
+    Value value;
+} ObjClosed;
+
+typedef struct {
+    bool is_closed;
+    union {
+        Value* open;
+        ObjClosed* closed;
+    };
+} Upvalue;
+
+typedef struct {
+    Obj obj;
     int arity;
     Chunk chunk;
     ObjString* name;
+    Upvalue upvalues[];
 } ObjFunction;
 
 void print_object(Obj* obj);
@@ -45,6 +54,14 @@ ObjString* concat_string(ObjString* first, ObjString* second);
 #define OBJ_IS_FUNCTION(obj) (is_obj_kind(obj, OBJ_FUNCTION))
 #define OBJ_AS_FUNCTION(obj) ((ObjFunction*) obj)
 
-ObjFunction* new_function(const char* name, int length);
+ObjFunction* new_function(const char* name, int length, int upvalues, Type* type);
+void function_close_upvalue(ObjFunction* const function, int upvalue, ObjClosed* closed);
+void function_open_upvalue(ObjFunction* const function, int upvalue, Value* value);
+Value* function_get_upvalue(ObjFunction* const function, int slot);
+
+#define OBJ_IS_CLOSED(obj) (is_obj_kind(obj, OBJ_CLOSED))
+#define OBJ_AS_CLOSED(obj) ((ObjClosed*) obj)
+
+ObjClosed* new_closed(Value value);
 
 #endif

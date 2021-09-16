@@ -4,4 +4,5 @@ quartz
 /.idea/
 /a.out/
 /qcc.dSYM/
+*.dSYM
 vgcore.*

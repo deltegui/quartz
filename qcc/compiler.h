@@ -1,5 +1,5 @@
-#ifndef QUARTZ_COMPILER_H
-#define QUARTZ_COMPILER_H
+#ifndef QUARTZ_COMPILER_H_
+#define QUARTZ_COMPILER_H_
 
 #include "chunk.h"
 #include "object.h"
@@ -14,6 +14,6 @@ typedef enum {
     COMPILATION_OK,
 } CompilationResult;
 
-CompilationResult compile(const char* source, ObjFunction** result);
+CompilationResult compile(const char* source, ObjFunction** const result);
 
 #endif

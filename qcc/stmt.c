@@ -1,6 +1,6 @@
 #include "stmt.h"
 
-static void free_list_stmt(ListStmt* list_stmt);
+static void free_list_stmt(ListStmt* const list_stmt);
 static void visit_list_stmt(StmtVisitor* visitor, void* ctx, ListStmt* list);
 
 ListStmt* create_stmt_list() {
@@ -13,7 +13,7 @@ ListStmt* create_stmt_list() {
 #undef INITIAL_CAPACITY
 }
 
-void stmt_list_add(ListStmt* list, Stmt* stmt) {
+void stmt_list_add(ListStmt* const list, Stmt* stmt) {
 #define GROWTH_FACTOR 2
     if (list->capacity <= list->size + 1) {
         list->capacity = list->capacity * GROWTH_FACTOR;
@@ -59,14 +59,14 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     return stmt;
 }
 
-static void free_list_stmt(ListStmt* list_stmt) {
+static void free_list_stmt(ListStmt* const list_stmt) {
     for (int i = 0; i < list_stmt->size; i++) {
         free_stmt(list_stmt->stmts[i]);
     }
     free(list_stmt->stmts);
 }
 
-void free_stmt(Stmt* stmt) {
+void free_stmt(Stmt* const stmt) {
     if (stmt == NULL) {
         return;
     }
@@ -116,6 +116,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_BLOCK: DISPATCH(visit_block, block); break;
     case STMT_FUNCTION: DISPATCH(visit_function, function); break;
     case STMT_RETURN: DISPATCH(visit_return, return_); break;
+    default: assert(false);
     }
 #undef DISPATCH
 }

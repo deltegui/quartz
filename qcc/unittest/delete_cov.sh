@@ -1,0 +1,2 @@
+rm ./*.gcda
+rm ./*.gcno

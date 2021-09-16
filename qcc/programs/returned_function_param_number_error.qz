@@ -1,0 +1,8 @@
+fn hola(): (Number): Void {
+    fn mama(a: Number): Void {
+        print a;
+    }
+    return mama;
+}
+var b = hola();
+b(6, "hola");

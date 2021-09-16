@@ -8,7 +8,7 @@
 
 #include "../lexer.h"
 
-bool token_equals(Token* first, Token* second) {
+bool t_token_equals(Token* first, Token* second) {
 #define ERROR(message) fprintf(\
     stderr,\
     "Token %.*s does not equal %.*s: %s\n",\

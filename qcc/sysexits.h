@@ -1,5 +1,5 @@
-#ifndef QUARTZ_SYSEXITS_H
-#define QUARTZ_SYSEXITS_H
+#ifndef QUARTZ_SYSEXITS_H_
+#define QUARTZ_SYSEXITS_H_
 
 #define EX_OK            0     // successful termination
 #define EX_BASE          64    // base value for error messages

@@ -1,6 +1,6 @@
-var my_global_num: Number;
-var my_global_str: String;
-var my_global_bool: Bool;
+var my_global_num: Number = 0;
+var my_global_str: String = "";
+var my_global_bool: Bool = false;
 {
     var my_local_num: Number = 1;
     var my_local_str: String = "local";

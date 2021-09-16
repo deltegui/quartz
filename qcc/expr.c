@@ -1,6 +1,6 @@
 #include "expr.h"
 
-Expr* create_expr(ExprKind kind, void* expr_node) {
+Expr* create_expr(ExprKind kind, const void* const expr_node) {
     Expr* expr = (Expr*) malloc(sizeof(Expr));
     switch(kind) {
     case EXPR_BINARY:
@@ -36,7 +36,7 @@ Expr* create_expr(ExprKind kind, void* expr_node) {
 // iterate over all nodes and free memory
 // for each one. A node pointer can be NULL
 // so we must protect ourselves from that.
-void free_expr(Expr* expr) {
+void free_expr(Expr* const expr) {
     if (expr == NULL) {
         return;
     }
@@ -55,12 +55,14 @@ void free_expr(Expr* expr) {
     case EXPR_UNARY:
         free_expr(expr->unary.expr);
         break;
-    case EXPR_CALL:
-        for (int i = 0; i < expr->call.params.size; i++) {
-            free_expr(expr->call.params.params[i].expr);
+    case EXPR_CALL: {
+        Expr** exprs = VECTOR_AS_EXPRS(&expr->call.params);
+        for (uint32_t i = 0; i < expr->call.params.size; i++) {
+            free_expr(exprs[i]);
         }
-        free_param_array(&expr->call.params);
+        free_vector(&expr->call.params);
         break;
+    }
     }
     free(expr);
 }

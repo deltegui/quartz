@@ -1,0 +1,12 @@
+var my: (Number): Void;
+{
+    var a = 0;
+    fn pipo(b: Number) {
+        print a;
+        a = a + 1;
+    }
+    my = pipo;
+}
+my(0);
+my(0);
+my(0);

@@ -1,0 +1,7 @@
+fn hola(): (Number): Void {
+    fn mama(a: String, b: Number): Void {
+        print a;
+    }
+    return mama;
+}
+var b = hola();

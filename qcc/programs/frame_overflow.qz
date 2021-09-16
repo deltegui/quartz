@@ -1,0 +1,6 @@
+fn hola() {
+    print "hola";
+    hola();
+}
+
+hola();

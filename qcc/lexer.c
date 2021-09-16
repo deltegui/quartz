@@ -5,69 +5,69 @@
 #include "debug.h"
 #endif
 
-static bool is_at_end(Lexer* lexer);
-static char peek(Lexer* lexer);
-static bool match(Lexer* lexer, char c);
-static bool match_next(Lexer* lexer, char next);
-static void advance(Lexer* lexer);
-static bool consume(Lexer* lexer, char expected);
+static bool is_at_end(Lexer* const lexer);
+static char peek(Lexer* const lexer);
+static bool match(Lexer* const lexer, char c);
+static bool match_next(Lexer* const lexer, char next);
+static void advance(Lexer* const lexer);
+static bool consume(Lexer* const lexer, char expected);
 
-static Token create_token(Lexer* lexer, TokenKind kind);
-static Token create_error(Lexer* lexer, const char* message);
+static Token create_token(Lexer* const lexer, TokenKind kind);
+static Token create_error(Lexer* const lexer, const char* message);
 
-static bool skip_whitespaces(Lexer* lexer);
-static bool consume_multiline_comment(Lexer* lexer);
-static bool is_numeric(Lexer* lexer);
-static bool is_alpha(Lexer* lexer);
-static bool is_string_quote(Lexer* lexer);
-static Token scan_number(Lexer* lexer);
-static Token scan_string(Lexer* lexer);
-static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len);
-static bool match_token(Lexer* lexer, const char* subpart, int start, int len);
-static Token scan_identifier(Lexer* lexer);
-static inline Token scan_token(Lexer* lexer);
-Token next_token(Lexer* lexer);
+static bool skip_whitespaces(Lexer* const lexer);
+static bool consume_multiline_comment(Lexer* const lexer);
+static bool is_numeric(Lexer* const lexer);
+static bool is_alpha(Lexer* const lexer);
+static bool is_string_quote(Lexer* const lexer);
+static Token scan_number(Lexer* const lexer);
+static Token scan_string(Lexer* const lexer);
+static bool match_subtoken(Lexer* const lexer, const char* subpart, int start, int len);
+static bool match_token(Lexer* const lexer, const char* subpart, int start, int len);
+static Token scan_identifier(Lexer* const lexer);
+static inline Token scan_token(Lexer* const lexer);
+Token next_token(Lexer* const lexer);
 
 #define CONSUME_UNTIL(lexer, character)\
     while(peek(lexer) != character && !is_at_end(lexer))\
         advance(lexer)
 
-void init_lexer(Lexer* lexer, const char* buffer) {
+void init_lexer(Lexer* const lexer, const char* const buffer) {
     lexer->current = buffer;
     lexer->start = buffer;
     lexer->line = 1;
 }
 
-static bool is_at_end(Lexer* lexer) {
+static bool is_at_end(Lexer* const lexer) {
     return *lexer->current == '\0';
 }
 
-static char peek(Lexer* lexer) {
+static char peek(Lexer* const lexer) {
     return *lexer->current;
 }
 
-static bool match(Lexer* lexer, char c) {
+static bool match(Lexer* const lexer, char c) {
     if (is_at_end(lexer)) {
         return false;
     }
     return (*lexer->current) == c;
 }
 
-static bool match_next(Lexer* lexer, char next) {
+static bool match_next(Lexer* const lexer, char next) {
     if (is_at_end(lexer)) {
         return false;
     }
     return *(lexer->current + 1) == next;
 }
 
-static void advance(Lexer* lexer) {
+static void advance(Lexer* const lexer) {
     if (is_at_end(lexer)) {
         return;
     }
     lexer->current++;
 }
 
-static bool consume(Lexer* lexer, char expected) {
+static bool consume(Lexer* const lexer, char expected) {
     if (match(lexer, expected)) {
         advance(lexer);
         return true;
@@ -75,26 +75,26 @@ static bool consume(Lexer* lexer, char expected) {
     return false;
 }
 
-static Token create_token(Lexer* lexer, TokenKind kind) {
+static Token create_token(Lexer* const lexer, TokenKind kind) {
     Token token;
     token.length = (int) (lexer->current - lexer->start);
     token.line = lexer->line;
     token.start = lexer->start;
     token.kind = kind;
 #ifdef LEXER_DEBUG
-    printf("[LEXER DEBUG]: Readed ");
+    printf("[LEXER DEBUG]: Read ");
     token_print(token);
 #endif
     return token;
 }
 
-static Token create_error(Lexer* lexer, const char* message) {
+static Token create_error(Lexer* const lexer, const char* message) {
     int len = (int) (lexer->current - lexer->start);
     fprintf(stderr, "[Line %d] %s here '%.*s'\n", lexer->line, message, len, lexer->start);
     return create_token(lexer, TOKEN_ERROR);
 }
 
-static bool skip_whitespaces(Lexer* lexer) {
+static bool skip_whitespaces(Lexer* const lexer) {
     bool ok = true;
     for (;;) {
         switch (*lexer->current) {
@@ -120,7 +120,7 @@ static bool skip_whitespaces(Lexer* lexer) {
     }
 }
 
-static bool consume_multiline_comment(Lexer* lexer) {
+static bool consume_multiline_comment(Lexer* const lexer) {
     int comment_start_line = lexer->line;
     while (! (match(lexer, '*') && match_next(lexer, '/')) ) {
         if (is_at_end(lexer)) {
@@ -141,23 +141,23 @@ static bool consume_multiline_comment(Lexer* lexer) {
     return true;
 }
 
-static bool is_numeric(Lexer* lexer) {
+static bool is_numeric(Lexer* const lexer) {
     return *lexer->current >= '0' && *lexer->current <= '9';
 }
 
-static bool is_alpha(Lexer* lexer) {
+static bool is_alpha(Lexer* const lexer) {
     char c = *lexer->current;
     return (c >= 'a' && c <= 'z') ||
         (c >= 'A' && c <= 'Z') ||
         c == '_';
 }
 
-static bool is_string_quote(Lexer* lexer) {
+static bool is_string_quote(Lexer* const lexer) {
     char c = *lexer->current;
     return (c == '\'' || c == '\"');
 }
 
-static Token scan_number(Lexer* lexer) {
+static Token scan_number(Lexer* const lexer) {
     while (is_numeric(lexer)) {
         advance(lexer);
     }
@@ -174,7 +174,7 @@ static Token scan_number(Lexer* lexer) {
     return create_token(lexer, TOKEN_NUMBER);
 }
 
-static Token scan_string(Lexer* lexer) {
+static Token scan_string(Lexer* const lexer) {
     advance(lexer); // Consume first quote
     lexer->start = lexer->current; // Omit first quote
     while (!is_string_quote(lexer) && !is_at_end(lexer)) {
@@ -191,7 +191,7 @@ static Token scan_string(Lexer* lexer) {
     return str_token;
 }
 
-static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len) {
+static bool match_subtoken(Lexer* const lexer, const char* subpart, int start, int len) {
 #define START_OVERFLOWS lexer->start + start > lexer->current
 #define END_OVERFLOWS lexer->start + len > lexer->current
     if (START_OVERFLOWS || END_OVERFLOWS) {
@@ -202,7 +202,7 @@ static bool match_subtoken(Lexer* lexer, const char* subpart, int start, int len
 #undef END_OVERFLOWS
 }
 
-static bool match_token(Lexer* lexer, const char* subpart, int start, int len) {
+static bool match_token(Lexer* const lexer, const char* subpart, int start, int len) {
     int readed_length = lexer->current - lexer->start;
     if (readed_length != len) {
         return false;
@@ -210,7 +210,7 @@ static bool match_token(Lexer* lexer, const char* subpart, int start, int len) {
     return match_subtoken(lexer, subpart, start, len);
 }
 
-static Token scan_identifier(Lexer* lexer) {
+static Token scan_identifier(Lexer* const lexer) {
     while (is_numeric(lexer) || is_alpha(lexer)) {
         advance(lexer);
     }
@@ -275,11 +275,17 @@ static Token scan_identifier(Lexer* lexer) {
         }
         break;
     }
+    case 'V': {
+        if (match_token(lexer, "oid", 1, 4)) {
+            return create_token(lexer, TOKEN_TYPE_VOID);
+        }
+        break;
+    }
     }
     return create_token(lexer, TOKEN_IDENTIFIER);
 }
 
-static inline Token scan_token(Lexer* lexer) {
+static inline Token scan_token(Lexer* const lexer) {
     switch (*lexer->current++) {
     case '+': return create_token(lexer, TOKEN_PLUS);
     case '-': return create_token(lexer, TOKEN_MINUS);
@@ -334,7 +340,7 @@ static inline Token scan_token(Lexer* lexer) {
     }
 }
 
-Token next_token(Lexer* lexer) {
+Token next_token(Lexer* const lexer) {
     if (!skip_whitespaces(lexer)) {
         return create_token(lexer, TOKEN_ERROR);
     }

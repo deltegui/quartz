@@ -1,0 +1,7 @@
+fn hello(): Void {
+    print "Hola";
+}
+
+var a: Void;
+a = hello();
+print a;

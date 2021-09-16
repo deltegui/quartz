@@ -185,14 +185,6 @@ static void should_fail_if_float_is_malformed() {
         1,
         TOKEN_ERROR
     );
-    // @todo this should work, but it doesnt.
-    /*
-    assert_types(
-        "  5.5.5   ",
-        1,
-        TOKEN_ERROR
-    );
-    */
 }
 
 static void should_create_string_tokens_correctly() {
@@ -316,12 +308,13 @@ static void should_scan_global_declarations_with_types() {
 
 static void should_tokenize_type_names() {
     assert_types(
-        "  Number String   Bool Nil ",
-        4,
+        "  Number String   Bool Nil   Void",
+        5,
         TOKEN_TYPE_NUMBER,
         TOKEN_TYPE_STRING,
         TOKEN_TYPE_BOOL,
-        TOKEN_TYPE_NIL
+        TOKEN_TYPE_NIL,
+        TOKEN_TYPE_VOID
     );
 }
 

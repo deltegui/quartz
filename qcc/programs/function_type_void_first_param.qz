@@ -1,0 +1,9 @@
+fn create_void_fn(): (Void, Number): Void {
+    fn hello() {
+        print "Hello";
+    }
+    return hello;
+}
+
+var a = create_void_fn();
+a();

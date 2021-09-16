@@ -1,0 +1,5 @@
+fn imvoid(): Void {
+    return 2+2;
+}
+
+imvoid();

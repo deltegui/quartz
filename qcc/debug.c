@@ -4,7 +4,7 @@
 #include "type.h"
 #include "object.h"
 
-void table_print(Table* table) {
+void table_print(const Table* table) {
     printf("\t| Key\t\t| Value\n");
     printf("\t|---------------|-----------------\n");
     for (int i = 0; i < table->capacity; i++) {
@@ -17,38 +17,71 @@ void table_print(Table* table) {
     printf("\n\n");
 }
 
-static void symbol_table_print(SymbolTable* table) {
+static void upvalues_print(const SymbolSet* set) {
+    if (SYMBOL_SET_SIZE(set) == 0) {
+        printf("Empty\t");
+        return;
+    }
+    SYMBOL_SET_FOREACH(set, {
+        Symbol* current = elements[i];
+        printf(
+            "'%.*s'(%d), ",
+            SYMBOL_NAME_LENGTH(current->name),
+            SYMBOL_NAME_START(current->name),
+            current->declaration_line);
+    });
+}
+
+static void symbol_upvalues_print(const Symbol* symbol) {
+    upvalues_print(symbol->upvalue_fn_refs);
+}
+
+static void fn_upvalues_print(const Symbol* symbol) {
+    if (symbol->kind != SYMBOL_FUNCTION) {
+        printf("Not a function");
+        return;
+    }
+    upvalues_print(symbol->function.upvalues);
+}
+
+static void symbol_table_print(const SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
-    printf("| Name\t| Line\t| Type\n");
-    printf("|-------|-------|------------\n");
-    for (int i = 0; i < table->capacity; i++) {
-        Symbol* current = &table->entries[i];
-        if (current->name.length == 0) {
-            continue;
-        }
+    printf("| Name\t| Line\t| Type  \t| Symbol upvalues \t | Function upvalues\n");
+    printf("|-------|-------|---------------|------------------------|------------\n");
+    SYMBOL_TABLE_FOREACH(table, {
+        Symbol* current = &elements[i];
         printf(
             "| %.*s\t| %d\t| ",
-            current->name.length,
-            current->name.str,
+            SYMBOL_NAME_LENGTH(current->name),
+            SYMBOL_NAME_START(current->name),
             current->declaration_line);
         type_print(current->type);
+
+        printf("\t| ");
+        symbol_upvalues_print(current);
+
+        printf("\t| ");
+        fn_upvalues_print(current);
+
         printf("\n");
-    }
+    });
     printf("\n\n");
 }
 
-static void symbol_node_print(SymbolNode* node) {
+static void symbol_node_print(const SymbolNode* node) {
     symbol_table_print(&node->symbols);
-    for (int i = 0; i < node->size; i++) {
-        symbol_node_print(&node->childs[i]);
+    printf("SCOPE CHILDS: %d\n", node->childs.size);
+    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
+    for (uint32_t i = 0; i < node->childs.size; i++) {
+        symbol_node_print(&childs[i]);
     }
 }
 
-void scoped_symbol_table_print(ScopedSymbolTable* table) {
+void scoped_symbol_table_print(const ScopedSymbolTable* table) {
     symbol_node_print(&table->global);
 }
 
-void valuearray_print(ValueArray* values) {
+void valuearray_print(const ValueArray* values) {
     printf("--------[ VALUE ARRAY ]--------\n\n");
     printf("| Index\t| Value\n");
     printf("|-------|------------\n");
@@ -92,14 +125,18 @@ static const char* OpCodeStrings[] = {
     "OP_SET_GLOBAL_LONG",
     "OP_GET_LOCAL",
     "OP_SET_LOCAL",
+    "OP_GET_UPVALUE",
+    "OP_SET_UPVALUE",
+    "OP_BIND_UPVALUE",
+    "OP_CLOSE",
+    "OP_BIND_CLOSED"
 };
 
 void opcode_print(uint8_t op) {
-    // @warning this be out of range.
     printf("%s\n", OpCodeStrings[op]);
 }
 
-void stack_print(Value* stack_top, Value* stack) {
+void stack_print(const Value* stack_top, Value* stack) {
     Value* current = stack;
     while (current < stack_top) {
         printf("[ ");
@@ -109,14 +146,14 @@ void stack_print(Value* stack_top, Value* stack) {
     }
 }
 
-static void chunk_format_print(Chunk* chunk, int i, const char* format, ...);
-static void chunk_value_print(Chunk* chunk, int index);
-static int chunk_opcode_print(Chunk* chunk, int i);
-static int chunk_short_print(Chunk* chunk, int i);
-static int chunk_long_print(Chunk* chunk, int i);
-static void standalone_chunk_print(Chunk* chunk);
+static void chunk_format_print(const Chunk* chunk, int i, const char* format, ...);
+static void chunk_value_print(const Chunk* chunk, int index);
+static int chunk_opcode_print(const Chunk* chunk, int i);
+static int chunk_short_print(const Chunk* chunk, int i);
+static int chunk_long_print(const Chunk* chunk, int i);
+static void standalone_chunk_print(const Chunk* chunk);
 
-static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
+static void chunk_format_print(const Chunk* chunk, int i, const char* format, ...) {
     printf("[%02d;%02d]\t", i, chunk->lines[i]);
     va_list params;
     va_start(params, format);
@@ -124,19 +161,18 @@ static void chunk_format_print(Chunk* chunk, int i, const char* format, ...) {
     va_end(params);
 }
 
-static void chunk_value_print(Chunk* chunk, int index) {
+static void chunk_value_print(const Chunk* chunk, int index) {
     Value val = chunk->constants.values[index];
     value_print(val);
     printf("\n");
 }
 
-static int chunk_opcode_print(Chunk* chunk, int i) {
+static int chunk_opcode_print(const Chunk* chunk, int i) {
     chunk_format_print(chunk, i, "%s\n", OpCodeStrings[chunk->code[i]]);
     return ++i;
 }
 
-static int chunk_short_print(Chunk* chunk, int i) {
-    i = chunk_opcode_print(chunk, i);
+static int chunk_short_print(const Chunk* chunk, int i) {
     chunk_format_print(chunk, i, "%04x\t", chunk->code[i]);
     if (chunk->code[i] < chunk->constants.size) {
         chunk_value_print(chunk, chunk->code[i]);
@@ -146,8 +182,7 @@ static int chunk_short_print(Chunk* chunk, int i) {
     return ++i;
 }
 
-static int chunk_long_print(Chunk* chunk, int i) {
-    i = chunk_opcode_print(chunk, i);
+static int chunk_long_print(const Chunk* chunk, int i) {
     uint8_t* pc = &chunk->code[i];
     uint16_t num = read_long(&pc);
     i++;
@@ -156,7 +191,7 @@ static int chunk_long_print(Chunk* chunk, int i) {
     return ++i;
 }
 
-static void standalone_chunk_print(Chunk* chunk) {
+static void standalone_chunk_print(const Chunk* chunk) {
     for (int i = 0; i < chunk->size; i++) {
         printf("[%d] %04x\n", i, chunk->code[i]);
     }
@@ -183,6 +218,7 @@ static void standalone_chunk_print(Chunk* chunk) {
         case OP_POP:
         case OP_PRINT:
         case OP_GREATER:
+        case OP_CLOSE:
         case OP_END: {
             i = chunk_opcode_print(chunk, i);
             break;
@@ -192,8 +228,11 @@ static void standalone_chunk_print(Chunk* chunk) {
         case OP_SET_GLOBAL:
         case OP_GET_LOCAL:
         case OP_SET_LOCAL:
+        case OP_GET_UPVALUE:
+        case OP_SET_UPVALUE:
         case OP_CONSTANT:
         case OP_CALL: {
+            i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
             break;
         }
@@ -201,7 +240,19 @@ static void standalone_chunk_print(Chunk* chunk) {
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:
         case OP_CONSTANT_LONG: {
+            i = chunk_opcode_print(chunk, i);
             i = chunk_long_print(chunk, i);
+            break;
+        }
+        case OP_BIND_UPVALUE: {
+            i = chunk_opcode_print(chunk, i);
+            i = chunk_short_print(chunk, i);
+            i = chunk_short_print(chunk, i);
+            break;
+        }
+        case OP_BIND_CLOSED: {
+            i = chunk_opcode_print(chunk, i);
+            i = chunk_short_print(chunk, i);
             break;
         }
         }
@@ -209,8 +260,8 @@ static void standalone_chunk_print(Chunk* chunk) {
     printf("\n");
 }
 
-void chunk_print(Chunk* chunk) {
-    printf("--------[ CHUNK DUMP: <GLOBAL> ]--------\n\n");
+static void chunk_print_with_name(const Chunk* chunk, const char* name) {
+    printf("--------[ CHUNK DUMP: %s ]--------\n\n", name);
     valuearray_print(&chunk->constants);
     standalone_chunk_print(chunk);
     for (int i = 0; i < chunk->constants.size; i++) {
@@ -218,12 +269,15 @@ void chunk_print(Chunk* chunk) {
             Obj* obj = VALUE_AS_OBJ(chunk->constants.values[i]);
             if (OBJ_IS_FUNCTION(obj)) {
                 ObjFunction* fn = OBJ_AS_FUNCTION(obj);
-                printf("--------[ CHUNK DUMP: '%s' ]--------\n\n", OBJ_AS_CSTRING(fn->name));
-                valuearray_print(&fn->chunk.constants);
-                standalone_chunk_print(&fn->chunk);
+                char* name = OBJ_AS_CSTRING(fn->name);
+                chunk_print_with_name(&fn->chunk, name);
             }
         }
     }
+}
+
+void chunk_print(const Chunk* chunk) {
+    chunk_print_with_name(chunk, "<GLOBAL>");
 }
 
 static const char* token_type_print(TokenKind kind) {
@@ -435,14 +489,15 @@ static void print_assignment(void* ctx, AssignmentExpr* assignment) {
 }
 
 static void print_call(void* ctx, CallExpr* call) {
+    Expr** exprs = VECTOR_AS_EXPRS(&call->params);
     pretty_print("Call Expr: [\n");
     OFFSET({
         pretty_print("Function name: ");
         token_print(call->identifier);
         pretty_print("Params: [\n");
         OFFSET({
-            for (int i = 0; i < call->params.size; i++) {
-                ACCEPT_EXPR(call->params.params[i].expr);
+            for (uint32_t i = 0; i < call->params.size; i++) {
+                ACCEPT_EXPR(exprs[i]);
             }
         });
         pretty_print("]\n");

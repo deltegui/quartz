@@ -1,0 +1,16 @@
+// This works like python. In python this code:
+//
+// def hola():
+//     hola = 5
+//     print(hola)
+//
+// hola()
+//
+// Will output '5'. The same as this Quartz code:
+
+fn hola() {
+    var hola = 5;
+    print hola;
+}
+
+hola();

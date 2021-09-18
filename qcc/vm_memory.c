@@ -3,6 +3,14 @@
 #include "object.h"
 #include "vm.h"
 
+void* qvm_realloc(void* ptr, size_t old_size, size_t size) {
+    if (size == 0) {
+        free(ptr);
+        return NULL;
+    }
+    return realloc(ptr, size);
+}
+
 static void free_object(Obj* obj) {
     switch (obj->kind) {
     case OBJ_STRING: {
@@ -30,12 +38,4 @@ void free_objects() {
         free_object(current);
         current = next;
     }
-}
-
-void* qvm_realloc(void* ptr, size_t old_size, size_t size) {
-    if (size == 0) {
-        free(ptr);
-        return NULL;
-    }
-    return realloc(ptr, size);
 }

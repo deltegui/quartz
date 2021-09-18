@@ -27,12 +27,19 @@ typedef struct {
     int frame_count;
     CallFrame* frame;
 
+    Obj** gray_stack;
+    int gray_stack_capacity;
+    int gray_stack_size;
+
+    bool is_running;
     bool had_runtime_error;
 } QVM;
 
 void init_qvm();
 void free_qvm();
 void qvm_execute(ObjFunction* func);
+void qvm_push_gray(Obj* obj);
+Obj* qvm_pop_gray();
 
 extern QVM qvm;
 

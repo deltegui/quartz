@@ -20,6 +20,7 @@
 #define TYPECHECKER_DEBUG
 #define COMPILER_DEBUG
 #define VM_DEBUG
+#define GC_DEBUG
 #endif
 
 #endif

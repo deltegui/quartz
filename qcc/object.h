@@ -9,6 +9,7 @@
 typedef struct s_obj {
     ObjKind kind;
     Type* type;
+    bool is_marked;
     struct s_obj* next;
 } Obj;
 
@@ -37,11 +38,14 @@ typedef struct {
     int arity;
     Chunk chunk;
     ObjString* name;
+    int upvalue_count;
     Upvalue upvalues[];
 } ObjFunction;
 
 void print_object(Obj* obj);
+// TODO rename this shit
 bool is_obj_kind(Obj* obj, ObjKind kind);
+void mark_object(Obj* obj);
 
 #define OBJ_IS_STRING(obj) (is_obj_kind(obj, OBJ_STRING))
 #define OBJ_AS_STRING(obj) ((ObjString*) obj)

@@ -14,6 +14,7 @@ static Obj* alloc_obj(size_t size, ObjKind kind, Type* type) {
     Obj* obj = (Obj*) qvm_realloc(NULL, 0, size);
     obj->kind = kind;
     obj->type = type;
+    obj->is_marked = false;
     obj->next = qvm.objects;
     qvm.objects = obj;
     return obj;
@@ -27,6 +28,7 @@ ObjFunction* new_function(const char* name, int length, int upvalues, Type* type
     init_chunk(&func->chunk);
     func->arity = 0;
     func->name = copy_string(name, length);
+    func->upvalue_count = upvalues;
     return func;
 }
 
@@ -119,4 +121,20 @@ void print_object(Obj* obj) {
 
 bool is_obj_kind(Obj* obj, ObjKind kind) {
     return obj->kind == kind;
+}
+
+void mark_object(Obj* obj) {
+    if (obj == NULL) {
+        return;
+    }
+    if (obj->is_marked) {
+        return;
+    }
+#ifdef GC_DEBUG
+    printf("Marked object: ");
+    print_object(obj);
+    printf("\n");
+#endif
+    obj->is_marked = true;
+    qvm_push_gray(obj);
 }

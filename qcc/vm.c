@@ -10,13 +10,33 @@
 
 QVM qvm;
 
+static void init_gray_stack() {
+    qvm.gray_stack = NULL;
+    qvm.gray_stack_capacity = 0;
+    qvm.gray_stack_size = 0;
+
+}
+
+static void free_gray_stack() {
+    if (qvm.gray_stack_capacity > 0) {
+        free(qvm.gray_stack);
+    }
+}
+
 void init_qvm() {
     init_type_pool();
+
     init_table(&qvm.strings);
     init_table(&qvm.globals);
+
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
+
+    init_gray_stack();
+
     qvm.frame_count = 0;
+
+    qvm.is_running = false;
     qvm.had_runtime_error = false;
 }
 
@@ -25,6 +45,23 @@ void free_qvm() {
     free_table(&qvm.strings);
     free_table(&qvm.globals);
     free_objects();
+    free_gray_stack();
+}
+
+void qvm_push_gray(Obj* obj) {
+    if (qvm.gray_stack_capacity <= qvm.gray_stack_size + 1) {
+        qvm.gray_stack_capacity = GROW_CAPACITY(qvm.gray_stack_capacity);
+        qvm.gray_stack = (Obj**) realloc(qvm.gray_stack, sizeof(Obj*) * qvm.gray_stack_capacity);
+        if (qvm.gray_stack == NULL) {
+            exit(1);
+        }
+    }
+    qvm.gray_stack[qvm.gray_stack_size] = obj;
+    qvm.gray_stack_size++;
+}
+
+Obj* qvm_pop_gray() {
+    return qvm.gray_stack[--qvm.gray_stack_size];
 }
 
 static void runtime_error(const char* message) {
@@ -329,5 +366,6 @@ void qvm_execute(ObjFunction* func) {
     frame->func = func;
     frame->pc = func->chunk.code;
     frame->slots = qvm.stack;
+    qvm.is_running = true;
     run(func);
 }

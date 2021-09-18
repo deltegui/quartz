@@ -112,24 +112,37 @@ static void mark_roots() {
 }
 
 static void mark_stack() {
+#ifdef GC_DEBUG
+    printf("\t-- gc start marking stack\n");
+#endif
     for (Value* current = qvm.stack; current != qvm.stack_top; current++) {
         mark_value(*current);
     }
+#ifdef GC_DEBUG
+    printf("\t-- gc end marking stack\n");
+#endif
 }
 
 static void mark_globals() {
+#ifdef GC_DEBUG
+    printf("\t-- gc start marking globals\n");
+#endif
     mark_table(&qvm.globals);
+#ifdef GC_DEBUG
+    printf("\t-- gc end marking globals\n");
+#endif
 }
 
 static void mark_callframes() {
-    for (int i = 0; i < qvm.frame_count; i++) {
 #ifdef GC_DEBUG
-    printf("Marking callframe function: ");
-    print_object((Obj*)qvm.frames[i].func);
-    printf("\n");
+    printf("\t-- gc start marking callframes\n");
 #endif
+    for (int i = 0; i < qvm.frame_count; i++) {
         mark_object((Obj*)qvm.frames[i].func);
     }
+#ifdef GC_DEBUG
+    printf("\t-- gc end marking callframes\n");
+#endif
 }
 
 static void trace_objects() {
@@ -137,7 +150,13 @@ static void trace_objects() {
     printf("-- gc start tracing\n");
 #endif
     for (int i = 0; i < qvm.gray_stack_size; i++) {
-        blacken_object(qvm_pop_gray());
+        Obj* current = qvm_pop_gray();
+#ifdef GC_DEBUG
+    printf("Tracing gray object: ");
+    print_object(current);
+    printf("\n");
+#endif
+        blacken_object(current);
     }
 #ifdef GC_DEBUG
     printf("-- gc end trancing\n");

@@ -61,6 +61,7 @@ void qvm_push_gray(Obj* obj) {
 }
 
 Obj* qvm_pop_gray() {
+    assert(qvm.gray_stack_size >= 0);
     return qvm.gray_stack[--qvm.gray_stack_size];
 }
 

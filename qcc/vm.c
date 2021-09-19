@@ -37,6 +37,9 @@ void init_qvm() {
 
     qvm.is_running = false;
     qvm.had_runtime_error = false;
+
+    qvm.bytes_allocated = 0;
+    qvm.next_gc_trigger = 2048;
 }
 
 void free_qvm() {

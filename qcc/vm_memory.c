@@ -2,10 +2,13 @@
 #include "common.h"
 #include "object.h"
 #include "vm.h"
+#include "table.h"
 
 #ifdef GC_DEBUG
 #include "debug.h"
 #endif
+
+#define GC_HEAP_GROW_FACTOR 2
 
 static void collect_garbage();
 
@@ -25,13 +28,13 @@ bool is_gc_running = false;
 #define GC_CAN_RUN() (qvm.is_running && !is_gc_running)
 
 void* qvm_realloc(void* ptr, size_t old_size, size_t size) {
+    qvm.bytes_allocated += size - old_size;
 #ifdef STRESS_GC
     if (size > old_size && GC_CAN_RUN()) {
-        printf("STRESS GC ");
         collect_garbage();
     }
 #else
-    if (size > old_size && GC_CAN_RUN()) {
+    if (qvm.bytes_allocated > qvm.next_gc_trigger && GC_CAN_RUN()) {
         collect_garbage();
     }
 #endif
@@ -74,13 +77,21 @@ void free_objects() {
 static void collect_garbage() {
 #ifdef GC_DEBUG
     printf("-- gc begins\n");
+    size_t before = qvm.bytes_allocated;
 #endif
     is_gc_running = true;
     mark();
     sweep();
     is_gc_running = false;
+    qvm.next_gc_trigger = qvm.bytes_allocated * GC_HEAP_GROW_FACTOR;
 #ifdef GC_DEBUG
     printf("-- gc ends\n");
+    printf(
+        "   collected %zu bytes (from %zu to %zu) next at %zu\n",
+        before - qvm.bytes_allocated,
+        before,
+        qvm.bytes_allocated,
+        qvm.next_gc_trigger);
 #endif
 }
 
@@ -93,6 +104,7 @@ static void mark() {
     // field in VM)
     mark_roots();
     trace_objects();
+    table_delete_white(&qvm.strings);
 #ifdef GC_DEBUG
     printf("-- gc end of mark phase\n");
 #endif
@@ -151,7 +163,7 @@ static void trace_objects() {
     while (qvm.gray_stack_size != 0) {
         Obj* current = qvm_pop_gray();
 #ifdef GC_DEBUG
-    printf("Tracing gray object: ");
+    printf("   Tracing gray object: ");
     print_object(current);
     printf("\n");
 #endif
@@ -198,7 +210,7 @@ static void sweep() {
         qvm.objects->is_marked = false;
     } else {
 #ifdef GC_DEBUG
-    printf("Sweeping object : ");
+    printf("   Sweeping object : ");
     print_object(qvm.objects);
     printf("\n");
 #endif
@@ -216,7 +228,7 @@ static void sweep() {
             continue;
         }
 #ifdef GC_DEBUG
-    printf("Sweeping object : ");
+    printf("   Sweeping object : ");
     print_object(current);
     printf("\n");
 #endif

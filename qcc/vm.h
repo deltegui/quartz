@@ -33,6 +33,9 @@ typedef struct {
 
     bool is_running;
     bool had_runtime_error;
+
+    size_t bytes_allocated;
+    size_t next_gc_trigger;
 } QVM;
 
 void init_qvm();

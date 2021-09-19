@@ -136,7 +136,7 @@ void mark_object(Obj* obj) {
         return;
     }
 #ifdef GC_DEBUG
-    printf("Marked object: ");
+    printf("   Marked object: ");
     print_object(obj);
     printf("\n");
 #endif

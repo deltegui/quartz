@@ -26,5 +26,6 @@ Value table_find(Table* const table, ObjString* key);
 bool table_delete(Table* const table, ObjString* key);
 ObjString* table_find_string(Table* const table, const char* chars, int length, uint32_t hash);
 void mark_table(Table* const table);
+void table_delete_white(Table* const table);
 
 #endif

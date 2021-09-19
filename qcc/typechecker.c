@@ -322,8 +322,9 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
         SYMBOL_NAME_START(var->name));
 #endif
     if (TYPECHECK_IS_GLOBAL_FN(checker)) {
+    // if (var->global) {
 #ifdef TYPECHECKER_DEBUG
-        printf("No, you are using it in global.\n");
+        printf("No, it's in global.\n");
 #endif
         return;
     }

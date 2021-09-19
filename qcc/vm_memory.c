@@ -170,7 +170,6 @@ static void blacken_object(Obj* obj) {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
         mark_object((Obj*)fn->name);
         mark_valuearray(&fn->chunk.constants);
-        printf("UPVALUE COUNT: %d\n");
         for (int i = 0; i < fn->upvalue_count; i++) {
             Upvalue* current = &fn->upvalues[i];
             if (current->is_closed) {

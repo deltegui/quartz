@@ -1,1 +1,1 @@
-[Line 1] Type error: The type 'Function' does not match with type 'Function' in function return
+[Line 1] Type error: The type '(Number): Void' does not match with type '(String, Number): Void' in function return

@@ -21,7 +21,6 @@ static Obj* alloc_obj(size_t size, ObjKind kind, Type* type) {
 }
 
 ObjFunction* new_function(const char* name, int length, int upvalues, Type* type) {
-    printf("NEW FUNCTION WITH %d upvalues \n", upvalues);
     ObjFunction* func = (ObjFunction*) alloc_obj(
         sizeof(ObjFunction) + (sizeof(Upvalue) * upvalues),
         OBJ_FUNCTION,
@@ -30,6 +29,9 @@ ObjFunction* new_function(const char* name, int length, int upvalues, Type* type
     func->arity = 0;
     func->name = copy_string(name, length);
     func->upvalue_count = upvalues;
+    for (int i = 0; i < upvalues; i++) {
+        func->upvalues[i].is_closed = false;
+    }
     return func;
 }
 

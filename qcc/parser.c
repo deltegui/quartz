@@ -158,6 +158,7 @@ void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* sy
     parser->panic_mode = false;
     parser->has_error = false;
     parser->function_deep_count = 0;
+    parser->is_global = true; // By default, we are in global scope.
 }
 
 static void error(Parser* const parser, const char* message, ...) {
@@ -330,12 +331,18 @@ static Stmt* statement(Parser* const parser) {
 }
 
 static Stmt* block_stmt(Parser* const parser) {
+    bool prev_is_global = parser->is_global;
+    parser->is_global = false;
+
     advance(parser); // consume {
     BlockStmt block;
     create_scope(parser);
     block.stmts = declaration_block(parser, TOKEN_RIGHT_BRACE);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected block to end with '}'");
     end_scope(parser);
+
+    parser->is_global = prev_is_global;
+
     return CREATE_STMT_BLOCK(block);
 }
 
@@ -367,6 +374,7 @@ static Stmt* variable_decl(Parser* const parser) {
 
     Symbol symbol = create_symbol_from_token(&var.identifier, var_type);
     symbol.assigned = var.definition != NULL;
+    symbol.global = parser->is_global;
     if (! register_symbol(parser, symbol)) {
         free_symbol(&symbol);
     }
@@ -385,6 +393,7 @@ static Stmt* function_decl(Parser* const parser) {
         .identifier = parser->current,
     };
     Symbol symbol = create_symbol_from_token(&fn.identifier, create_type_function());
+    symbol.global = parser->is_global;
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");

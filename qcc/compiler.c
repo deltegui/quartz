@@ -438,7 +438,6 @@ static void compile_var(void* ctx, VarStmt* var) {
 }
 
 static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index) {
-    var_sym->global = compiler->scope_depth == 0;
     var_sym->constant_index = var_index;
 }
 

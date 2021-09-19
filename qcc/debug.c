@@ -46,8 +46,8 @@ static void fn_upvalues_print(const Symbol* symbol) {
 
 static void symbol_table_print(const SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
-    printf("| Name\t| Line\t| Type  \t| Symbol upvalues \t | Function upvalues\n");
-    printf("|-------|-------|---------------|------------------------|------------\n");
+    printf("| Name\t| Line \t| Type  \t| Global? \t| Symbol upvalues \t | Function upvalues\n");
+    printf("|-------|-------|---------------|---------------|------------------------|------------\n");
     SYMBOL_TABLE_FOREACH(table, {
         Symbol* current = &elements[i];
         printf(
@@ -56,6 +56,8 @@ static void symbol_table_print(const SymbolTable* table) {
             SYMBOL_NAME_START(current->name),
             current->declaration_line);
         type_print(current->type);
+
+        printf("\t| %s\t", (current->global ? "Yes" : "No"));
 
         printf("\t| ");
         symbol_upvalues_print(current);

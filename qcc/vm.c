@@ -14,7 +14,6 @@ static void init_gray_stack() {
     qvm.gray_stack = NULL;
     qvm.gray_stack_capacity = 0;
     qvm.gray_stack_size = 0;
-
 }
 
 static void free_gray_stack() {
@@ -61,7 +60,7 @@ void qvm_push_gray(Obj* obj) {
 }
 
 Obj* qvm_pop_gray() {
-    assert(qvm.gray_stack_size >= 0);
+    assert(qvm.gray_stack_size >= 1);
     return qvm.gray_stack[--qvm.gray_stack_size];
 }
 
@@ -85,7 +84,7 @@ static inline void call(uint8_t param_count) {
     qvm.frame->slots = fn_ptr;
 }
 
-static inline void stack_push(Value val) {
+void stack_push(Value val) {
     if ((qvm.stack_top - qvm.stack) + 1 >= STACK_MAX) {
         runtime_error("Stack overflow");
         return;
@@ -93,7 +92,7 @@ static inline void stack_push(Value val) {
     *(qvm.stack_top++) = val;
 }
 
-static inline Value stack_pop() {
+Value stack_pop() {
     return *(--qvm.stack_top);
 }
 
@@ -112,10 +111,12 @@ static inline Value stack_peek(uint8_t distance) {
     stack_push(BOOL_VALUE(a op b))
 
 #define STRING_CONCAT()\
-    ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
-    ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
+    ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_peek(0)));\
+    ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_peek(1)));\
     ObjString* concat = concat_string(a, b);\
     Value val = OBJ_VALUE(concat, CREATE_TYPE_STRING());\
+    stack_pop();\
+    stack_pop();\
     stack_push(val)
 
 #define CONSTANT_OP(read)\

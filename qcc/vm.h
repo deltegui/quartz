@@ -37,6 +37,8 @@ typedef struct {
 
 void init_qvm();
 void free_qvm();
+void stack_push(Value val);
+Value stack_pop();
 void qvm_execute(ObjFunction* func);
 void qvm_push_gray(Obj* obj);
 Obj* qvm_pop_gray();

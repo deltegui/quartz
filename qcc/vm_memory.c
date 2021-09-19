@@ -25,7 +25,6 @@ bool is_gc_running = false;
 #define GC_CAN_RUN() (qvm.is_running && !is_gc_running)
 
 void* qvm_realloc(void* ptr, size_t old_size, size_t size) {
-    printf("qvm realloc called!\n");
 #ifdef STRESS_GC
     if (size > old_size && GC_CAN_RUN()) {
         printf("STRESS GC ");
@@ -149,7 +148,7 @@ static void trace_objects() {
 #ifdef GC_DEBUG
     printf("-- gc start tracing\n");
 #endif
-    for (int i = 0; i < qvm.gray_stack_size; i++) {
+    while (qvm.gray_stack_size != 0) {
         Obj* current = qvm_pop_gray();
 #ifdef GC_DEBUG
     printf("Tracing gray object: ");
@@ -171,6 +170,7 @@ static void blacken_object(Obj* obj) {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
         mark_object((Obj*)fn->name);
         mark_valuearray(&fn->chunk.constants);
+        printf("UPVALUE COUNT: %d\n");
         for (int i = 0; i < fn->upvalue_count; i++) {
             Upvalue* current = &fn->upvalues[i];
             if (current->is_closed) {

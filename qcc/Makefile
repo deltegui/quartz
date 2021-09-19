@@ -17,8 +17,17 @@ win64:
 debug:
 	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG ./*.c -o ./quartz
 
-stressgc:
-	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG -D STRESS_GC ./*.c -o ./quartz
-
 win64-debug:
 	x86_64-w64-mingw32-gcc -lm -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG ./*.c -o ./quartz
+
+sgc:
+	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D STRESS_GC ./*.c -o ./quartz
+
+win64-sgc:
+	x86_64-w64-mingw32-gcc -lm -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D STRESS_GC ./*.c -o ./quartz
+
+debug-sgc:
+	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG -D STRESS_GC ./*.c -o ./quartz
+
+win64-debug-sgc:
+	x86_64-w64-mingw32-gcc -lm -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG -D STRESS_GC ./*.c -o ./quartz

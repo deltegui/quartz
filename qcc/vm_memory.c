@@ -23,7 +23,7 @@ static void blacken_object(Obj* obj);
 
 static void sweep();
 
-bool is_gc_running = false;
+bool is_gc_running = false; // TODO is this thing needed?
 
 #define GC_CAN_RUN() (qvm.is_running && !is_gc_running)
 

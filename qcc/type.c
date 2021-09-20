@@ -147,11 +147,7 @@ Type* simple_type_from_token_kind(TokenKind kind) {
     case TOKEN_TYPE_BOOL: return CREATE_TYPE_BOOL();
     case TOKEN_TYPE_NIL: return CREATE_TYPE_NIL();
     case TOKEN_TYPE_VOID: return CREATE_TYPE_VOID();
-    default:
-        // If we reach this assert, you forget to put a case in the switch
-        // or you are calling the wrong function.
-        assert(false);
-        return CREATE_TYPE_UNKNOWN();
+    default: return CREATE_TYPE_UNKNOWN();
     }
 }
 

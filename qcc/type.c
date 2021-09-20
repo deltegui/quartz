@@ -180,6 +180,9 @@ static void function_type_print(const Type* const type) {
 
 bool type_equals(Type* first, Type* second) {
     assert(first != NULL && second != NULL);
+    if (first == second) {
+        return true;
+    }
     if (first->kind != second->kind) {
         return false;
     }

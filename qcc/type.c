@@ -147,7 +147,11 @@ Type* simple_type_from_token_kind(TokenKind kind) {
     case TOKEN_TYPE_BOOL: return CREATE_TYPE_BOOL();
     case TOKEN_TYPE_NIL: return CREATE_TYPE_NIL();
     case TOKEN_TYPE_VOID: return CREATE_TYPE_VOID();
-    default: return CREATE_TYPE_UNKNOWN();
+    default:
+        // If we reach this assert, you forget to put a case in the switch
+        // or you are calling the wrong function.
+        assert(false);
+        return CREATE_TYPE_UNKNOWN();
     }
 }
 
@@ -158,8 +162,8 @@ void type_print(const Type* const type) {
     case TYPE_NIL: printf("Nil"); break;
     case TYPE_STRING: printf("String"); break;
     case TYPE_FUNCTION: function_type_print(type); break;
-    case TYPE_UNKNOWN: printf("Unknown"); break;
     case TYPE_VOID: printf("Void"); break;
+    case TYPE_UNKNOWN: printf("Unknown"); break;
     }
 }
 

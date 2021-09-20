@@ -16,4 +16,5 @@
 - Usa init_<module>(T* t) para inicializar una estructura.
 - Usa T create_<module>() para crear una estructura reservando memoria para ella.
 - Usa free_<module>(T* t) para liberar la memoria de esa estructura.
+- Usa mark_<module>(T* t) para marcar la memoria de esa estructura.
 

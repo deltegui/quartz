@@ -101,7 +101,7 @@ ObjString* concat_string(ObjString* first, ObjString* second) {
     return copy_string(buffer, concat_length);
 }
 
-void print_object(Obj* obj) {
+void print_object(Obj* const obj) {
     switch (obj->kind) {
     case OBJ_STRING: {
         printf("'%s'", OBJ_AS_CSTRING(obj));
@@ -124,11 +124,11 @@ void print_object(Obj* obj) {
     }
 }
 
-bool is_obj_kind(Obj* obj, ObjKind kind) {
+bool object_is_kind(Obj* const obj, ObjKind kind) {
     return obj->kind == kind;
 }
 
-void mark_object(Obj* obj) {
+void mark_object(Obj* const obj) {
     if (obj == NULL) {
         return;
     }

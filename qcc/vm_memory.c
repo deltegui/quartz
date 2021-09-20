@@ -23,9 +23,7 @@ static void blacken_object(Obj* obj);
 
 static void sweep();
 
-bool is_gc_running = false; // TODO is this thing needed?
-
-#define GC_CAN_RUN() (qvm.is_running && !is_gc_running)
+#define GC_CAN_RUN() (qvm.is_running)
 
 void* qvm_realloc(void* ptr, size_t old_size, size_t size) {
     qvm.bytes_allocated += size - old_size;
@@ -79,10 +77,8 @@ static void collect_garbage() {
     printf("-- gc begins\n");
     size_t before = qvm.bytes_allocated;
 #endif
-    is_gc_running = true;
     mark();
     sweep();
-    is_gc_running = false;
     qvm.next_gc_trigger = qvm.bytes_allocated * GC_HEAP_GROW_FACTOR;
 #ifdef GC_DEBUG
     printf("-- gc ends\n");

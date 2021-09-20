@@ -1,5 +1,5 @@
 #include "values.h"
-#include "object.h" // used for print_object
+#include "object.h" // used for print_object and mark_object
 // ValueArray is a runtime data structure, so its memory
 // must be managed by vm_memory.h
 #include "vm_memory.h"
@@ -25,6 +25,12 @@ Value value_default(Type* type) {
     case TYPE_NIL:
     default:
         return NIL_VALUE();
+    }
+}
+
+void mark_value(Value value) {
+    if (VALUE_IS_OBJ(value)) {
+        mark_object(VALUE_AS_OBJ(value));
     }
 }
 
@@ -81,4 +87,10 @@ int valuearray_write(ValueArray* const arr, Value value) {
     }
     arr->values[arr->size] = value;
     return arr->size++;
+}
+
+void mark_valuearray(ValueArray* const array) {
+    for (int i = 0; i < array->size; i++) {
+        mark_value(array->values[i]);
+    }
 }

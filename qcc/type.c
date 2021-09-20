@@ -158,8 +158,8 @@ void type_print(const Type* const type) {
     case TYPE_NIL: printf("Nil"); break;
     case TYPE_STRING: printf("String"); break;
     case TYPE_FUNCTION: function_type_print(type); break;
-    case TYPE_UNKNOWN: printf("Unknown"); break;
     case TYPE_VOID: printf("Void"); break;
+    case TYPE_UNKNOWN: printf("Unknown"); break;
     }
 }
 
@@ -180,6 +180,9 @@ static void function_type_print(const Type* const type) {
 
 bool type_equals(Type* first, Type* second) {
     assert(first != NULL && second != NULL);
+    if (first == second) {
+        return true;
+    }
     if (first->kind != second->kind) {
         return false;
     }

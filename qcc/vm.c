@@ -10,14 +10,36 @@
 
 QVM qvm;
 
+static void init_gray_stack() {
+    qvm.gray_stack = NULL;
+    qvm.gray_stack_capacity = 0;
+    qvm.gray_stack_size = 0;
+}
+
+static void free_gray_stack() {
+    if (qvm.gray_stack_capacity > 0) {
+        free(qvm.gray_stack);
+    }
+}
+
 void init_qvm() {
     init_type_pool();
+
     init_table(&qvm.strings);
     init_table(&qvm.globals);
+
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
+
+    init_gray_stack();
+
     qvm.frame_count = 0;
+
+    qvm.is_running = false;
     qvm.had_runtime_error = false;
+
+    qvm.bytes_allocated = 0;
+    qvm.next_gc_trigger = 2048;
 }
 
 void free_qvm() {
@@ -25,6 +47,24 @@ void free_qvm() {
     free_table(&qvm.strings);
     free_table(&qvm.globals);
     free_objects();
+    free_gray_stack();
+}
+
+void qvm_push_gray(Obj* obj) {
+    if (qvm.gray_stack_capacity <= qvm.gray_stack_size + 1) {
+        qvm.gray_stack_capacity = GROW_CAPACITY(qvm.gray_stack_capacity);
+        qvm.gray_stack = (Obj**) realloc(qvm.gray_stack, sizeof(Obj*) * qvm.gray_stack_capacity);
+        if (qvm.gray_stack == NULL) {
+            exit(1);
+        }
+    }
+    qvm.gray_stack[qvm.gray_stack_size] = obj;
+    qvm.gray_stack_size++;
+}
+
+Obj* qvm_pop_gray() {
+    assert(qvm.gray_stack_size >= 1);
+    return qvm.gray_stack[--qvm.gray_stack_size];
 }
 
 static void runtime_error(const char* message) {
@@ -47,7 +87,7 @@ static inline void call(uint8_t param_count) {
     qvm.frame->slots = fn_ptr;
 }
 
-static inline void stack_push(Value val) {
+void stack_push(Value val) {
     if ((qvm.stack_top - qvm.stack) + 1 >= STACK_MAX) {
         runtime_error("Stack overflow");
         return;
@@ -55,7 +95,7 @@ static inline void stack_push(Value val) {
     *(qvm.stack_top++) = val;
 }
 
-static inline Value stack_pop() {
+Value stack_pop() {
     return *(--qvm.stack_top);
 }
 
@@ -74,10 +114,12 @@ static inline Value stack_peek(uint8_t distance) {
     stack_push(BOOL_VALUE(a op b))
 
 #define STRING_CONCAT()\
-    ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
-    ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_pop()));\
+    ObjString* b = OBJ_AS_STRING(VALUE_AS_OBJ(stack_peek(0)));\
+    ObjString* a = OBJ_AS_STRING(VALUE_AS_OBJ(stack_peek(1)));\
     ObjString* concat = concat_string(a, b);\
     Value val = OBJ_VALUE(concat, CREATE_TYPE_STRING());\
+    stack_pop();\
+    stack_pop();\
     stack_push(val)
 
 #define CONSTANT_OP(read)\
@@ -329,5 +371,6 @@ void qvm_execute(ObjFunction* func) {
     frame->func = func;
     frame->pc = func->chunk.code;
     frame->slots = qvm.stack;
+    qvm.is_running = true;
     run(func);
 }

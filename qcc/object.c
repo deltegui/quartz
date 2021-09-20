@@ -14,6 +14,7 @@ static Obj* alloc_obj(size_t size, ObjKind kind, Type* type) {
     Obj* obj = (Obj*) qvm_realloc(NULL, 0, size);
     obj->kind = kind;
     obj->type = type;
+    obj->is_marked = false;
     obj->next = qvm.objects;
     qvm.objects = obj;
     return obj;
@@ -27,6 +28,10 @@ ObjFunction* new_function(const char* name, int length, int upvalues, Type* type
     init_chunk(&func->chunk);
     func->arity = 0;
     func->name = copy_string(name, length);
+    func->upvalue_count = upvalues;
+    for (int i = 0; i < upvalues; i++) {
+        func->upvalues[i].is_closed = false;
+    }
     return func;
 }
 
@@ -82,7 +87,9 @@ ObjString* copy_string(const char* chars, int length) {
         return interned;
     }
     ObjString* str = alloc_string(chars, length, hash);
+    stack_push(OBJ_VALUE(str, CREATE_TYPE_STRING())); // We need to GC discover our new string.
     table_set(&qvm.strings, str, NIL_VALUE());
+    stack_pop();
     return str;
 }
 
@@ -94,7 +101,7 @@ ObjString* concat_string(ObjString* first, ObjString* second) {
     return copy_string(buffer, concat_length);
 }
 
-void print_object(Obj* obj) {
+void print_object(Obj* const obj) {
     switch (obj->kind) {
     case OBJ_STRING: {
         printf("'%s'", OBJ_AS_CSTRING(obj));
@@ -117,6 +124,22 @@ void print_object(Obj* obj) {
     }
 }
 
-bool is_obj_kind(Obj* obj, ObjKind kind) {
+bool object_is_kind(Obj* const obj, ObjKind kind) {
     return obj->kind == kind;
+}
+
+void mark_object(Obj* const obj) {
+    if (obj == NULL) {
+        return;
+    }
+    if (obj->is_marked) {
+        return;
+    }
+#ifdef GC_DEBUG
+    printf("   Marked object: ");
+    print_object(obj);
+    printf("\n");
+#endif
+    obj->is_marked = true;
+    qvm_push_gray(obj);
 }

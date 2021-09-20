@@ -15,6 +15,7 @@ typedef struct {
     bool panic_mode;
     bool has_error;
     int function_deep_count;
+    bool is_global;
 } Parser;
 
 void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* symbols);

@@ -67,6 +67,7 @@ static Stmt* statement(Parser* const parser);
 static Stmt* block_stmt(Parser* const parser);
 static Stmt* print_stmt(Parser* const parser);
 static Stmt* return_stmt(Parser* const parser);
+static Stmt* if_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
 
 static Expr* expression(Parser* const parser);
@@ -105,6 +106,8 @@ ParseRule rules[] = {
     [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
     [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
+    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_RETURN]        = {NULL,        NULL,   PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,        NULL,   PREC_NONE},
@@ -325,6 +328,8 @@ static Stmt* statement(Parser* const parser) {
         return print_stmt(parser);
     case TOKEN_RETURN:
         return return_stmt(parser);
+    case TOKEN_IF:
+        return if_stmt(parser);
     default:
         return expr_stmt(parser);
     }
@@ -539,6 +544,27 @@ static Stmt* return_stmt(Parser* const parser) {
     return CREATE_STMT_RETURN(return_stmt);
 }
 
+static Stmt* if_stmt(Parser* const parser) {
+    Token token = parser->current;
+    advance(parser); // consume if
+    consume(parser, TOKEN_LEFT_PAREN, "expected left paren in if condition");
+    Expr* condition = expression(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in if condition");
+    Stmt* then = statement(parser);
+    Stmt* else_ = NULL;
+    if (parser->current.kind == TOKEN_ELSE) {
+        advance(parser); // consume else
+        else_ = statement(parser);
+    }
+    IfStmt if_stmt = (IfStmt){
+        .token = token,
+        .condition = condition,
+        .then = then,
+        .else_= else_,
+    };
+    return CREATE_STMT_IF(if_stmt);
+}
+
 static Stmt* expr_stmt(Parser* const parser) {
     Expr* expr = expression(parser);
     ExprStmt expr_stmt = (ExprStmt){
@@ -689,9 +715,9 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
     // Well, you may think it's strange that a language that has
     // a complete compiler cant be smart enough to realize that
     // a function that is declared before its use is correct.
-    // Well, there is a problem in the compiler phase that prevents
+    // Well, there is a problem in the compiler's phases that prevents
     // eliminate these lines and checking that in the typechecker:
-    // The AST order is relevant for the compiler phase, so it won't
+    // The AST order is relevant for any compiler phase, so it won't
     // realize that the function is declared before, generating bad
     // bytecode (chunk constant index).
     Symbol* existing = get_identifier_symbol(parser, identifier);

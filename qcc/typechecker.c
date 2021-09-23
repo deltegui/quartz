@@ -62,6 +62,7 @@ static void typecheck_print(void* ctx, PrintStmt* print);
 static void typecheck_block(void* ctx, BlockStmt* block);
 static void typecheck_function(void* ctx, FunctionStmt* function);
 static void typecheck_return(void* ctx, ReturnStmt* function);
+static void typecheck_if(void* ctx, IfStmt* if_);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -70,6 +71,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_block = typecheck_block,
     .visit_function = typecheck_function,
     .visit_return = typecheck_return,
+    .visit_if = typecheck_if,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -418,6 +420,22 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     }
 }
 
+static void typecheck_if(void* ctx, IfStmt* if_) {
+    Typechecker* checker = (Typechecker*) ctx;
+    ACCEPT_EXPR(ctx, if_->condition);
+    if (! TYPE_IS_BOOL(checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &if_->token,
+            CREATE_TYPE_BOOL(),
+            "in if condition. The condition must evaluate to Bool.");
+    }
+    ACCEPT_STMT(ctx, if_->then);
+    if (if_->else_ != NULL) {
+        ACCEPT_STMT(ctx, if_->else_);
+    }
+}
+
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     Typechecker* checker = (Typechecker*) ctx;
 
@@ -468,16 +486,23 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
         }
         // just continue to TYPE_NUMBER
     }
-    case TOKEN_LOWER:
-    case TOKEN_LOWER_EQUAL:
-    case TOKEN_GREATER:
-    case TOKEN_GREATER_EQUAL:
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_PERCENT:
     case TOKEN_SLASH: {
         if (TYPE_IS_NUMBER(left_type) && TYPE_IS_NUMBER(right_type)) {
             checker->last_type = CREATE_TYPE_NUMBER();
+            return;
+        }
+        ERROR("Invalid types for numeric operation");
+        return;
+    }
+    case TOKEN_LOWER:
+    case TOKEN_LOWER_EQUAL:
+    case TOKEN_GREATER:
+    case TOKEN_GREATER_EQUAL: {
+        if (TYPE_IS_NUMBER(left_type) && TYPE_IS_NUMBER(right_type)) {
+            checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
         ERROR("Invalid types for numeric operation");

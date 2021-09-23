@@ -215,6 +215,18 @@ static Token scan_identifier(Lexer* const lexer) {
         advance(lexer);
     }
     switch (*lexer->start) {
+    case 'i': {
+        if (match_token(lexer, "f", 1, 2)) {
+            return create_token(lexer, TOKEN_IF);
+        }
+        break;
+    }
+    case 'e': {
+        if (match_token(lexer, "lse", 1, 4)) {
+            return create_token(lexer, TOKEN_ELSE);
+        }
+        break;
+    }
     case 't': {
         if (match_token(lexer, "rue", 1, 4)) {
             return create_token(lexer, TOKEN_TRUE);

@@ -131,7 +131,9 @@ static const char* OpCodeStrings[] = {
     "OP_SET_UPVALUE",
     "OP_BIND_UPVALUE",
     "OP_CLOSE",
-    "OP_BIND_CLOSED"
+    "OP_BIND_CLOSED",
+    "OP_JUMP",
+    "OP_JUMP_IF_FALSE",
 };
 
 void opcode_print(uint8_t op) {
@@ -233,7 +235,9 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_GET_UPVALUE:
         case OP_SET_UPVALUE:
         case OP_CONSTANT:
-        case OP_CALL: {
+        case OP_CALL:
+        case OP_JUMP:
+        case OP_JUMP_IF_FALSE: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
             break;
@@ -323,6 +327,8 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_TYPE_NIL: return "TokenNilType";
     case TOKEN_COMMA: return "TokenComma";
     case TOKEN_RETURN: return "TokenReturn";
+    case TOKEN_IF: return "TokenIf";
+    case TOKEN_ELSE: return "TokenElse";
     default: return "Unknown";
     }
 }
@@ -362,6 +368,7 @@ static void print_print(void* ctx, PrintStmt* var);
 static void print_block(void* ctx, BlockStmt* block);
 static void print_function(void* ctx, FunctionStmt* function);
 static void print_return(void* ctx, ReturnStmt* return_);
+static void print_if(void* ctx, IfStmt* if_);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -370,6 +377,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_block = print_block,
     .visit_function = print_function,
     .visit_return = print_return,
+    .visit_if = print_if,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -528,6 +536,31 @@ static void print_function(void* ctx, FunctionStmt* function) {
         OFFSET({
             ACCEPT_STMT(function->body);
         });
+    });
+    pretty_print("]\n");
+}
+
+static void print_if(void* ctx, IfStmt* if_) {
+    pretty_print("If: [\n");
+    OFFSET({
+        pretty_print("Token: ");
+        token_print(if_->token);
+        pretty_print("Condition: \n");
+        OFFSET({
+            ACCEPT_EXPR(if_->condition);
+        });
+        pretty_print("Then: [\n");
+        OFFSET({
+            ACCEPT_STMT(if_->then);
+        });
+        pretty_print("]\n");
+        pretty_print("Else: [\n");
+        OFFSET({
+            if (if_->else_ != NULL) {
+                ACCEPT_STMT(if_->else_);
+            }
+        });
+        pretty_print("]\n");
     });
     pretty_print("]\n");
 }

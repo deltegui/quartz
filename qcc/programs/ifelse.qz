@@ -1,0 +1,20 @@
+fn tell_me_if_five(n: Number) {
+    if (n > 5) {
+        print "Is greater than five";
+    } else if (n < 5) {
+        print "Is lower than five";
+    } else {
+        print "Is five";
+    }
+}
+
+tell_me_if_five(5);
+tell_me_if_five(2);
+tell_me_if_five(6);
+
+var a = "hola";
+if (a == "adios") {
+    print "esto es imposible que salga";
+}
+print a;
+

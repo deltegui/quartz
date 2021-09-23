@@ -360,6 +360,29 @@ static void should_tokenize_print_correctly() {
     );
 }
 
+static void should_tokenize_if_correctly() {
+    assert_types(
+        " if (true) ",
+        4,
+        TOKEN_IF,
+        TOKEN_LEFT_PAREN,
+        TOKEN_TRUE,
+        TOKEN_RIGHT_PAREN
+    );
+}
+
+static void should_tokenize_else_correctly() {
+    assert_types(
+        " if (bla) else ",
+        5,
+        TOKEN_IF,
+        TOKEN_LEFT_PAREN,
+        TOKEN_IDENTIFIER,
+        TOKEN_RIGHT_PAREN,
+        TOKEN_ELSE
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -378,7 +401,8 @@ int main(void) {
         cmocka_unit_test(should_scan_reserved_words),
         cmocka_unit_test(should_scan_boolean_operators),
         cmocka_unit_test(should_create_string_tokens_correctly),
-        cmocka_unit_test(should_fail_if_string_is_malformed)
+        cmocka_unit_test(should_fail_if_string_is_malformed),
+        cmocka_unit_test(should_tokenize_if_correctly)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

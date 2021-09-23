@@ -52,6 +52,10 @@ typedef enum {
     OP_BIND_UPVALUE,
     OP_CLOSE,
     OP_BIND_CLOSED,
+
+    // Jumps
+    OP_JUMP,
+    OP_JUMP_IF_FALSE,
 } OpCode;
 
 typedef struct {
@@ -64,9 +68,10 @@ typedef struct {
 
 void init_chunk(Chunk* const chunk);
 void free_chunk(Chunk* const chunk);
-void chunk_write(Chunk* const chunk, uint8_t bytecode, int line);
+int chunk_write(Chunk* const chunk, uint8_t bytecode, int line);
 bool chunk_check_last_byte(Chunk* const chunk, uint8_t bytecode);
 int chunk_add_constant(Chunk* const chunk, Value value);
+void chunk_patch(Chunk* const chunk, int position, uint8_t bytecode);
 
 uint16_t read_long(uint8_t **pc);
 

@@ -63,6 +63,13 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_expr_equals(first->return_.inner, second->return_.inner);
         break;
     }
+    case STMT_IF: {
+        assert_expr_equals(first->if_.condition, second->if_.condition);
+        assert_stmt_equals(first->if_.then, second->if_.then);
+        if (first->if_.else_ != NULL) {
+            assert_stmt_equals(first->if_.else_, second->if_.else_);
+        }
+    }
     }
 }
 
@@ -513,6 +520,70 @@ static void should_fail_if_you_use_reserved_words_as_identifiers() {
     assert_has_errors(" fn {} () {} ");
 }
 
+static void should_parse_single_if() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    PrintStmt p = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    if_.then = CREATE_STMT_PRINT(p);
+    if_.else_ = NULL;
+    assert_stmt_ast("if (true) print 2;", CREATE_STMT_IF(if_));
+}
+
+static void should_parse_if_with_block() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    ListStmt* list = create_stmt_list();
+    PrintStmt p = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    stmt_list_add(list, CREATE_STMT_PRINT(p));
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(list),
+    };
+    if_.then = CREATE_STMT_BLOCK(block);
+    if_.else_ = NULL;
+    assert_stmt_ast("if (true) { print 2; }", CREATE_STMT_IF(if_));
+}
+
+static void should_parse_if_else() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    PrintStmt p_two = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    if_.then = CREATE_STMT_PRINT(p_two);
+    PrintStmt p_five = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(five),
+    };
+    if_.else_ = CREATE_STMT_PRINT(p_five);
+    assert_stmt_ast("if (true) print 2; else print 5;", CREATE_STMT_IF(if_));
+}
+
+static void should_parse_if_elif_else() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    PrintStmt p_two = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    if_.then = CREATE_STMT_PRINT(p_two);
+
+    IfStmt inner_if;
+    inner_if.condition = CREATE_LITERAL_EXPR(false_);
+    PrintStmt p_five = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(five),
+    };
+    inner_if.then = CREATE_STMT_PRINT(p_five);
+    ExprStmt return_ = (ExprStmt){
+        .inner = CREATE_LITERAL_EXPR(five),
+    };
+    inner_if.else_ = CREATE_STMT_EXPR(return_);
+
+    if_.else_ = CREATE_STMT_IF(inner_if);
+    assert_stmt_ast("if (true) print 2; else if (false) print 5; else 5;", CREATE_STMT_IF(if_));
+}
+
 static int test_setup(void** args) {
     init_type_pool();
     return 0;
@@ -540,7 +611,11 @@ int main(void) {
         cmocka_unit_test(should_parse_reserved_words_as_literals),
         cmocka_unit_test(should_parse_equality),
         cmocka_unit_test(should_fail_if_you_use_reserved_words_as_identifiers),
-        cmocka_unit_test(should_fail_if_return_is_not_inside_a_function)
+        cmocka_unit_test(should_fail_if_return_is_not_inside_a_function),
+        cmocka_unit_test(should_parse_single_if),
+        cmocka_unit_test(should_parse_if_with_block),
+        cmocka_unit_test(should_parse_if_else),
+        cmocka_unit_test(should_parse_if_elif_else)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

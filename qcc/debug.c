@@ -362,6 +362,7 @@ static void print_print(void* ctx, PrintStmt* var);
 static void print_block(void* ctx, BlockStmt* block);
 static void print_function(void* ctx, FunctionStmt* function);
 static void print_return(void* ctx, ReturnStmt* return_);
+static void print_if(void* ctx, IfStmt* if_);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -370,6 +371,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_block = print_block,
     .visit_function = print_function,
     .visit_return = print_return,
+    .visit_if = print_if,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -528,6 +530,29 @@ static void print_function(void* ctx, FunctionStmt* function) {
         OFFSET({
             ACCEPT_STMT(function->body);
         });
+    });
+    pretty_print("]\n");
+}
+
+static void print_if(void* ctx, IfStmt* if_) {
+    pretty_print("If: [\n");
+    OFFSET({
+        pretty_print("Condition: \n");
+        OFFSET({
+            ACCEPT_EXPR(if_->condition);
+        });
+        pretty_print("Then: [\n");
+        OFFSET({
+            ACCEPT_STMT(if_->then);
+        });
+        pretty_print("]\n");
+        pretty_print("Else: [\n");
+        OFFSET({
+            if (if_->else_ != NULL) {
+                ACCEPT_STMT(if_->else_);
+            }
+        });
+        pretty_print("]\n");
     });
     pretty_print("]\n");
 }

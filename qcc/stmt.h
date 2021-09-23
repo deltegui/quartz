@@ -50,8 +50,8 @@ typedef struct {
 
 typedef struct {
     Expr* condition;
-    struct _Stmt* if_part;
-    struct _Stmt* else_part;
+    struct _Stmt* then;
+    struct _Stmt* else_;
 } IfStmt;
 
 ListStmt* create_stmt_list();

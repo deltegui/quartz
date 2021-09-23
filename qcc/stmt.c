@@ -99,8 +99,8 @@ void free_stmt(Stmt* const stmt) {
         break;
     case STMT_IF:
         free_expr(stmt->if_.condition);
-        free_stmt(stmt->if_.if_part);
-        free_stmt(stmt->if_.else_part);
+        free_stmt(stmt->if_.then);
+        free_stmt(stmt->if_.else_);
         break;
     }
     free(stmt);

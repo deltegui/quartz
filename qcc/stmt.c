@@ -55,6 +55,10 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
         stmt->kind = STMT_RETURN;
         stmt->return_ = *(ReturnStmt*)stmt_node;
         break;
+    case STMT_IF:
+        stmt->kind = STMT_IF;
+        stmt->if_ = *(IfStmt*)stmt_node;
+        break;
     }
     return stmt;
 }
@@ -93,6 +97,11 @@ void free_stmt(Stmt* const stmt) {
     case STMT_RETURN:
         free_expr(stmt->return_.inner);
         break;
+    case STMT_IF:
+        free_expr(stmt->if_.condition);
+        free_stmt(stmt->if_.if_part);
+        free_stmt(stmt->if_.else_part);
+        break;
     }
     free(stmt);
 }
@@ -116,6 +125,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_BLOCK: DISPATCH(visit_block, block); break;
     case STMT_FUNCTION: DISPATCH(visit_function, function); break;
     case STMT_RETURN: DISPATCH(visit_return, return_); break;
+    case STMT_IF: DISPATCH(visit_if, if_); break;
     default: assert(false);
     }
 #undef DISPATCH

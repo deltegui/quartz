@@ -11,6 +11,7 @@ typedef enum {
     STMT_PRINT,
     STMT_BLOCK,
     STMT_RETURN,
+    STMT_IF,
 } StmtKind;
 
 struct _Stmt;
@@ -47,6 +48,12 @@ typedef struct {
     Expr* inner;
 } ReturnStmt;
 
+typedef struct {
+    Expr* condition;
+    struct _Stmt* if_part;
+    struct _Stmt* else_part;
+} IfStmt;
+
 ListStmt* create_stmt_list();
 void stmt_list_add(ListStmt* const list, struct _Stmt* stmt);
 
@@ -60,6 +67,7 @@ typedef struct _Stmt {
         PrintStmt print;
         BlockStmt block;
         ReturnStmt return_;
+        IfStmt if_;
     };
 } Stmt;
 
@@ -70,6 +78,7 @@ typedef struct {
     void (*visit_print)(void* ctx, PrintStmt* print);
     void (*visit_block)(void* ctx, BlockStmt* block);
     void (*visit_return)(void* ctx, ReturnStmt* ret);
+    void (*visit_if)(void* ctx, IfStmt* ifstmt);
 } StmtVisitor;
 
 #define STMT_IS_VAR(stmt) (stmt.kind == STMT_VAR)
@@ -79,6 +88,7 @@ typedef struct {
 #define STMT_IS_PRINT(stmt) (stmt.kind == STMT_PRINT)
 #define STMT_IS_BLOCK(stmt) (stmt.kind == STMT_BLOCK)
 #define STMT_IS_RETURN(stmt) (stmt.kind == STMT_RETURN)
+#define STMT_IS_IF(stmt) (stmt.kind = STMT_IF)
 
 #define CREATE_STMT_RETURN(return_) create_stmt(STMT_RETURN, &return_)
 #define CREATE_STMT_VAR(var) create_stmt(STMT_VAR, &var)
@@ -88,6 +98,7 @@ typedef struct {
 #define CREATE_STMT_LIST(list) create_stmt(STMT_LIST, list)
 #define CREATE_STMT_PRINT(print) create_stmt(STMT_PRINT, &print)
 #define CREATE_STMT_BLOCK(block) create_stmt(STMT_BLOCK, &block)
+#define CREATE_STMT_IF(if_) create_stmt(STMT_IF, &if_)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* const stmt);

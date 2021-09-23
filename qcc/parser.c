@@ -68,7 +68,6 @@ static Stmt* block_stmt(Parser* const parser);
 static Stmt* print_stmt(Parser* const parser);
 static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
-static Stmt* else_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
 
 static Expr* expression(Parser* const parser);
@@ -331,8 +330,6 @@ static Stmt* statement(Parser* const parser) {
         return return_stmt(parser);
     case TOKEN_IF:
         return if_stmt(parser);
-    case TOKEN_ELSE:
-        return else_stmt(parser);
     default:
         return expr_stmt(parser);
     }
@@ -548,11 +545,22 @@ static Stmt* return_stmt(Parser* const parser) {
 }
 
 static Stmt* if_stmt(Parser* const parser) {
-
-}
-
-static Stmt* else_stmt(Parser* const parser) {
-
+    advance(parser); // consume if
+    consume(parser, TOKEN_LEFT_PAREN, "expected left paren in if condition");
+    Expr* condition = expression(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in if condition");
+    Stmt* if_part = statement(parser);
+    Stmt* else_part = NULL;
+    if (parser->current.kind == TOKEN_ELSE) {
+        advance(parser); // consume else
+        else_part = statement(parser);
+    }
+    IfStmt if_stmt = (IfStmt){
+        .condition = condition,
+        .if_part = if_part,
+        .else_part = else_part,
+    };
+    return CREATE_STMT_IF(if_stmt);
 }
 
 static Stmt* expr_stmt(Parser* const parser) {

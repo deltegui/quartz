@@ -67,6 +67,8 @@ static Stmt* statement(Parser* const parser);
 static Stmt* block_stmt(Parser* const parser);
 static Stmt* print_stmt(Parser* const parser);
 static Stmt* return_stmt(Parser* const parser);
+static Stmt* if_stmt(Parser* const parser);
+static Stmt* else_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
 
 static Expr* expression(Parser* const parser);
@@ -105,6 +107,8 @@ ParseRule rules[] = {
     [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
     [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
+    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_RETURN]        = {NULL,        NULL,   PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,        NULL,   PREC_NONE},
@@ -325,6 +329,10 @@ static Stmt* statement(Parser* const parser) {
         return print_stmt(parser);
     case TOKEN_RETURN:
         return return_stmt(parser);
+    case TOKEN_IF:
+        return if_stmt(parser);
+    case TOKEN_ELSE:
+        return else_stmt(parser);
     default:
         return expr_stmt(parser);
     }
@@ -537,6 +545,14 @@ static Stmt* return_stmt(Parser* const parser) {
         consume(parser, TOKEN_SEMICOLON, "Expected return statment to end with ';'");
     }
     return CREATE_STMT_RETURN(return_stmt);
+}
+
+static Stmt* if_stmt(Parser* const parser) {
+
+}
+
+static Stmt* else_stmt(Parser* const parser) {
+
 }
 
 static Stmt* expr_stmt(Parser* const parser) {

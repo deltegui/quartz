@@ -49,6 +49,7 @@ typedef struct {
 } ReturnStmt;
 
 typedef struct {
+    Token token; // Just only to know where the if is.
     Expr* condition;
     struct _Stmt* then;
     struct _Stmt* else_;

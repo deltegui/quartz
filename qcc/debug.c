@@ -323,6 +323,8 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_TYPE_NIL: return "TokenNilType";
     case TOKEN_COMMA: return "TokenComma";
     case TOKEN_RETURN: return "TokenReturn";
+    case TOKEN_IF: return "TokenIf";
+    case TOKEN_ELSE: return "TokenElse";
     default: return "Unknown";
     }
 }
@@ -537,6 +539,8 @@ static void print_function(void* ctx, FunctionStmt* function) {
 static void print_if(void* ctx, IfStmt* if_) {
     pretty_print("If: [\n");
     OFFSET({
+        pretty_print("Token: ");
+        token_print(if_->token);
         pretty_print("Condition: \n");
         OFFSET({
             ACCEPT_EXPR(if_->condition);

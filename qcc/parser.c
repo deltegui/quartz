@@ -545,6 +545,7 @@ static Stmt* return_stmt(Parser* const parser) {
 }
 
 static Stmt* if_stmt(Parser* const parser) {
+    Token token = parser->current;
     advance(parser); // consume if
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren in if condition");
     Expr* condition = expression(parser);
@@ -556,6 +557,7 @@ static Stmt* if_stmt(Parser* const parser) {
         else_ = statement(parser);
     }
     IfStmt if_stmt = (IfStmt){
+        .token = token,
         .condition = condition,
         .then = then,
         .else_= else_,

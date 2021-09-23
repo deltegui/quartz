@@ -94,6 +94,7 @@ static void compile_print(void* ctx, PrintStmt* print);
 static void compile_block(void* ctx, BlockStmt* block);
 static void compile_function(void* ctx, FunctionStmt* function);
 static void compile_return(void* ctx, ReturnStmt* return_);
+static void compile_if(void* ctx, IfStmt* if_);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -102,6 +103,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_block = compile_block,
     .visit_function = compile_function,
     .visit_return = compile_return,
+    .visit_if = compile_if,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -418,6 +420,10 @@ static void compile_return(void* ctx, ReturnStmt* return_) {
         emit(compiler, OP_NIL);
     }
     emit(compiler, OP_RETURN);
+}
+
+static void compile_if(void* ctx, IfStmt* if_) {
+
 }
 
 static void compile_var(void* ctx, VarStmt* var) {

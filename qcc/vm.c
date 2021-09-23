@@ -153,6 +153,8 @@ static inline Value stack_peek(uint8_t distance) {
 #define READ_GLOBAL_CONSTANT_LONG() qvm.frames[0].func->chunk.constants.values[read_long(&qvm.frame->pc)]
 #define READ_GLOBAL_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_GLOBAL_CONSTANT_LONG()))
 
+#define GOTO(pos) do { qvm.frame->pc = &qvm.frame->func->chunk.code[pos]; } while(false)
+
 static void run(ObjFunction* func) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
@@ -352,6 +354,18 @@ static void run(ObjFunction* func) {
             Obj* closed_obj = VALUE_AS_OBJ(stack_peek(0));
             ObjClosed* closed = OBJ_AS_CLOSED(closed_obj);
             function_close_upvalue(function, upvalue, closed);
+            break;
+        }
+        case OP_JUMP: {
+            GOTO(READ_BYTE());
+            break;
+        }
+        case OP_JUMP_IF_FALSE: {
+            Value condition = stack_pop();
+            uint8_t dst = READ_BYTE();
+            if (! VALUE_AS_BOOL(condition)) {
+                GOTO(dst);
+            }
             break;
         }
         }

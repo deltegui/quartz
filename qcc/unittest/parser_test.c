@@ -65,9 +65,9 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
     }
     case STMT_IF: {
         assert_expr_equals(first->if_.condition, second->if_.condition);
-        assert_stmt_equals(first->if_.if_part, second->if_.if_part);
-        if (first->if_.else_part != NULL) {
-            assert_stmt_equals(first->if_.else_part, second->if_.else_part);
+        assert_stmt_equals(first->if_.then, second->if_.then);
+        if (first->if_.else_ != NULL) {
+            assert_stmt_equals(first->if_.else_, second->if_.else_);
         }
     }
     }
@@ -526,8 +526,8 @@ static void should_parse_single_if() {
     PrintStmt p = (PrintStmt){
         .inner = CREATE_LITERAL_EXPR(two),
     };
-    if_.if_part = CREATE_STMT_PRINT(p);
-    if_.else_part = NULL;
+    if_.then = CREATE_STMT_PRINT(p);
+    if_.else_ = NULL;
     assert_stmt_ast("if (true) print 2;", CREATE_STMT_IF(if_));
 }
 
@@ -542,8 +542,8 @@ static void should_parse_if_with_block() {
     BlockStmt block = (BlockStmt){
         .stmts = CREATE_STMT_LIST(list),
     };
-    if_.if_part = CREATE_STMT_BLOCK(block);
-    if_.else_part = NULL;
+    if_.then = CREATE_STMT_BLOCK(block);
+    if_.else_ = NULL;
     assert_stmt_ast("if (true) { print 2; }", CREATE_STMT_IF(if_));
 }
 
@@ -553,11 +553,11 @@ static void should_parse_if_else() {
     PrintStmt p_two = (PrintStmt){
         .inner = CREATE_LITERAL_EXPR(two),
     };
-    if_.if_part = CREATE_STMT_PRINT(p_two);
+    if_.then = CREATE_STMT_PRINT(p_two);
     PrintStmt p_five = (PrintStmt){
         .inner = CREATE_LITERAL_EXPR(five),
     };
-    if_.else_part = CREATE_STMT_PRINT(p_five);
+    if_.else_ = CREATE_STMT_PRINT(p_five);
     assert_stmt_ast("if (true) print 2; else print 5;", CREATE_STMT_IF(if_));
 }
 
@@ -567,20 +567,20 @@ static void should_parse_if_elif_else() {
     PrintStmt p_two = (PrintStmt){
         .inner = CREATE_LITERAL_EXPR(two),
     };
-    if_.if_part = CREATE_STMT_PRINT(p_two);
+    if_.then = CREATE_STMT_PRINT(p_two);
 
     IfStmt inner_if;
     inner_if.condition = CREATE_LITERAL_EXPR(false_);
     PrintStmt p_five = (PrintStmt){
         .inner = CREATE_LITERAL_EXPR(five),
     };
-    inner_if.if_part = CREATE_STMT_PRINT(p_five);
+    inner_if.then = CREATE_STMT_PRINT(p_five);
     ExprStmt return_ = (ExprStmt){
         .inner = CREATE_LITERAL_EXPR(five),
     };
-    inner_if.else_part = CREATE_STMT_EXPR(return_);
+    inner_if.else_ = CREATE_STMT_EXPR(return_);
 
-    if_.else_part = CREATE_STMT_IF(inner_if);
+    if_.else_ = CREATE_STMT_IF(inner_if);
     assert_stmt_ast("if (true) print 2; else if (false) print 5; else 5;", CREATE_STMT_IF(if_));
 }
 

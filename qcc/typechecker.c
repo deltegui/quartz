@@ -486,16 +486,23 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
         }
         // just continue to TYPE_NUMBER
     }
-    case TOKEN_LOWER:
-    case TOKEN_LOWER_EQUAL:
-    case TOKEN_GREATER:
-    case TOKEN_GREATER_EQUAL:
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_PERCENT:
     case TOKEN_SLASH: {
         if (TYPE_IS_NUMBER(left_type) && TYPE_IS_NUMBER(right_type)) {
             checker->last_type = CREATE_TYPE_NUMBER();
+            return;
+        }
+        ERROR("Invalid types for numeric operation");
+        return;
+    }
+    case TOKEN_LOWER:
+    case TOKEN_LOWER_EQUAL:
+    case TOKEN_GREATER:
+    case TOKEN_GREATER_EQUAL: {
+        if (TYPE_IS_NUMBER(left_type) && TYPE_IS_NUMBER(right_type)) {
+            checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
         ERROR("Invalid types for numeric operation");

@@ -49,16 +49,18 @@ static void end_scope(Compiler* const compiler);
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length);
 
-static void emit(Compiler* const compiler, uint8_t bytecode);
-static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param);
-static void emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param);
-static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
+static int emit(Compiler* const compiler, uint8_t bytecode);
+static int emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param);
+static int emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param);
+static int emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn);
 static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
 static void emit_closed_variables(Compiler* const compiler, int depth);
 static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_token);
+static void emit_jump_destiny(Compiler* const compiler, int patch);
 static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_token, Symbol* fn_ref);
 static Token symbol_to_token_identifier(Symbol* symbol);
+static void patch_chunk(Compiler* const compiler, int position, uint8_t value);
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
 static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
@@ -232,28 +234,28 @@ static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int len
     return scoped_symbol_lookup_function_str(&compiler->symbols, name, length);
 }
 
-static void emit(Compiler* const compiler, uint8_t bytecode) {
-    chunk_write(current_chunk(compiler), bytecode, compiler->last_line);
+static int emit(Compiler* const compiler, uint8_t bytecode) {
+    return chunk_write(current_chunk(compiler), bytecode, compiler->last_line);
 }
 
-static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param) {
+static int emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param) {
     emit(compiler, bytecode);
-    emit(compiler, param);
+    return emit(compiler, param);
 }
 
-static void emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param) {
+static int emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param) {
     uint8_t high = param >> 0x8;
     uint8_t low = param & 0x00FF;
     emit(compiler, bytecode);
     emit(compiler, high);
-    emit(compiler, low);
+    return emit(compiler, low);
 }
 
-static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param) {
+static int emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param) {
     if (param > UINT8_MAX) {
-        emit_long(compiler, op_long, param);
+        return emit_long(compiler, op_long, param);
     } else {
-        emit_short(compiler, op_short, param);
+        return emit_short(compiler, op_short, param);
     }
 }
 
@@ -389,6 +391,10 @@ static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token f
     }
 }
 
+static void patch_chunk(Compiler* const compiler, int position, uint8_t value) {
+    chunk_patch(current_chunk(compiler), position, value);
+}
+
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym) {
     if (last_emitted_byte_equals(compiler, OP_RETURN)) {
         return;
@@ -423,8 +429,33 @@ static void compile_return(void* ctx, ReturnStmt* return_) {
 }
 
 static void compile_if(void* ctx, IfStmt* if_) {
+    Compiler* compiler = (Compiler*) ctx;
+    bool have_else = if_->else_ != NULL;
+    int patch_else_pos = 0;
 
+    ACCEPT_EXPR(ctx, if_->condition);
+
+    int patch_if_pos = emit_short(compiler, OP_JUMP_IF_FALSE, 0);
+    ACCEPT_STMT(ctx, if_->then);
+    if (have_else) {
+        patch_else_pos = emit_short(compiler, OP_JUMP, 0);
+    }
+    emit_jump_destiny(compiler, patch_if_pos);
+
+    if (have_else) {
+        ACCEPT_STMT(ctx, if_->else_);
+        emit_jump_destiny(compiler, patch_else_pos);
+    }
 }
+
+static void emit_jump_destiny(Compiler* const compiler, int patch) {
+    int pos = emit(compiler, OP_NOP);
+    if (pos > UINT8_MAX) {
+        error(compiler, "Jump too large");
+    }
+    patch_chunk(compiler, patch, pos);
+}
+
 
 static void compile_var(void* ctx, VarStmt* var) {
     Compiler* compiler = (Compiler*) ctx;

@@ -20,6 +20,9 @@ typedef struct {
     bool has_error;
 
     Vector function_stack; // Vector<FuncMeta>
+
+    bool is_defining_variable;
+    Symbol* defining_variable;
 } Typechecker;
 
 #define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack.size == 0)
@@ -39,6 +42,9 @@ static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int le
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var);
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var);
+
+static void start_variable_definition(Typechecker* const checker, Symbol* var);
+static void end_variable_definition(Typechecker* const checker);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -150,6 +156,8 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
+    checker.is_defining_variable = false;
+    checker.defining_variable = NULL;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
@@ -177,6 +185,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
 
     Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
+
     if (var->definition == NULL) {
         if (TYPE_IS_UNKNOWN(symbol->type)) {
             error(
@@ -196,7 +205,11 @@ static void typecheck_var(void* ctx, VarStmt* var) {
         }
         return;
     }
+
+    start_variable_definition(checker, symbol);
     ACCEPT_EXPR(ctx, var->definition);
+    end_variable_definition(checker);
+
     if (TYPE_IS_VOID(checker->last_type)) {
         error(
             checker,
@@ -223,7 +236,9 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
 
     Symbol* symbol = lookup_str(checker, identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
-    if (symbol->declaration_line == identifier->name.line) {
+    // TODO this check in theory is not needed because you cant use a variable that is not defined,
+    // so, using a variable in it's declaration cant happend anyway.
+    if (checker->is_defining_variable && symbol == checker->defining_variable) {
         error(
             checker,
             &identifier->name,
@@ -356,6 +371,16 @@ static bool var_is_current_function_local(Typechecker* const checker, Symbol* va
     FuncMeta* meta = function_stack_peek(checker);
     Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance);
     return var_sym != NULL;
+}
+
+static void start_variable_definition(Typechecker* const checker, Symbol* var) {
+    checker->is_defining_variable = true;
+    checker->defining_variable = var;
+}
+
+static void end_variable_definition(Typechecker* const checker) {
+    checker->is_defining_variable = false;
+    checker->defining_variable = NULL;
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {

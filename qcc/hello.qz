@@ -1,6 +1,1 @@
-fn this_err(): String {
-    if (false) {
-        return false;
-    }
-    return "yes";
-}
+var a = 5; print a;

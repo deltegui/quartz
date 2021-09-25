@@ -69,6 +69,16 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         if (first->if_.else_ != NULL) {
             assert_stmt_equals(first->if_.else_, second->if_.else_);
         }
+        break;
+    }
+    case STMT_FOR: {
+        assert_expr_equals(first->for_.condition, second->for_.condition);
+        if (first->for_.init != NULL) {
+            assert_stmt_equals(first->for_.init, second->for_.init);
+        }
+        if (first->for_.mod != NULL) {
+            assert_stmt_equals(first->for_.mod, second->for_.mod);
+        }
     }
     }
 }

@@ -240,6 +240,9 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "n", 1, 2)) {
             return create_token(lexer, TOKEN_FUNCTION);
         }
+        if (match_token(lexer, "or", 1, 3)) {
+            return create_token(lexer, TOKEN_FOR);
+        }
         break;
     }
     case 'n': {

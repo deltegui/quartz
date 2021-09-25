@@ -27,6 +27,9 @@ typedef enum {
     TOKEN_LEFT_BRACE,
     TOKEN_RIGHT_BRACE,
     TOKEN_COMMA,
+    TOKEN_IF,
+    TOKEN_ELSE,
+    TOKEN_FOR,
 
     // Two character tokens
     TOKEN_AND,
@@ -35,8 +38,6 @@ typedef enum {
     TOKEN_BANG_EQUAL,
     TOKEN_LOWER_EQUAL,
     TOKEN_GREATER_EQUAL,
-    TOKEN_IF,
-    TOKEN_ELSE,
 
     // Multi-character tokens
     TOKEN_RETURN,

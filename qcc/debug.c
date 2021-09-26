@@ -329,6 +329,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_RETURN: return "TokenReturn";
     case TOKEN_IF: return "TokenIf";
     case TOKEN_ELSE: return "TokenElse";
+    case TOKEN_FOR: return "TokenFor";
     default: return "Unknown";
     }
 }
@@ -369,6 +370,7 @@ static void print_block(void* ctx, BlockStmt* block);
 static void print_function(void* ctx, FunctionStmt* function);
 static void print_return(void* ctx, ReturnStmt* return_);
 static void print_if(void* ctx, IfStmt* if_);
+static void print_for(void* ctx, ForStmt* for_);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -378,6 +380,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_function = print_function,
     .visit_return = print_return,
     .visit_if = print_if,
+    .visit_for = print_for,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -564,3 +567,12 @@ static void print_if(void* ctx, IfStmt* if_) {
     });
     pretty_print("]\n");
 }
+
+static void print_for(void* ctx, ForStmt* for_) {
+    pretty_print("for: [\n");
+    OFFSET({
+        pretty_print("Token: ");
+        token_print(for_->token);
+    });
+}
+

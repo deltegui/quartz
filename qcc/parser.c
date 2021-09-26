@@ -55,6 +55,7 @@ static Symbol* get_identifier_symbol(Parser* const parser, Token identifier);
 static Stmt* declaration_block(Parser* const parser, TokenKind limit_token);
 
 static Stmt* declaration(Parser* const parser);
+static Stmt* parse_variable(Parser* const parser);
 static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
@@ -70,6 +71,10 @@ static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
 static Stmt* for_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
+
+static void parse_for_init(Parser* const parser, ForStmt* for_stmt);
+static void parse_for_condition(Parser* const parser, ForStmt* for_stmt);
+static void parse_for_mod(Parser* const parser, ForStmt* for_stmt);
 
 static Expr* expression(Parser* const parser);
 static Expr* grouping(Parser* const parser, bool can_assign);
@@ -100,6 +105,9 @@ ParseRule rules[] = {
     [TOKEN_LEFT_BRACE]    = {NULL,        NULL,   PREC_NONE},
     [TOKEN_RIGHT_BRACE]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_COMMA]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_FOR]           = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_AND]           = {NULL,        binary, PREC_AND},
     [TOKEN_OR]            = {NULL,        binary, PREC_OR},
@@ -107,8 +115,6 @@ ParseRule rules[] = {
     [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
     [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
-    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_RETURN]        = {NULL,        NULL,   PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,        NULL,   PREC_NONE},
@@ -354,7 +360,7 @@ static Stmt* block_stmt(Parser* const parser) {
     return CREATE_STMT_BLOCK(block);
 }
 
-static Stmt* variable_decl(Parser* const parser) {
+static Stmt* parse_variable(Parser* const parser) {
     advance(parser); // consume var
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         error(parser, "Expected identifier to be var name");
@@ -387,8 +393,13 @@ static Stmt* variable_decl(Parser* const parser) {
         free_symbol(&symbol);
     }
 
-    consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
     return CREATE_STMT_VAR(var);
+}
+
+static Stmt* variable_decl(Parser* const parser) {
+    Stmt* var = parse_variable(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
+    return var;
 }
 
 static Stmt* function_decl(Parser* const parser) {
@@ -569,19 +580,65 @@ static Stmt* if_stmt(Parser* const parser) {
 }
 
 static Stmt* for_stmt(Parser* const parser) {
-    Token token = parser->current;
-    advance(parser);
+    ForStmt for_stmt;
+    for_stmt.token = parser->current;
+
+    advance(parser); // consume for
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren in for condition");
 
+    parse_for_init(parser, &for_stmt);
+    parse_for_condition(parser, &for_stmt);
+    parse_for_mod(parser, &for_stmt);
+
     consume(parser, TOKEN_RIGTH_PAREN, "expected right paren in for condition");
-    Stmt* body = statement(parser);
-    ForStmt for_stmt = (ForStmt){
-        .token = token,
-        .condition = ,
-        .init = ,
-        .mod = ,
-        .body = body,
+    for_stmt.body = statement(parser);
+}
+
+static void parse_for_init(Parser* const parser, ForStmt* for_stmt) {
+    if (parser->current.kind == TOKEN_SEMICOLON) {
+        for_stmt->init = NULL;
+        return;
     }
+
+    // TODO this block of code is similar than (parse_for_mod)
+    ListStmt* vars = create_stmt_list();
+    for (;;) {
+        Stmt* var = parse_variable(parser);
+        stmt_list_add(vars, var);
+        if (parser->current.kind == TOKEN_SEMICOLON) {
+            break;
+        }
+        consume(parser, TOKEN_COLON, "expected ',' between var initialization in for");
+    }
+    consume(parser, TOKEN_SEMICOLON, "expected ';' at end of var initialization in for");
+    for_stmt->init = vars;
+}
+
+static void parse_for_condition(Parser* const parser, ForStmt* for_stmt) {
+    if (parser->current.kind == TOKEN_SEMICOLON) {
+        for_stmt->condition = NULL;
+    } else {
+        for_stmt->condition = expression(parser);
+    }
+    consume(parser, TOKEN_SEMICOLON, "expected ';' at end of condition in for");
+}
+
+static void parse_for_mod(Parser* const parser, ForStmt* for_stmt) {
+    if (parser->current.kind == TOKEN_RIGTH_PAREN) {
+        for_stmt->mod = NULL;
+        return;
+    }
+
+    ListStmt* mods = create_stmt_list();
+    for (;;) {
+        Expr* expr = expression(parser);
+        stmt_list_add(mods, CREATE_STMT_EXPR(expr));
+        if (parser->current.kind == TOKEN_RIGHT_PAREN) {
+            break;
+        }
+        consume(parser, TOKEN_COLON, "expected ',' between var initialization in for");
+    }
+    for_stmt->mod = mods;
 }
 
 static Stmt* expr_stmt(Parser* const parser) {

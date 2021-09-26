@@ -23,7 +23,7 @@ typedef struct {
 
 typedef struct {
     Token identifier;
-    Expr* definition;
+    Expr* definition; // Optional (can be NULL)
 } VarStmt;
 
 typedef struct {
@@ -53,14 +53,14 @@ typedef struct {
     Token token; // Just only to know where the if is.
     Expr* condition;
     struct _Stmt* then;
-    struct _Stmt* else_;
+    struct _Stmt* else_; // Optional (can be NULL)
 } IfStmt;
 
 typedef struct {
     Token token; // Just only to know where the For is.
-    struct _Stmt* init;
-    Expr* condition;
-    struct _Stmt* mod;
+    struct _Stmt* init; // Optional (can be NULL)
+    Expr* condition; // Optional (can be NULL)
+    struct _Stmt* mod; // Optional (can be NULL)
     struct _Stmt* body;
 } ForStmt;
 

@@ -473,7 +473,7 @@ static void typecheck_for(void* ctx, ForStmt* for_) {
     if (for_->condition != NULL && !TYPE_IS_BOOL(checker->last_type)) {
         error_last_type_match(
             checker,
-            &if_->token,
+            &for_->token,
             CREATE_TYPE_BOOL(),
             "in for condition. The condition must evaluate to Bool.");
     }

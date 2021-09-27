@@ -95,6 +95,7 @@ void free_stmt(Stmt* const stmt) {
         free_expr(stmt->for_.condition);
         free_stmt(stmt->for_.init);
         free_stmt(stmt->for_.mod);
+        free_stmt(stmt->for_.body);
         break;
     }
     free(stmt);
@@ -120,6 +121,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_FUNCTION: DISPATCH(visit_function, function); break;
     case STMT_RETURN: DISPATCH(visit_return, return_); break;
     case STMT_IF: DISPATCH(visit_if, if_); break;
+    case STMT_FOR: DISPATCH(visit_for, for_); break;
     default: assert(false);
     }
 #undef DISPATCH

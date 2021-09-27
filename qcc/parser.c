@@ -398,7 +398,7 @@ static Stmt* parse_variable(Parser* const parser) {
 
 static Stmt* variable_decl(Parser* const parser) {
     Stmt* var = parse_variable(parser);
-    consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
+    consume(parser, TOKEN_SEMICOLON, "Expected variable declaration to end with ';'");
     return var;
 }
 
@@ -590,13 +590,20 @@ static Stmt* for_stmt(Parser* const parser) {
     parse_for_condition(parser, &for_stmt);
     parse_for_mod(parser, &for_stmt);
 
-    consume(parser, TOKEN_RIGTH_PAREN, "expected right paren in for condition");
+    consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in for condition");
     for_stmt.body = statement(parser);
+
+    return CREATE_STMT_FOR(for_stmt);
 }
 
 static void parse_for_init(Parser* const parser, ForStmt* for_stmt) {
+    for_stmt->init = NULL;
+    if (parser->current.kind == TOKEN_RIGHT_PAREN) {
+        error(parser, "expected ';' after init in for");
+        return;
+    }
     if (parser->current.kind == TOKEN_SEMICOLON) {
-        for_stmt->init = NULL;
+        advance(parser); // consume semicolon
         return;
     }
 
@@ -608,23 +615,29 @@ static void parse_for_init(Parser* const parser, ForStmt* for_stmt) {
         if (parser->current.kind == TOKEN_SEMICOLON) {
             break;
         }
-        consume(parser, TOKEN_COLON, "expected ',' between var initialization in for");
+        consume(parser, TOKEN_COMMA, "expected ',' between var initialization in for");
+        if (parser->has_error) {
+            break;
+        }
     }
     consume(parser, TOKEN_SEMICOLON, "expected ';' at end of var initialization in for");
-    for_stmt->init = vars;
+    for_stmt->init = CREATE_STMT_LIST(vars);
 }
 
 static void parse_for_condition(Parser* const parser, ForStmt* for_stmt) {
-    if (parser->current.kind == TOKEN_SEMICOLON) {
-        for_stmt->condition = NULL;
-    } else {
+    for_stmt->condition = NULL;
+    if (parser->current.kind == TOKEN_RIGHT_PAREN) {
+        error(parser, "expected ';' after condition in for");
+        return;
+    }
+    if (parser->current.kind != TOKEN_SEMICOLON) {
         for_stmt->condition = expression(parser);
     }
     consume(parser, TOKEN_SEMICOLON, "expected ';' at end of condition in for");
 }
 
 static void parse_for_mod(Parser* const parser, ForStmt* for_stmt) {
-    if (parser->current.kind == TOKEN_RIGTH_PAREN) {
+    if (parser->current.kind == TOKEN_RIGHT_PAREN) {
         for_stmt->mod = NULL;
         return;
     }
@@ -636,9 +649,12 @@ static void parse_for_mod(Parser* const parser, ForStmt* for_stmt) {
         if (parser->current.kind == TOKEN_RIGHT_PAREN) {
             break;
         }
-        consume(parser, TOKEN_COLON, "expected ',' between var initialization in for");
+        consume(parser, TOKEN_COMMA, "expected ',' between var initialization in for");
+        if (parser->has_error) {
+            break;
+        }
     }
-    for_stmt->mod = mods;
+    for_stmt->mod = CREATE_STMT_LIST(mods);
 }
 
 static Stmt* expr_stmt(Parser* const parser) {

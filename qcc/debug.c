@@ -573,6 +573,32 @@ static void print_for(void* ctx, ForStmt* for_) {
     OFFSET({
         pretty_print("Token: ");
         token_print(for_->token);
+        pretty_print("Init: [\n");
+        OFFSET({
+            if (for_->init != NULL) {
+                ACCEPT_STMT(for_->init);
+            }
+        });
+        pretty_print("]\n");
+        pretty_print("Condition: \n");
+        OFFSET({
+            if (for_->condition != NULL) {
+                ACCEPT_EXPR(for_->condition);
+            }
+        });
+        pretty_print("Mod: [\n");
+        OFFSET({
+            if (for_->mod != NULL) {
+                ACCEPT_STMT(for_->mod);
+            }
+        });
+        pretty_print("]\n");
+        pretty_print("Body: [\n");
+        OFFSET({
+            ACCEPT_STMT(for_->body);
+        });
+        pretty_print("]\n");
     });
+    pretty_print("]\n");
 }
 

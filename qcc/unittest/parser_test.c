@@ -72,7 +72,9 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case STMT_FOR: {
-        assert_expr_equals(first->for_.condition, second->for_.condition);
+        if (first->for_.condition != NULL) {
+            assert_expr_equals(first->for_.condition, second->for_.condition);
+        }
         if (first->for_.init != NULL) {
             assert_stmt_equals(first->for_.init, second->for_.init);
         }
@@ -594,6 +596,156 @@ static void should_parse_if_elif_else() {
     assert_stmt_ast("if (true) print 2; else if (false) print 5; else 5;", CREATE_STMT_IF(if_));
 }
 
+static void should_parse_for_with_condition() {
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = NULL;
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (;false;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_infinite() {
+    ForStmt for_;
+    for_.condition = NULL;
+    for_.init = NULL;
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (;;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_one_init_and_condition() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var));
+
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (var a = 5;false;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_two_init_and_condition() {
+    VarStmt var_a = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+
+    VarStmt var_b = (VarStmt){
+        .identifier = b_token,
+        .definition = CREATE_LITERAL_EXPR(two)
+    };
+
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_a));
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_b));
+
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (var a = 5, var b = 2;false;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_init_condition_mod() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var));
+
+    AssignmentExpr assigment = (AssignmentExpr){
+        .name = a_token,
+        .value = CREATE_LITERAL_EXPR(two),
+    };
+    ExprStmt stmt = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(assigment),
+    };
+    ListStmt* mod_list = create_stmt_list();
+    stmt_list_add(mod_list, CREATE_STMT_EXPR(stmt));
+
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = CREATE_STMT_LIST(mod_list);
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+
+    assert_stmt_ast("for (var a = 5;false;a = 2) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_two_mod() {
+    VarStmt var_a = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    VarStmt var_b = (VarStmt){
+        .identifier = b_token,
+        .definition = CREATE_LITERAL_EXPR(two)
+    };
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_a));
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_b));
+
+    AssignmentExpr a_assigment = (AssignmentExpr){
+        .name = a_token,
+        .value = CREATE_LITERAL_EXPR(two),
+    };
+    ExprStmt a_stmt = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(a_assigment),
+    };
+    AssignmentExpr b_assigment = (AssignmentExpr){
+        .name = b_token,
+        .value = CREATE_LITERAL_EXPR(five),
+    };
+    ExprStmt b_stmt = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(b_assigment),
+    };
+    ListStmt* mod_list = create_stmt_list();
+    stmt_list_add(mod_list, CREATE_STMT_EXPR(a_stmt));
+    stmt_list_add(mod_list, CREATE_STMT_EXPR(b_stmt));
+
+    ForStmt for_;
+    for_.condition = NULL;
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = CREATE_STMT_LIST(mod_list);
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+
+    assert_stmt_ast("for (var a = 5, var b = 2;;a = 2, b = 5) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_fail_if_for_is_malformed() {
+    assert_has_errors(" for () {}");
+    assert_has_errors(" for (;) {}");
+    assert_has_errors(" for (,;;) {}");
+    assert_has_errors(" for (;;,) {}");
+    assert_has_errors(" for (;;) ");
+}
+
 static int test_setup(void** args) {
     init_type_pool();
     return 0;
@@ -625,7 +777,14 @@ int main(void) {
         cmocka_unit_test(should_parse_single_if),
         cmocka_unit_test(should_parse_if_with_block),
         cmocka_unit_test(should_parse_if_else),
-        cmocka_unit_test(should_parse_if_elif_else)
+        cmocka_unit_test(should_parse_if_elif_else),
+        cmocka_unit_test(should_parse_for_infinite),
+        cmocka_unit_test(should_parse_for_with_condition),
+        cmocka_unit_test(should_parse_for_one_init_and_condition),
+        cmocka_unit_test(should_parse_for_two_init_and_condition),
+        cmocka_unit_test(should_parse_for_init_condition_mod),
+        cmocka_unit_test(should_parse_for_two_mod),
+        cmocka_unit_test(should_fail_if_for_is_malformed)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

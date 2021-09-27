@@ -170,7 +170,9 @@ bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
 static void typecheck_block(void* ctx, BlockStmt* block) {
     Typechecker* checker = (Typechecker*) ctx;
     start_scope(checker);
+    function_stack_start_scope(checker);
     ACCEPT_STMT(ctx, block->stmts);
+    function_stack_end_scope(checker);
     end_scope(checker);
 }
 
@@ -467,6 +469,7 @@ static void typecheck_if(void* ctx, IfStmt* if_) {
 static void typecheck_for(void* ctx, ForStmt* for_) {
     Typechecker* checker = (Typechecker*) ctx;
     start_scope(checker);
+    function_stack_start_scope(checker);
 
     ACCEPT_STMT(checker, for_->init);
     ACCEPT_EXPR(checker, for_->condition);
@@ -480,6 +483,7 @@ static void typecheck_for(void* ctx, ForStmt* for_) {
     ACCEPT_STMT(checker, for_->mod);
     ACCEPT_STMT(checker, for_->body);
 
+    function_stack_end_scope(checker);
     end_scope(checker);
 }
 

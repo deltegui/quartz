@@ -69,6 +69,7 @@ static void typecheck_block(void* ctx, BlockStmt* block);
 static void typecheck_function(void* ctx, FunctionStmt* function);
 static void typecheck_return(void* ctx, ReturnStmt* function);
 static void typecheck_if(void* ctx, IfStmt* if_);
+static void typecheck_for(void* ctx, ForStmt* for_);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -78,6 +79,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_function = typecheck_function,
     .visit_return = typecheck_return,
     .visit_if = typecheck_if,
+    .visit_for = typecheck_for,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -138,10 +140,12 @@ static void error(Typechecker* const checker, Token* token, const char* message,
 
 static void start_scope(Typechecker* const checker) {
     symbol_start_scope(checker->symbols);
+    function_stack_start_scope(checker);
 }
 
 static void end_scope(Typechecker* const checker) {
     symbol_end_scope(checker->symbols);
+    function_stack_end_scope(checker);
 }
 
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length) {
@@ -369,7 +373,11 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
 
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var) {
     FuncMeta* meta = function_stack_peek(checker);
-    Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance);
+    // We use scope_distance - 1 because we count how many scopes we have until we reach
+    // the closest function. But lookup_levels thinks that a scope_distance of 0 is just
+    // search in the current scope, a scope_distance of 1 is current scope and one above
+    // and so on.
+    Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance - 1);
     return var_sym != NULL;
 }
 
@@ -388,9 +396,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_push(checker, function->identifier);
 
     start_scope(checker);
-    function_stack_start_scope(checker);
     ACCEPT_STMT(ctx, function->body);
-    function_stack_end_scope(checker);
     end_scope(checker);
 
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
@@ -456,9 +462,29 @@ static void typecheck_if(void* ctx, IfStmt* if_) {
             "in if condition. The condition must evaluate to Bool.");
     }
     ACCEPT_STMT(ctx, if_->then);
+    // TODO this null check shouldnt be neccesary
     if (if_->else_ != NULL) {
         ACCEPT_STMT(ctx, if_->else_);
     }
+}
+
+static void typecheck_for(void* ctx, ForStmt* for_) {
+    Typechecker* checker = (Typechecker*) ctx;
+    start_scope(checker);
+
+    ACCEPT_STMT(checker, for_->init);
+    ACCEPT_EXPR(checker, for_->condition);
+    if (for_->condition != NULL && !TYPE_IS_BOOL(checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &for_->token,
+            CREATE_TYPE_BOOL(),
+            "in for condition. The condition must evaluate to Bool.");
+    }
+    ACCEPT_STMT(checker, for_->mod);
+    ACCEPT_STMT(checker, for_->body);
+
+    end_scope(checker);
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

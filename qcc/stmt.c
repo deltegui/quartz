@@ -26,41 +26,30 @@ void stmt_list_add(ListStmt* const list, Stmt* stmt) {
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     Stmt* stmt = (Stmt*) malloc(sizeof(Stmt));
+
+#define CASE_STMT(k, f, s)\
+    case k:\
+        stmt->kind = k;\
+        stmt->f = *(s*)stmt_node;\
+        break
+
     switch(kind) {
-    case STMT_EXPR:
-        stmt->kind = STMT_EXPR;
-        stmt->expr = *(ExprStmt*)stmt_node;
-        break;
-    case STMT_VAR:
-        stmt->kind = STMT_VAR;
-        stmt->var = *(VarStmt*)stmt_node;
-        break;
-    case STMT_FUNCTION:
-        stmt->kind = STMT_FUNCTION;
-        stmt->function = *(FunctionStmt*)stmt_node;
-        break;
+    CASE_STMT(STMT_EXPR, expr, ExprStmt);
+    CASE_STMT(STMT_VAR, var, VarStmt);
+    CASE_STMT(STMT_FUNCTION, function, FunctionStmt);
+    CASE_STMT(STMT_PRINT, print, PrintStmt);
+    CASE_STMT(STMT_BLOCK, block, BlockStmt);
+    CASE_STMT(STMT_RETURN, return_, ReturnStmt);
+    CASE_STMT(STMT_IF, if_, IfStmt);
+    CASE_STMT(STMT_FOR, for_, ForStmt);
     case STMT_LIST:
         stmt->kind = STMT_LIST;
         stmt->list = (ListStmt*)stmt_node;
         break;
-    case STMT_PRINT:
-        stmt->kind = STMT_PRINT;
-        stmt->print = *(PrintStmt*)stmt_node;
-        break;
-    case STMT_BLOCK:
-        stmt->kind = STMT_BLOCK;
-        stmt->block = *(BlockStmt*)stmt_node;
-        break;
-    case STMT_RETURN:
-        stmt->kind = STMT_RETURN;
-        stmt->return_ = *(ReturnStmt*)stmt_node;
-        break;
-    case STMT_IF:
-        stmt->kind = STMT_IF;
-        stmt->if_ = *(IfStmt*)stmt_node;
-        break;
     }
     return stmt;
+
+#undef SET_STMT
 }
 
 static void free_list_stmt(ListStmt* const list_stmt) {
@@ -102,6 +91,12 @@ void free_stmt(Stmt* const stmt) {
         free_stmt(stmt->if_.then);
         free_stmt(stmt->if_.else_);
         break;
+    case STMT_FOR:
+        free_expr(stmt->for_.condition);
+        free_stmt(stmt->for_.init);
+        free_stmt(stmt->for_.mod);
+        free_stmt(stmt->for_.body);
+        break;
     }
     free(stmt);
 }
@@ -126,6 +121,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_FUNCTION: DISPATCH(visit_function, function); break;
     case STMT_RETURN: DISPATCH(visit_return, return_); break;
     case STMT_IF: DISPATCH(visit_if, if_); break;
+    case STMT_FOR: DISPATCH(visit_for, for_); break;
     default: assert(false);
     }
 #undef DISPATCH

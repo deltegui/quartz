@@ -55,6 +55,7 @@ static Symbol* get_identifier_symbol(Parser* const parser, Token identifier);
 static Stmt* declaration_block(Parser* const parser, TokenKind limit_token);
 
 static Stmt* declaration(Parser* const parser);
+static Stmt* parse_variable(Parser* const parser);
 static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
@@ -68,7 +69,12 @@ static Stmt* block_stmt(Parser* const parser);
 static Stmt* print_stmt(Parser* const parser);
 static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
+static Stmt* for_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
+
+static void parse_for_init(Parser* const parser, ForStmt* for_stmt);
+static void parse_for_condition(Parser* const parser, ForStmt* for_stmt);
+static void parse_for_mod(Parser* const parser, ForStmt* for_stmt);
 
 static Expr* expression(Parser* const parser);
 static Expr* grouping(Parser* const parser, bool can_assign);
@@ -99,6 +105,9 @@ ParseRule rules[] = {
     [TOKEN_LEFT_BRACE]    = {NULL,        NULL,   PREC_NONE},
     [TOKEN_RIGHT_BRACE]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_COMMA]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_FOR]           = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_AND]           = {NULL,        binary, PREC_AND},
     [TOKEN_OR]            = {NULL,        binary, PREC_OR},
@@ -106,8 +115,6 @@ ParseRule rules[] = {
     [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
     [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL,        binary, PREC_COMPARISON},
-    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_RETURN]        = {NULL,        NULL,   PREC_NONE},
     [TOKEN_FUNCTION]      = {NULL,        NULL,   PREC_NONE},
@@ -161,7 +168,7 @@ void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* sy
     parser->panic_mode = false;
     parser->has_error = false;
     parser->function_deep_count = 0;
-    parser->is_global = true; // By default, we are in global scope.
+    parser->scope_depth = 0;
 }
 
 static void error(Parser* const parser, const char* message, ...) {
@@ -215,11 +222,13 @@ static void syncronize(Parser* const parser) {
 }
 
 static void create_scope(Parser* const parser){
+    parser->scope_depth++;
     symbol_create_scope(parser->symbols);
 }
 
 static void end_scope(Parser* const parser){
     symbol_end_scope(parser->symbols);
+    parser->scope_depth--;
 }
 
 static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name){
@@ -330,15 +339,14 @@ static Stmt* statement(Parser* const parser) {
         return return_stmt(parser);
     case TOKEN_IF:
         return if_stmt(parser);
+    case TOKEN_FOR:
+        return for_stmt(parser);
     default:
         return expr_stmt(parser);
     }
 }
 
 static Stmt* block_stmt(Parser* const parser) {
-    bool prev_is_global = parser->is_global;
-    parser->is_global = false;
-
     advance(parser); // consume {
     BlockStmt block;
     create_scope(parser);
@@ -346,12 +354,10 @@ static Stmt* block_stmt(Parser* const parser) {
     consume(parser, TOKEN_RIGHT_BRACE, "Expected block to end with '}'");
     end_scope(parser);
 
-    parser->is_global = prev_is_global;
-
     return CREATE_STMT_BLOCK(block);
 }
 
-static Stmt* variable_decl(Parser* const parser) {
+static Stmt* parse_variable(Parser* const parser) {
     advance(parser); // consume var
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         error(parser, "Expected identifier to be var name");
@@ -379,13 +385,18 @@ static Stmt* variable_decl(Parser* const parser) {
 
     Symbol symbol = create_symbol_from_token(&var.identifier, var_type);
     symbol.assigned = var.definition != NULL;
-    symbol.global = parser->is_global;
+    symbol.global = parser->scope_depth == 0;
     if (! register_symbol(parser, symbol)) {
         free_symbol(&symbol);
     }
 
-    consume(parser, TOKEN_SEMICOLON, "Expected global declaration to end with ';'");
     return CREATE_STMT_VAR(var);
+}
+
+static Stmt* variable_decl(Parser* const parser) {
+    Stmt* var = parse_variable(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expected variable declaration to end with ';'");
+    return var;
 }
 
 static Stmt* function_decl(Parser* const parser) {
@@ -398,7 +409,7 @@ static Stmt* function_decl(Parser* const parser) {
         .identifier = parser->current,
     };
     Symbol symbol = create_symbol_from_token(&fn.identifier, create_type_function());
-    symbol.global = parser->is_global;
+    symbol.global = parser->scope_depth == 0;
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
@@ -563,6 +574,92 @@ static Stmt* if_stmt(Parser* const parser) {
         .else_= else_,
     };
     return CREATE_STMT_IF(if_stmt);
+}
+
+static Stmt* for_stmt(Parser* const parser) {
+    ForStmt for_stmt;
+    for_stmt.token = parser->current;
+
+    // We need a additional scope here because
+    // a for can delcare variables in its init
+    // part, and those variables should be local
+    // to the for body.
+    create_scope(parser);
+
+    advance(parser); // consume for
+    consume(parser, TOKEN_LEFT_PAREN, "expected left paren in for condition");
+
+    parse_for_init(parser, &for_stmt);
+    parse_for_condition(parser, &for_stmt);
+    parse_for_mod(parser, &for_stmt);
+
+    consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in for condition");
+    for_stmt.body = statement(parser);
+
+    end_scope(parser);
+
+    return CREATE_STMT_FOR(for_stmt);
+}
+
+static void parse_for_init(Parser* const parser, ForStmt* for_stmt) {
+    for_stmt->init = NULL;
+    if (parser->current.kind == TOKEN_RIGHT_PAREN) {
+        error(parser, "expected ';' after init in for");
+        return;
+    }
+    if (parser->current.kind == TOKEN_SEMICOLON) {
+        advance(parser); // consume semicolon
+        return;
+    }
+
+    // TODO this block of code is similar than (parse_for_mod)
+    ListStmt* vars = create_stmt_list();
+    for (;;) {
+        Stmt* var = parse_variable(parser);
+        stmt_list_add(vars, var);
+        if (parser->current.kind == TOKEN_SEMICOLON) {
+            break;
+        }
+        consume(parser, TOKEN_COMMA, "expected ',' between var initialization in for");
+        if (parser->has_error) {
+            break;
+        }
+    }
+    consume(parser, TOKEN_SEMICOLON, "expected ';' at end of var initialization in for");
+    for_stmt->init = CREATE_STMT_LIST(vars);
+}
+
+static void parse_for_condition(Parser* const parser, ForStmt* for_stmt) {
+    for_stmt->condition = NULL;
+    if (parser->current.kind == TOKEN_RIGHT_PAREN) {
+        error(parser, "expected ';' after condition in for");
+        return;
+    }
+    if (parser->current.kind != TOKEN_SEMICOLON) {
+        for_stmt->condition = expression(parser);
+    }
+    consume(parser, TOKEN_SEMICOLON, "expected ';' at end of condition in for");
+}
+
+static void parse_for_mod(Parser* const parser, ForStmt* for_stmt) {
+    if (parser->current.kind == TOKEN_RIGHT_PAREN) {
+        for_stmt->mod = NULL;
+        return;
+    }
+
+    ListStmt* mods = create_stmt_list();
+    for (;;) {
+        Expr* expr = expression(parser);
+        stmt_list_add(mods, CREATE_STMT_EXPR(expr));
+        if (parser->current.kind == TOKEN_RIGHT_PAREN) {
+            break;
+        }
+        consume(parser, TOKEN_COMMA, "expected ',' between var initialization in for");
+        if (parser->has_error) {
+            break;
+        }
+    }
+    for_stmt->mod = CREATE_STMT_LIST(mods);
 }
 
 static Stmt* expr_stmt(Parser* const parser) {

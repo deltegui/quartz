@@ -14,5 +14,4 @@ fn fibonacci(n: Number): Number {
 
 print fibonacci(21);
 print fibonacci(34);
-print fibonacci(1476);
 print fibonacci(3);

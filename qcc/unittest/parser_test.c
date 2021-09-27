@@ -81,6 +81,7 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         if (first->for_.mod != NULL) {
             assert_stmt_equals(first->for_.mod, second->for_.mod);
         }
+        assert_stmt_equals(first->for_.body, second->for_.body);
     }
     }
 }

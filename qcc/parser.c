@@ -583,6 +583,12 @@ static Stmt* for_stmt(Parser* const parser) {
     ForStmt for_stmt;
     for_stmt.token = parser->current;
 
+    // We need a additional scope here because
+    // a for can delcare variables in its init
+    // part, and those variables should be local
+    // to the for body.
+    create_scope(parser);
+
     advance(parser); // consume for
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren in for condition");
 
@@ -592,6 +598,8 @@ static Stmt* for_stmt(Parser* const parser) {
 
     consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in for condition");
     for_stmt.body = statement(parser);
+
+    end_scope(parser);
 
     return CREATE_STMT_FOR(for_stmt);
 }

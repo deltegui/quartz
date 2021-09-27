@@ -69,6 +69,7 @@ static void typecheck_block(void* ctx, BlockStmt* block);
 static void typecheck_function(void* ctx, FunctionStmt* function);
 static void typecheck_return(void* ctx, ReturnStmt* function);
 static void typecheck_if(void* ctx, IfStmt* if_);
+static void typecheck_for(void* ctx, ForStmt* for_);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -78,6 +79,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_function = typecheck_function,
     .visit_return = typecheck_return,
     .visit_if = typecheck_if,
+    .visit_for = typecheck_for,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -456,9 +458,29 @@ static void typecheck_if(void* ctx, IfStmt* if_) {
             "in if condition. The condition must evaluate to Bool.");
     }
     ACCEPT_STMT(ctx, if_->then);
+    // TODO this null check shouldnt be neccesary
     if (if_->else_ != NULL) {
         ACCEPT_STMT(ctx, if_->else_);
     }
+}
+
+static void typecheck_for(void* ctx, ForStmt* for_) {
+    Typechecker* checker = (Typechecker*) ctx;
+    start_scope(checker);
+
+    ACCEPT_STMT(checker, for_->init);
+    ACCEPT_EXPR(checker, for_->condition);
+    if (for_->condition != NULL && !TYPE_IS_BOOL(checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &if_->token,
+            CREATE_TYPE_BOOL(),
+            "in for condition. The condition must evaluate to Bool.");
+    }
+    ACCEPT_STMT(checker, for_->mod);
+    ACCEPT_STMT(checker, for_->body);
+
+    end_scope(checker);
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

@@ -269,6 +269,12 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
+    case 'w': {
+        if (match_token(lexer, "hile", 1, 5)) {
+            return create_token(lexer, TOKEN_WHILE);
+        }
+        break;
+    }
     case 'N': {
         if (match_token(lexer, "umber", 1, 6)) {
             return create_token(lexer, TOKEN_TYPE_NUMBER);

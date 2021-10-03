@@ -30,6 +30,7 @@ typedef enum {
     TOKEN_IF,
     TOKEN_ELSE,
     TOKEN_FOR,
+    TOKEN_WHILE,
 
     // Two character tokens
     TOKEN_AND,

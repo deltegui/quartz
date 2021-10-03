@@ -330,6 +330,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_IF: return "TokenIf";
     case TOKEN_ELSE: return "TokenElse";
     case TOKEN_FOR: return "TokenFor";
+    case TOKEN_WHILE: return "TokenWhile";
     default: return "Unknown";
     }
 }

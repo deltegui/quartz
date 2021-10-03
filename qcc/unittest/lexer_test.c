@@ -396,6 +396,19 @@ static void should_tokenize_for_correctly() {
     );
 }
 
+static void should_tokenize_while_correctly() {
+    assert_types(
+        "   while (true) {}",
+        6,
+        TOKEN_WHILE,
+        TOKEN_LEFT_PAREN,
+        TOKEN_TRUE,
+        TOKEN_RIGHT_PAREN,
+        TOKEN_LEFT_BRACE,
+        TOKEN_RIGHT_BRACE
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -416,7 +429,8 @@ int main(void) {
         cmocka_unit_test(should_create_string_tokens_correctly),
         cmocka_unit_test(should_fail_if_string_is_malformed),
         cmocka_unit_test(should_tokenize_if_correctly),
-        cmocka_unit_test(should_tokenize_for_correctly)
+        cmocka_unit_test(should_tokenize_for_correctly),
+        cmocka_unit_test(should_tokenize_while_correctly)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

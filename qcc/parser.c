@@ -70,6 +70,7 @@ static Stmt* print_stmt(Parser* const parser);
 static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
 static Stmt* for_stmt(Parser* const parser);
+static Stmt* while_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
 
 static void parse_for_init(Parser* const parser, ForStmt* for_stmt);
@@ -341,6 +342,8 @@ static Stmt* statement(Parser* const parser) {
         return if_stmt(parser);
     case TOKEN_FOR:
         return for_stmt(parser);
+    case TOKEN_WHILE:
+        return while_stmt(parser);
     default:
         return expr_stmt(parser);
     }
@@ -576,12 +579,23 @@ static Stmt* if_stmt(Parser* const parser) {
     return CREATE_STMT_IF(if_stmt);
 }
 
+static Stmt* while_stmt(Parser* const parser) {
+    WhileStmt while_stmt;
+    while_stmt.token = parser->current;
+    advance(parser); // consume while
+    consume(parser, TOKEN_LEFT_PAREN, "expected left paren before while condition");
+    while_stmt.condition = expression(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "expected right paren after while condition");
+    while_stmt.body = statement(parser);
+    return CREATE_STMT_WHILE(while_stmt);
+}
+
 static Stmt* for_stmt(Parser* const parser) {
     ForStmt for_stmt;
     for_stmt.token = parser->current;
 
     // We need a additional scope here because
-    // a for can delcare variables in its init
+    // a for stmt can delcare variables in its init
     // part, and those variables should be local
     // to the for body.
     create_scope(parser);

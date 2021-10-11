@@ -98,6 +98,7 @@ static void compile_function(void* ctx, FunctionStmt* function);
 static void compile_return(void* ctx, ReturnStmt* return_);
 static void compile_if(void* ctx, IfStmt* if_);
 static void compile_for(void* ctx, ForStmt* for_);
+static void compile_while(void* ctx, WhileStmt* while_);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -108,6 +109,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_return = compile_return,
     .visit_if = compile_if,
     .visit_for = compile_for,
+    .visit_while = compile_while,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -474,6 +476,27 @@ static void compile_for(void* ctx, ForStmt* for_) {
     emit_jump_destiny(compiler, patch_for_pos);
 
     end_scope(compiler);
+}
+
+static void compile_while(void* ctx, WhileStmt* while_) {
+    Compiler* compiler = (Compiler*) ctx;
+
+    int loop_init = emit(compiler, OP_NOP);
+
+    ACCEPT_EXPR(compiler, while_->condition);
+    int patch_for_pos = emit_short(compiler, OP_JUMP_IF_FALSE, 0);
+
+    ACCEPT_STMT(compiler, while_->body);
+
+    // This group of code is equal to emit_jump_destiny and compile_for
+    int jump_to_init = emit_short(compiler, OP_JUMP, loop_init);
+    int distance = jump_to_init - loop_init;
+    assert(distance > 0);
+    if (distance > UINT8_MAX) {
+        error(compiler, "Jump to init for loop too large");
+    }
+
+    emit_jump_destiny(compiler, patch_for_pos);
 }
 
 static void emit_jump_destiny(Compiler* const compiler, int patch) {

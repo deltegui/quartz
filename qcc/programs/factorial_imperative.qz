@@ -1,6 +1,6 @@
 fn factorial(n: Number): Number {
     var result = 1;
-    for (;n>1;) {
+    while (n>1) {
         result = result * n;
         n = n - 1;
     }

@@ -193,7 +193,7 @@ CompilationResult compile(const char* source, ObjFunction** const result) {
         END_WITH(NULL);
         return PARSING_ERROR;
     }
-    if (!typecheck(ast, &compiler.symbols)) {
+    if (!typecheck(source, ast, &compiler.symbols)) {
         END_WITH(NULL);
         return TYPE_ERROR;
     }

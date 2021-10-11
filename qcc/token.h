@@ -64,6 +64,7 @@ typedef struct {
     const char* start;
     uint8_t length;
     uint32_t line;
+    uint32_t column;
 } Token;
 
 #define VECTOR_AS_TOKENS(vect) VECTOR_AS(vect, Token)

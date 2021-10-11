@@ -110,7 +110,7 @@ void print_object(Obj* const obj) {
     case OBJ_FUNCTION: {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
         printf("<fn '%s' ", OBJ_AS_CSTRING(fn->name));
-        type_print(obj->type);
+        TYPE_PRINT(obj->type);
         printf(">");
         break;
     }

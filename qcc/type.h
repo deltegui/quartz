@@ -53,8 +53,11 @@ Type* create_type_function();
 #define CREATE_TYPE_VOID() create_type_simple(TYPE_VOID)
 #define CREATE_TYPE_UNKNOWN() create_type_simple(TYPE_UNKNOWN)
 
+#define TYPE_PRINT(typ) type_fprint(stdout, typ)
+#define ERR_TYPE_PRINT(typ) type_fprint(stderr, typ)
+
 Type* simple_type_from_token_kind(TokenKind kind);
-void type_print(const Type* const type);
+void type_fprint(FILE* out, const Type* const type);
 bool type_equals(Type* first, Type* second);
 
 #define VECTOR_AS_TYPES(vect) VECTOR_AS(vect, Type*)

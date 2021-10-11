@@ -55,7 +55,7 @@ static void symbol_table_print(const SymbolTable* table) {
             SYMBOL_NAME_LENGTH(current->name),
             SYMBOL_NAME_START(current->name),
             current->declaration_line);
-        type_print(current->type);
+        TYPE_PRINT(current->type);
 
         printf("\t| %s\t", (current->global ? "Yes" : "No"));
 

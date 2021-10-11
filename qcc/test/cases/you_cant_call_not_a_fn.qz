@@ -1,1 +1,4 @@
 [Line 2] Type error: Calling 'a' which is not a function
+1 | var a = 5;
+2 | a();
+  | ~^

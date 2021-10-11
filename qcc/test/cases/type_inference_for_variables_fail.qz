@@ -1,1 +1,4 @@
 [Line 5] Type error: Cannot declare Void variable
+4 | 
+5 | var a = do_something();
+  | ~~~~~^

@@ -1,5 +1,24 @@
-[Line 3] Type error: Invalid types for numeric operation for types: 'String' and 'Number'
-[Line 6] Type error: Invalid types for numeric operation for types: 'Bool' and 'Number'
-[Line 8] Type error: The type 'Bool' does not match with type 'String' in variable declaration.
-[Line 9] Type error: The type 'Number' does not match with type 'Bool' in variable declaration.
-[Line 10] Type error: The type 'String' does not match with type 'Number' in variable declaration.
+[Line 3] Type error: Invalid types for numeric operation for types 'String' and 'Number'
+2 |     var a = 1;
+3 |     var b = "hola" + a;
+  | ~~~~~~~~~~~~~~~~~~~~^
+
+[Line 6] Type error: Invalid types for numeric operation for types 'Bool' and 'Number'
+5 |         var a = true;
+6 |         print a + 1;
+  | ~~~~~~~~~~~~~~~~~^
+
+[Line 8] Type error: The Type 'Bool' does not match with type 'String' in variable declaration.
+7 |     }
+8 |     var c: Bool = 'true';
+  | ~~~~~~~~~^
+
+[Line 9] Type error: The Type 'Number' does not match with type 'Bool' in variable declaration.
+8 |     var c: Bool = 'true';
+9 |     var num: Number = false;
+  | ~~~~~~~~~~~^
+
+[Line 10] Type error: The Type 'String' does not match with type 'Number' in variable declaration.
+9 |     var num: Number = false;
+10 |     var str: String = 0;
+   | ~~~~~~~~~~~^

@@ -235,9 +235,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_GET_UPVALUE:
         case OP_SET_UPVALUE:
         case OP_CONSTANT:
-        case OP_CALL:
-        case OP_JUMP:
-        case OP_JUMP_IF_FALSE: {
+        case OP_CALL: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
             break;
@@ -245,7 +243,9 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_GET_GLOBAL_LONG:
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:
-        case OP_CONSTANT_LONG: {
+        case OP_CONSTANT_LONG:
+        case OP_JUMP:
+        case OP_JUMP_IF_FALSE: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_long_print(chunk, i);
             break;

@@ -57,12 +57,13 @@ static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token f
 static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
 static void emit_closed_variables(Compiler* const compiler, int depth);
 static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_token);
-static void emit_jump_destiny(Compiler* const compiler, int patch);
-static void emit_jump_to(Compiler* const compiler, uint8_t jump_op, int to);
+static void patch_jump(Compiler* const compiler, int patch);
+static int emit_jump_to(Compiler* const compiler, uint8_t jump_op, uint16_t to);
 static void check_jump_distance(Compiler* const compiler, int distance);
 static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_token, Symbol* fn_ref);
 static Token symbol_to_token_identifier(Symbol* symbol);
 static void patch_chunk(Compiler* const compiler, int position, uint8_t value);
+static void patch_chunk_long(Compiler* const compiler, int position, uint16_t value);
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
 static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
@@ -401,6 +402,13 @@ static void patch_chunk(Compiler* const compiler, int position, uint8_t value) {
     chunk_patch(current_chunk(compiler), position, value);
 }
 
+static void patch_chunk_long(Compiler* const compiler, int position, uint16_t value) {
+    uint8_t high = value >> 0x8;
+    uint8_t low = value & 0x00FF;
+    patch_chunk(compiler, position-1, high);
+    patch_chunk(compiler, position, low);
+}
+
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym) {
     if (last_emitted_byte_equals(compiler, OP_RETURN)) {
         return;
@@ -441,16 +449,16 @@ static void compile_if(void* ctx, IfStmt* if_) {
 
     ACCEPT_EXPR(ctx, if_->condition);
 
-    int patch_if_pos = emit_short(compiler, OP_JUMP_IF_FALSE, 0);
+    int patch_if_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
     ACCEPT_STMT(ctx, if_->then);
     if (have_else) {
-        patch_else_pos = emit_short(compiler, OP_JUMP, 0);
+        patch_else_pos = emit_jump_to(compiler, OP_JUMP, 0);
     }
-    emit_jump_destiny(compiler, patch_if_pos);
+    patch_jump(compiler, patch_if_pos);
 
     if (have_else) {
         ACCEPT_STMT(ctx, if_->else_);
-        emit_jump_destiny(compiler, patch_else_pos);
+        patch_jump(compiler, patch_else_pos);
     }
 }
 
@@ -463,14 +471,14 @@ static void compile_for(void* ctx, ForStmt* for_) {
     int loop_init = emit(compiler, OP_NOP);
 
     ACCEPT_EXPR(compiler, for_->condition);
-    int patch_for_pos = emit_short(compiler, OP_JUMP_IF_FALSE, 0);
+    int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
     ACCEPT_STMT(compiler, for_->body);
     ACCEPT_STMT(compiler, for_->mod);
 
     emit_jump_to(compiler, OP_JUMP, loop_init);
 
-    emit_jump_destiny(compiler, patch_for_pos);
+    patch_jump(compiler, patch_for_pos);
 
     end_scope(compiler);
 }
@@ -481,31 +489,30 @@ static void compile_while(void* ctx, WhileStmt* while_) {
     int loop_init = emit(compiler, OP_NOP);
 
     ACCEPT_EXPR(compiler, while_->condition);
-    int patch_for_pos = emit_short(compiler, OP_JUMP_IF_FALSE, 0);
+    int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
     ACCEPT_STMT(compiler, while_->body);
 
     emit_jump_to(compiler, OP_JUMP, loop_init);
 
-    emit_jump_destiny(compiler, patch_for_pos);
+    patch_jump(compiler, patch_for_pos);
 }
 
-static void emit_jump_destiny(Compiler* const compiler, int patch) {
-    int pos = emit(compiler, OP_NOP);
-    int distance = pos - patch;
-    check_jump_distance(compiler, distance);
-    patch_chunk(compiler, patch, pos);
+static void patch_jump(Compiler* const compiler, int patch) {
+    int jump_dst = emit(compiler, OP_NOP);
+    check_jump_distance(compiler, jump_dst - patch);
+    patch_chunk_long(compiler, patch, jump_dst);
 }
 
-static void emit_jump_to(Compiler* const compiler, uint8_t jump_op, int to) {
-    int jump_to_init = emit_short(compiler, jump_op, to);
-    int distance = jump_to_init - to;
-    check_jump_distance(compiler, distance);
+static int emit_jump_to(Compiler* const compiler, uint8_t jump_op, uint16_t to) {
+    int jump_to_init = emit_long(compiler, jump_op, to);
+    check_jump_distance(compiler, jump_to_init - (int)to);
+    return jump_to_init;
 }
 
 static void check_jump_distance(Compiler* const compiler, int distance) {
     assert(distance > 0);
-    if (distance > UINT8_MAX) {
+    if (distance > UINT16_MAX) {
         error(compiler, "Jump too large");
     }
 }

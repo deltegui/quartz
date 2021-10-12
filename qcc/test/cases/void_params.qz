@@ -1,2 +1,7 @@
 [Line 1] Type error: Function param 't' cannot be Void
+1 | fn hola(t: Void, b: Void) {
+  | ~~~~~~~~^
+
 [Line 1] Type error: Function param 'b' cannot be Void
+1 | fn hola(t: Void, b: Void) {
+  | ~~~~~~~~~~~~~~~~~^

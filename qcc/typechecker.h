@@ -4,6 +4,6 @@
 #include "stmt.h"
 #include "symbol.h"
 
-bool typecheck(Stmt* ast, ScopedSymbolTable* symbols);
+bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols);
 
 #endif

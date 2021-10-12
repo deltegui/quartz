@@ -140,17 +140,18 @@ static inline Value stack_peek(uint8_t distance) {
     stack_push(table_find(&qvm.globals, identifier))
 
 #define READ_BYTE() *(qvm.frame->pc++)
+#define READ_LONG() read_long(&qvm.frame->pc)
 
 #define READ_CONSTANT() qvm.frame->func->chunk.constants.values[READ_BYTE()]
 #define READ_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT()))
 
-#define READ_CONSTANT_LONG() qvm.frame->func->chunk.constants.values[read_long(&qvm.frame->pc)]
+#define READ_CONSTANT_LONG() qvm.frame->func->chunk.constants.values[READ_LONG()]
 #define READ_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_CONSTANT_LONG()))
 
 #define READ_GLOBAL_CONSTANT() qvm.frames[0].func->chunk.constants.values[READ_BYTE()]
 #define READ_GLOBAL_STRING() OBJ_AS_STRING(VALUE_AS_OBJ(READ_GLOBAL_CONSTANT()))
 
-#define READ_GLOBAL_CONSTANT_LONG() qvm.frames[0].func->chunk.constants.values[read_long(&qvm.frame->pc)]
+#define READ_GLOBAL_CONSTANT_LONG() qvm.frames[0].func->chunk.constants.values[READ_LONG()]
 #define READ_GLOBAL_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_GLOBAL_CONSTANT_LONG()))
 
 #define GOTO(pos) do { qvm.frame->pc = &qvm.frame->func->chunk.code[pos]; } while(false)
@@ -357,12 +358,12 @@ static void run(ObjFunction* func) {
             break;
         }
         case OP_JUMP: {
-            GOTO(READ_BYTE());
+            GOTO(READ_LONG());
             break;
         }
         case OP_JUMP_IF_FALSE: {
             Value condition = stack_pop();
-            uint8_t dst = READ_BYTE();
+            uint8_t dst = READ_LONG();
             if (! VALUE_AS_BOOL(condition)) {
                 GOTO(dst);
             }

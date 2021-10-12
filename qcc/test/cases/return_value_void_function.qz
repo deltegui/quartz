@@ -1,1 +1,3 @@
-[Line 1] Type error: The type 'Void' does not match with type 'Number' in function return
+[Line 1] Type error: The Type 'Void' does not match with type 'Number' in function return
+1 | fn imvoid(): Void {
+  | ~~~~~~~~^

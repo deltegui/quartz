@@ -4,6 +4,7 @@
 #include "vector.h"
 #include "symbol.h"
 #include "type.h"
+#include "error.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -203,6 +204,7 @@ static void error_at(Parser* const parser, Token* token, const char* format, va_
     fprintf(stderr, ": ");
     vfprintf(stderr, format, params);
     fprintf(stderr, "\n");
+    print_error_context(parser->lexer.source, token);
     parser->has_error = true;
 }
 
@@ -384,7 +386,6 @@ static Stmt* parse_variable(Parser* const parser) {
         advance(parser); // consume =
         var.definition = expression(parser);
     }
-
 
     Symbol symbol = create_symbol_from_token(&var.identifier, var_type);
     symbol.assigned = var.definition != NULL;

@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "expr.h"
 #include "symbol.h"
+#include "error.h"
 
 typedef struct {
     Token name;
@@ -23,6 +24,8 @@ typedef struct {
 
     bool is_defining_variable;
     Symbol* defining_variable;
+
+    const char* source;
 } Typechecker;
 
 #define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack.size == 0)
@@ -33,7 +36,9 @@ static void function_stack_push(Typechecker* const checker, Token fn_token);
 static void function_stack_start_scope(Typechecker* const checker);
 static void function_stack_end_scope(Typechecker* const checker);
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
+static void error_ctx(Typechecker* const checker, Token* token);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
+static void have_error(Typechecker* const checker);
 
 static void start_scope(Typechecker* const checker);
 static void end_scope(Typechecker* const checker);
@@ -123,21 +128,32 @@ static void function_stack_end_scope(Typechecker* const checker) {
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
     Type* last_type = checker->last_type;
-    error(checker, where, "The type '");
-    type_print(first);
-    printf("' does not match with type '");
-    type_print(last_type);
-    printf("' %s\n", message);
+    have_error(checker);
+    fprintf(stderr, "[Line %d] Type error: The Type '", where->line);
+    ERR_TYPE_PRINT(first);
+    fprintf(stderr, "' does not match with type '");
+    ERR_TYPE_PRINT(last_type);
+    fprintf(stderr, "' %s\n", message);
+    error_ctx(checker, where);
+}
+
+static void error_ctx(Typechecker* const checker, Token* token) {
+    print_error_context(checker->source, token);
 }
 
 static void error(Typechecker* const checker, Token* token, const char* message, ...) {
-    checker->has_error = true;
-    checker->last_type = CREATE_TYPE_UNKNOWN();
+    have_error(checker);
     va_list params;
     va_start(params, message);
-    printf("[Line %d] Type error: ",token->line);
-    vprintf(message, params);
+    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    vfprintf(stderr, message, params);
     va_end(params);
+    error_ctx(checker, token);
+}
+
+static void have_error(Typechecker* const checker) {
+    checker->has_error = true;
+    checker->last_type = CREATE_TYPE_UNKNOWN();
 }
 
 static void start_scope(Typechecker* const checker) {
@@ -158,12 +174,13 @@ static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int le
     return scoped_symbol_lookup_levels(checker->symbols, &name, level);
 }
 
-bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
+bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
     checker.is_defining_variable = false;
     checker.defining_variable = NULL;
+    checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
@@ -325,10 +342,11 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         Type* last = checker->last_type;
         if (! type_equals(last, def_type)) {
             error(checker, &call->identifier, "Type of param number %d in function call (", i);
-            type_print(last);
+            ERR_TYPE_PRINT(last);
             printf(") does not match with function definition (");
-            type_print(def_type);
+            ERR_TYPE_PRINT(def_type);
             printf(")\n");
+            print_error_context(checker->source, &call->identifier);
         }
     }
 
@@ -538,12 +556,13 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     ACCEPT_EXPR(checker, binary->right);
     Type* right_type = checker->last_type;
 
-#define ERROR(msg) error(checker, &binary->op, "%s", msg);\
-    printf(" for types: '");\
-    type_print(left_type);\
-    printf("' and '");\
-    type_print(right_type);\
-    printf("'\n")
+#define ERROR(msg) have_error(checker);\
+    fprintf(stderr, "[Line %d] Type error: %s for types '", binary->op.line, msg);\
+    ERR_TYPE_PRINT(left_type);\
+    fprintf(stderr, "' and '");\
+    ERR_TYPE_PRINT(right_type);\
+    fprintf(stderr, "'\n");\
+    error_ctx(checker, &binary->op)
 
     switch (binary->op.kind) {
     case TOKEN_PLUS: {
@@ -607,10 +626,11 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     ACCEPT_EXPR(checker, unary->expr);
     Type* inner_type = checker->last_type;
 
-#define ERROR(msg) error(checker, &unary->op, "%s", msg);\
-    printf(" for type: '");\
-    type_print(inner_type);\
-    printf("'\n")
+#define ERROR(msg) have_error(checker);\
+    fprintf(stderr, "[Line %d] Type error: %s for type '", unary->op.line, msg);\
+    ERR_TYPE_PRINT(inner_type);\
+    fprintf(stderr, "'\n");\
+    error_ctx(checker, &unary->op)
 
     switch (unary->op.kind) {
     case TOKEN_BANG: {

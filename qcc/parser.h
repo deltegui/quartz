@@ -16,6 +16,8 @@ typedef struct {
     bool has_error;
     int function_deep_count;
     int scope_depth;
+
+    bool is_in_loop;
 } Parser;
 
 void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* symbols);

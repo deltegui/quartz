@@ -72,6 +72,7 @@ static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
 static Stmt* for_stmt(Parser* const parser);
 static Stmt* while_stmt(Parser* const parser);
+static Stmt* break_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
 
 static void parse_for_init(Parser* const parser, ForStmt* for_stmt);
@@ -135,6 +136,14 @@ ParseRule rules[] = {
     [TOKEN_TYPE_NIL]      = {NULL,        NULL,   PREC_NONE},
 };
 
+#define IN_LOOP(parser, ...)\
+    bool prev = parser->is_in_loop;\
+    parser->is_in_loop = true;\
+    {\
+        __VA_ARGS__\
+    }\
+    parser->is_in_loop = prev;
+
 static ParseRule* get_rule(TokenKind kind) {
     return &rules[kind];
 }
@@ -171,6 +180,7 @@ void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* sy
     parser->has_error = false;
     parser->function_deep_count = 0;
     parser->scope_depth = 0;
+    parser->is_in_loop = false;
 }
 
 static void error(Parser* const parser, const char* message, ...) {
@@ -346,6 +356,8 @@ static Stmt* statement(Parser* const parser) {
         return for_stmt(parser);
     case TOKEN_WHILE:
         return while_stmt(parser);
+    case TOKEN_BREAK:
+        return break_stmt(parser);
     default:
         return expr_stmt(parser);
     }
@@ -587,8 +599,21 @@ static Stmt* while_stmt(Parser* const parser) {
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren before while condition");
     while_stmt.condition = expression(parser);
     consume(parser, TOKEN_RIGHT_PAREN, "expected right paren after while condition");
-    while_stmt.body = statement(parser);
+    IN_LOOP(parser, {
+        while_stmt.body = statement(parser);
+    });
     return CREATE_STMT_WHILE(while_stmt);
+}
+
+static Stmt* break_stmt(Parser* const parser) {
+    if (!parser->is_in_loop) {
+        error(parser, "Expected break statement to be inside a loop");
+    }
+    BreakStmt break_stmt;
+    break_stmt.token = parser->current;
+    advance(parser); // consume break
+    consume(parser, TOKEN_SEMICOLON, "expected break statement to end with semicolon");
+    return CREATE_STMT_BREAK(break_stmt);
 }
 
 static Stmt* for_stmt(Parser* const parser) {
@@ -609,7 +634,9 @@ static Stmt* for_stmt(Parser* const parser) {
     parse_for_mod(parser, &for_stmt);
 
     consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in for condition");
-    for_stmt.body = statement(parser);
+    IN_LOOP(parser, {
+        for_stmt.body = statement(parser);
+    });
 
     end_scope(parser);
 

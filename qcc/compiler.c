@@ -58,6 +58,8 @@ static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
 static void emit_closed_variables(Compiler* const compiler, int depth);
 static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_token);
 static void emit_jump_destiny(Compiler* const compiler, int patch);
+static void emit_jump_to(Compiler* const compiler, uint8_t jump_op, int to);
+static void check_jump_distance(Compiler* const compiler, int distance);
 static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_token, Symbol* fn_ref);
 static Token symbol_to_token_identifier(Symbol* symbol);
 static void patch_chunk(Compiler* const compiler, int position, uint8_t value);
@@ -466,12 +468,7 @@ static void compile_for(void* ctx, ForStmt* for_) {
     ACCEPT_STMT(compiler, for_->body);
     ACCEPT_STMT(compiler, for_->mod);
 
-    int jump_to_init = emit_short(compiler, OP_JUMP, loop_init);
-    int distance = jump_to_init - loop_init;
-    assert(distance > 0);
-    if (distance > UINT8_MAX) {
-        error(compiler, "Jump to init for loop too large");
-    }
+    emit_jump_to(compiler, OP_JUMP, loop_init);
 
     emit_jump_destiny(compiler, patch_for_pos);
 
@@ -488,13 +485,7 @@ static void compile_while(void* ctx, WhileStmt* while_) {
 
     ACCEPT_STMT(compiler, while_->body);
 
-    // This group of code is equal to emit_jump_destiny and compile_for
-    int jump_to_init = emit_short(compiler, OP_JUMP, loop_init);
-    int distance = jump_to_init - loop_init;
-    assert(distance > 0);
-    if (distance > UINT8_MAX) {
-        error(compiler, "Jump to init for loop too large");
-    }
+    emit_jump_to(compiler, OP_JUMP, loop_init);
 
     emit_jump_destiny(compiler, patch_for_pos);
 }
@@ -502,11 +493,21 @@ static void compile_while(void* ctx, WhileStmt* while_) {
 static void emit_jump_destiny(Compiler* const compiler, int patch) {
     int pos = emit(compiler, OP_NOP);
     int distance = pos - patch;
+    check_jump_distance(compiler, distance);
+    patch_chunk(compiler, patch, pos);
+}
+
+static void emit_jump_to(Compiler* const compiler, uint8_t jump_op, int to) {
+    int jump_to_init = emit_short(compiler, jump_op, to);
+    int distance = jump_to_init - to;
+    check_jump_distance(compiler, distance);
+}
+
+static void check_jump_distance(Compiler* const compiler, int distance) {
     assert(distance > 0);
     if (distance > UINT8_MAX) {
         error(compiler, "Jump too large");
     }
-    patch_chunk(compiler, patch, pos);
 }
 
 static void compile_var(void* ctx, VarStmt* var) {

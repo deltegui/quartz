@@ -1,0 +1,16 @@
+fn lo(a: Number) {
+    for (;;) {
+        print a;
+        if (a <= 10) {
+            break;
+        }
+        if (a % 5 == 0) {
+            break;
+        }
+        a = a + 1;
+    }
+}
+
+
+lo(5);
+lo(11);

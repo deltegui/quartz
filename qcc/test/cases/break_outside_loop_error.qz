@@ -1,0 +1,4 @@
+[Line 4] Error at 'break': Expected break statement to be inside a loop
+3 | 
+4 | break;
+  | ~~~~~^

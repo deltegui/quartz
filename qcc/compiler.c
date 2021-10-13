@@ -14,6 +14,18 @@ typedef enum {
 } CompilerMode;
 
 typedef struct {
+    Vector loop_len;
+    Vector breaks;
+} BreakContext;
+
+static void init_break_ctx(BreakContext* const break_ctx);
+static void free_break_ctx(BreakContext* const break_ctx);
+static int break_ctx_pop_loop(BreakContext* const break_ctx);
+static int break_ctx_pop_break(BreakContext* const break_ctx);
+static void break_ctx_push_loop(BreakContext* const break_ctx);
+static void break_ctx_push_break(BreakContext* const break_ctx, int break_point);
+
+typedef struct {
     Parser parser;
     ScopedSymbolTable symbols;
 
@@ -27,7 +39,24 @@ typedef struct {
     int scope_depth;
     int function_scope_depth;
     int next_local_index;
+
+    BreakContext break_ctx;
+    int continue_ctx;
 } Compiler;
+
+#define BREAK_CTX_POP_LOOP(compiler) break_ctx_pop_loop(&compiler->break_ctx);
+#define BREAK_CTX_POP_BREAK(compiler) break_ctx_pop_break(&compiler->break_ctx);
+#define BREAK_CTX_PUSH_LOOP(compiler) break_ctx_push_loop(&compiler->break_ctx);
+#define BREAK_CTX_PUSH_BREAK(compiler, pos) break_ctx_push_break(&compiler->break_ctx, pos);
+
+#define CONTINUE_CTX_NOT_DEFINED -1
+#define CONTINUE_CTX(compiler, pos, ...)\
+    do {\
+        int prev_continue = compiler->continue_ctx;\
+        compiler->continue_ctx = pos;\
+        __VA_ARGS__\
+        compiler->continue_ctx = prev_continue;\
+    } while(false)
 
 struct IdentifierOps {
     uint8_t op_global;
@@ -57,6 +86,7 @@ static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token f
 static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
 static void emit_closed_variables(Compiler* const compiler, int depth);
 static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_token);
+static void patch_breaks(Compiler* const compiler);
 static void patch_jump(Compiler* const compiler, int patch);
 static int emit_jump_to(Compiler* const compiler, uint8_t jump_op, uint16_t to);
 static void check_jump_distance(Compiler* const compiler, int distance);
@@ -102,6 +132,7 @@ static void compile_return(void* ctx, ReturnStmt* return_);
 static void compile_if(void* ctx, IfStmt* if_);
 static void compile_for(void* ctx, ForStmt* for_);
 static void compile_while(void* ctx, WhileStmt* while_);
+static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -113,6 +144,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_if = compile_if,
     .visit_for = compile_for,
     .visit_while = compile_while,
+    .visit_loopg = compile_loopg,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -131,6 +163,39 @@ struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
     .op_local = OP_SET_LOCAL,
     .op_upvalue = OP_SET_UPVALUE,
 };
+
+#define VECTOR_AS_INT(vect) VECTOR_AS(vect, int)
+#define VECTOR_ADD_INT(vect, i) VECTOR_ADD(vect, i, int)
+
+static void init_break_ctx(BreakContext* const break_ctx) {
+    init_vector(&break_ctx->loop_len, sizeof(int));
+    init_vector(&break_ctx->breaks, sizeof(int));
+}
+
+static void free_break_ctx(BreakContext* const break_ctx) {
+    free_vector(&break_ctx->loop_len);
+    free_vector(&break_ctx->breaks);
+}
+
+static int break_ctx_pop_loop(BreakContext* const break_ctx) {
+    int* loop_len = VECTOR_AS_INT(&break_ctx->loop_len);
+    return loop_len[--break_ctx->loop_len.size];
+}
+
+static int break_ctx_pop_break(BreakContext* const break_ctx) {
+    int* breaks = VECTOR_AS_INT(&break_ctx->breaks);
+    return breaks[--break_ctx->breaks.size];
+}
+
+static void break_ctx_push_loop(BreakContext* const break_ctx) {
+    VECTOR_ADD_INT(&break_ctx->loop_len, 0);
+}
+
+static void break_ctx_push_break(BreakContext* const break_ctx, int break_point) {
+    int* loop_len = VECTOR_AS_INT(&break_ctx->loop_len);
+    loop_len[break_ctx->loop_len.size - 1]++;
+    VECTOR_ADD_INT(&break_ctx->breaks, break_point);
+}
 
 static void error(Compiler* const compiler, const char* message) {
     fprintf(stderr, "[Line %d] Compile error: %s\n", compiler->last_line, message);
@@ -152,10 +217,14 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->function_scope_depth = 0;
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
+
+    init_break_ctx(&compiler->break_ctx);
+    compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
 }
 
 static void free_compiler(Compiler* const compiler) {
     free_scoped_symbol_table(&compiler->symbols);
+    free_break_ctx(&compiler->break_ctx);
 }
 
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym) {
@@ -176,6 +245,9 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     inner->function_scope_depth = 0;
     inner->next_local_index = 1; // We expect to always have a function in pos 0
     memset(inner->locals, 0, UINT8_COUNT);
+
+    inner->break_ctx = outer->break_ctx;
+    inner->continue_ctx = outer->continue_ctx;
 }
 
 static Chunk* current_chunk(Compiler* const compiler) {
@@ -465,37 +537,72 @@ static void compile_if(void* ctx, IfStmt* if_) {
 static void compile_for(void* ctx, ForStmt* for_) {
     Compiler* compiler = (Compiler*) ctx;
     start_scope(compiler);
+    BREAK_CTX_PUSH_LOOP(compiler);
 
     ACCEPT_STMT(compiler, for_->init);
 
     int loop_init = emit(compiler, OP_NOP);
 
-    ACCEPT_EXPR(compiler, for_->condition);
+    if (for_->condition != NULL) {
+        ACCEPT_EXPR(compiler, for_->condition);
+    } else {
+        emit(compiler, OP_TRUE);
+    }
     int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
-    ACCEPT_STMT(compiler, for_->body);
+    CONTINUE_CTX(compiler, loop_init, {
+        ACCEPT_STMT(compiler, for_->body);
+    });
     ACCEPT_STMT(compiler, for_->mod);
 
     emit_jump_to(compiler, OP_JUMP, loop_init);
 
     patch_jump(compiler, patch_for_pos);
+    patch_breaks(compiler);
 
     end_scope(compiler);
 }
 
 static void compile_while(void* ctx, WhileStmt* while_) {
     Compiler* compiler = (Compiler*) ctx;
+    BREAK_CTX_PUSH_LOOP(compiler);
 
     int loop_init = emit(compiler, OP_NOP);
 
     ACCEPT_EXPR(compiler, while_->condition);
     int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
-    ACCEPT_STMT(compiler, while_->body);
+    CONTINUE_CTX(compiler, loop_init, {
+        ACCEPT_STMT(compiler, while_->body);
+    });
 
     emit_jump_to(compiler, OP_JUMP, loop_init);
 
     patch_jump(compiler, patch_for_pos);
+    patch_breaks(compiler);
+}
+
+static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
+    Compiler* compiler = (Compiler*) ctx;
+    if (loopg->kind == LOOP_BREAK) {
+        int break_pos = emit_jump_to(compiler, OP_JUMP, 0);
+        BREAK_CTX_PUSH_BREAK(compiler, break_pos);
+    } else {
+        emit_jump_to(compiler, OP_JUMP, compiler->continue_ctx);
+    }
+}
+
+static void patch_breaks(Compiler* const compiler) {
+    int breaks_in_loop = BREAK_CTX_POP_LOOP(compiler);
+    if (breaks_in_loop <= 0) {
+        return;
+    }
+    int jump_dst = emit(compiler, OP_NOP);
+    for (int i = 0; i < breaks_in_loop; i++) {
+        int break_to_patch = BREAK_CTX_POP_BREAK(compiler);
+        check_jump_distance(compiler, jump_dst - break_to_patch);
+        patch_chunk_long(compiler, break_to_patch, jump_dst);
+    }
 }
 
 static void patch_jump(Compiler* const compiler, int patch) {

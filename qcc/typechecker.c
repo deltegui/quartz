@@ -67,6 +67,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_call = typecheck_call,
 };
 
+static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg);
 static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
 static void typecheck_print(void* ctx, PrintStmt* print);
@@ -87,6 +88,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_if = typecheck_if,
     .visit_for = typecheck_for,
     .visit_while = typecheck_while,
+    .visit_loopg = typecheck_loopg,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -186,6 +188,9 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     ACCEPT_STMT(&checker, ast);
     free_vector(&checker.function_stack);
     return !checker.has_error;
+}
+
+static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg) {
 }
 
 static void typecheck_block(void* ctx, BlockStmt* block) {

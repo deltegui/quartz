@@ -409,6 +409,24 @@ static void should_tokenize_while_correctly() {
     );
 }
 
+static void should_tokenize_break_correctly() {
+    assert_types(
+        "   break; ",
+        2,
+        TOKEN_BREAK,
+        TOKEN_SEMICOLON
+    );
+}
+
+static void should_tokenize_continue_correctly() {
+    assert_types(
+        "   continue; ",
+        2,
+        TOKEN_CONTINUE,
+        TOKEN_SEMICOLON
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -430,7 +448,9 @@ int main(void) {
         cmocka_unit_test(should_fail_if_string_is_malformed),
         cmocka_unit_test(should_tokenize_if_correctly),
         cmocka_unit_test(should_tokenize_for_correctly),
-        cmocka_unit_test(should_tokenize_while_correctly)
+        cmocka_unit_test(should_tokenize_while_correctly),
+        cmocka_unit_test(should_tokenize_break_correctly),
+        cmocka_unit_test(should_tokenize_continue_correctly)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

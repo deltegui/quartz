@@ -41,7 +41,7 @@ static void print_arrow(Token* token) {
         fprintf(stderr, " ");
     }
     fprintf(stderr, " | ");
-    for (int i = 0; i < token->column; i++) {
+    for (uint32_t i = 0; i < token->column; i++) {
         fprintf(stderr, "~");
     }
     fprintf(stderr, "^\n");

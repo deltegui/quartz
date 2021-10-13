@@ -72,7 +72,7 @@ static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
 static Stmt* for_stmt(Parser* const parser);
 static Stmt* while_stmt(Parser* const parser);
-static Stmt* break_stmt(Parser* const parser);
+static Stmt* loopg_stmt(Parser* const parser);
 static Stmt* expr_stmt(Parser* const parser);
 
 static void parse_for_init(Parser* const parser, ForStmt* for_stmt);
@@ -137,12 +137,12 @@ ParseRule rules[] = {
 };
 
 #define IN_LOOP(parser, ...)\
-    bool prev = parser->is_in_loop;\
-    parser->is_in_loop = true;\
-    {\
+    do {\
+        bool prev = parser->is_in_loop;\
+        parser->is_in_loop = true;\
         __VA_ARGS__\
-    }\
-    parser->is_in_loop = prev;
+        parser->is_in_loop = prev;\
+    } while(false)
 
 static ParseRule* get_rule(TokenKind kind) {
     return &rules[kind];
@@ -225,6 +225,13 @@ static void syncronize(Parser* const parser) {
         case TOKEN_SEMICOLON:
             advance(parser); // consume semicolon
         case TOKEN_VAR:
+        case TOKEN_FUNCTION:
+        case TOKEN_CONTINUE:
+        case TOKEN_BREAK:
+        case TOKEN_IF:
+        case TOKEN_WHILE:
+        case TOKEN_FOR:
+        case TOKEN_RETURN:
         case TOKEN_PRINT:
         case TOKEN_END:
             return;
@@ -356,8 +363,9 @@ static Stmt* statement(Parser* const parser) {
         return for_stmt(parser);
     case TOKEN_WHILE:
         return while_stmt(parser);
+    case TOKEN_CONTINUE:
     case TOKEN_BREAK:
-        return break_stmt(parser);
+        return loopg_stmt(parser);
     default:
         return expr_stmt(parser);
     }
@@ -605,15 +613,18 @@ static Stmt* while_stmt(Parser* const parser) {
     return CREATE_STMT_WHILE(while_stmt);
 }
 
-static Stmt* break_stmt(Parser* const parser) {
+static Stmt* loopg_stmt(Parser* const parser) {
     if (!parser->is_in_loop) {
-        error(parser, "Expected break statement to be inside a loop");
+        error(parser, "Expected break/continue statement to be inside a loop");
     }
-    BreakStmt break_stmt;
-    break_stmt.token = parser->current;
-    advance(parser); // consume break
-    consume(parser, TOKEN_SEMICOLON, "expected break statement to end with semicolon");
-    return CREATE_STMT_BREAK(break_stmt);
+    LoopGotoStmt loopg;
+    loopg.token = parser->current;
+    loopg.kind = (parser->current.kind == TOKEN_BREAK)
+        ? LOOP_BREAK
+        : LOOP_CONTINUE;
+    advance(parser); // consume break or continue
+    consume(parser, TOKEN_SEMICOLON, "expected break/continue statement to end with semicolon");
+    return CREATE_STMT_LOOPG(loopg);
 }
 
 static Stmt* for_stmt(Parser* const parser) {

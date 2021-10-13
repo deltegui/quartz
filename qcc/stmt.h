@@ -14,7 +14,7 @@ typedef enum {
     STMT_IF,
     STMT_FOR,
     STMT_WHILE,
-    STMT_BREAK,
+    STMT_LOOPG,
 } StmtKind;
 
 struct _Stmt;
@@ -72,9 +72,15 @@ typedef struct {
     struct _Stmt* body;
 } WhileStmt;
 
+typedef enum {
+    LOOP_BREAK,
+    LOOP_CONTINUE,
+} LoopGotoKind;
+
 typedef struct {
-    Token token; // Just to know where the break is.
-} BreakStmt;
+    Token token; // Just to know where the loop goto is.
+    LoopGotoKind kind;
+} LoopGotoStmt;
 
 ListStmt* create_stmt_list();
 void stmt_list_add(ListStmt* const list, struct _Stmt* stmt);
@@ -92,7 +98,7 @@ typedef struct _Stmt {
         IfStmt if_;
         ForStmt for_;
         WhileStmt while_;
-        BreakStmt break_;
+        LoopGotoStmt loopg;
     };
 } Stmt;
 
@@ -106,7 +112,7 @@ typedef struct {
     void (*visit_if)(void* ctx, IfStmt* ifstmt);
     void (*visit_for)(void* ctx, ForStmt* forstmt);
     void (*visit_while)(void* ctx, WhileStmt* whilestmt);
-    void (*visit_break)(void* ctx, BreakStmt* breakstmt);
+    void (*visit_loopg)(void* ctx, LoopGotoStmt* loopg);
 } StmtVisitor;
 
 #define STMT_IS_VAR(stmt) (stmt.kind == STMT_VAR)
@@ -119,7 +125,7 @@ typedef struct {
 #define STMT_IS_IF(stmt) (stmt.kind == STMT_IF)
 #define STMT_IS_FOR(stmt) (stmt.kind == STMT_FOR)
 #define STMT_IS_WHILE(stmt) (stmt.kind == STMT_WHILE)
-#define STMT_IS_BREAK(stmt) (stmt.kind == STMT_BREAK)
+#define STMT_IS_LOOPG(stmt) (stmt.kind == STMT_LOOPG)
 
 #define CREATE_STMT_RETURN(return_) create_stmt(STMT_RETURN, &return_)
 #define CREATE_STMT_VAR(var) create_stmt(STMT_VAR, &var)
@@ -132,7 +138,7 @@ typedef struct {
 #define CREATE_STMT_IF(if_) create_stmt(STMT_IF, &if_)
 #define CREATE_STMT_FOR(for_) create_stmt(STMT_FOR, &for_)
 #define CREATE_STMT_WHILE(while_) create_stmt(STMT_WHILE, &while_)
-#define CREATE_STMT_BREAK(break_) create_stmt(STMT_BREAK, &break_)
+#define CREATE_STMT_LOOPG(loopg) create_stmt(STMT_LOOPG, &loopg)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* const stmt);

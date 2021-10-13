@@ -43,7 +43,7 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     CASE_STMT(STMT_IF, if_, IfStmt);
     CASE_STMT(STMT_FOR, for_, ForStmt);
     CASE_STMT(STMT_WHILE, while_, WhileStmt);
-    CASE_STMT(STMT_BREAK, break_, BreakStmt);
+    CASE_STMT(STMT_LOOPG, loopg, LoopGotoStmt);
     case STMT_LIST:
         stmt->kind = STMT_LIST;
         stmt->list = (ListStmt*)stmt_node;
@@ -103,7 +103,7 @@ void free_stmt(Stmt* const stmt) {
         free_expr(stmt->while_.condition);
         free_stmt(stmt->while_.body);
         break;
-    case STMT_BREAK:
+    case STMT_LOOPG:
         break;
     }
     free(stmt);
@@ -131,7 +131,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_IF: DISPATCH(visit_if, if_); break;
     case STMT_FOR: DISPATCH(visit_for, for_); break;
     case STMT_WHILE: DISPATCH(visit_while, while_); break;
-    case STMT_BREAK: DISPATCH(visit_break, break_); break;
+    case STMT_LOOPG: DISPATCH(visit_loopg, loopg); break;
     default: assert(false);
     }
 #undef DISPATCH

@@ -89,7 +89,7 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_stmt_equals(first->while_.body, second->while_.body);
         break;
     }
-    case STMT_BREAK: {
+    case STMT_LOOPG: {
         break;
     }
     }
@@ -311,13 +311,24 @@ IdentifierExpr a_identifier = (IdentifierExpr){
     },
 };
 
-BreakStmt break_ = (BreakStmt){
+LoopGotoStmt break_ = (LoopGotoStmt){
     .token = (Token){
         .length = 5,
         .line = 1,
         .start = "break",
         .kind = TOKEN_BREAK,
     },
+    .kind = LOOP_BREAK,
+};
+
+LoopGotoStmt continue_ = (LoopGotoStmt){
+    .token = (Token){
+        .length = 5,
+        .line = 1,
+        .start = "continue",
+        .kind = TOKEN_CONTINUE,
+    },
+    .kind = LOOP_CONTINUE,
 };
 
 static void should_parse_additions() {
@@ -775,20 +786,33 @@ static void should_parse_while_with_condition() {
     assert_stmt_ast("  while (false) {} ", CREATE_STMT_WHILE(while_));
 }
 
-static void should_fail_parse_break_if_is_not_inside_a_loop() {
+static void should_fail_parse_loopg_if_is_not_inside_a_loop() {
     assert_has_errors("break;");
+    assert_has_errors("continue;");
 }
 
 static void should_parse_break() {
     WhileStmt while_;
     while_.condition = CREATE_LITERAL_EXPR(false_);
     ListStmt* list = create_stmt_list();
-    stmt_list_add(list, CREATE_STMT_BREAK(break_));
+    stmt_list_add(list, CREATE_STMT_LOOPG(break_));
     BlockStmt block = (BlockStmt){
         .stmts = CREATE_STMT_LIST(list),
     };
     while_.body = CREATE_STMT_BLOCK(block);
     assert_stmt_ast("  while (false) {break;} ", CREATE_STMT_WHILE(while_));
+}
+
+static void should_parse_continue() {
+    WhileStmt while_;
+    while_.condition = CREATE_LITERAL_EXPR(false_);
+    ListStmt* list = create_stmt_list();
+    stmt_list_add(list, CREATE_STMT_LOOPG(continue_));
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(list),
+    };
+    while_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("  while (false) {continue;} ", CREATE_STMT_WHILE(while_));
 }
 
 static int test_setup(void** args) {
@@ -831,8 +855,9 @@ int main(void) {
         cmocka_unit_test(should_parse_for_two_mod),
         cmocka_unit_test(should_fail_if_for_is_malformed),
         cmocka_unit_test(should_parse_while_with_condition),
-        cmocka_unit_test(should_fail_parse_break_if_is_not_inside_a_loop),
-        cmocka_unit_test(should_parse_break)
+        cmocka_unit_test(should_fail_parse_loopg_if_is_not_inside_a_loop),
+        cmocka_unit_test(should_parse_break),
+        cmocka_unit_test(should_parse_continue)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

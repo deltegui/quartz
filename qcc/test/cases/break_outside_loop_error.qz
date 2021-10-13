@@ -1,4 +1,9 @@
-[Line 4] Error at 'break': Expected break statement to be inside a loop
+[Line 4] Error at 'break': Expected break/continue statement to be inside a loop
 3 | 
 4 | break;
   | ~~~~~^
+
+[Line 5] Error at 'continue': Expected break/continue statement to be inside a loop
+4 | break;
+5 | continue;
+  | ~~~~~~~~^

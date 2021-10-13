@@ -332,6 +332,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_FOR: return "TokenFor";
     case TOKEN_WHILE: return "TokenWhile";
     case TOKEN_BREAK: return "TokenBreak";
+    case TOKEN_CONTINUE: return "TokenContinue";
     default: return "Unknown";
     }
 }
@@ -348,7 +349,7 @@ void token_print(Token token) {
 }
 
 static void print_offset();
-static void pretty_print(const char *msg, ...);
+static void pretty_print(const char *msg);
 
 static void print_binary(void* ctx, BinaryExpr* binary);
 static void print_unary(void* ctx, UnaryExpr* unary);
@@ -375,7 +376,7 @@ static void print_return(void* ctx, ReturnStmt* return_);
 static void print_if(void* ctx, IfStmt* if_);
 static void print_for(void* ctx, ForStmt* for_);
 static void print_while(void* ctx, WhileStmt* while_);
-static void print_break(void* ctx, BreakStmt* break_);
+static void print_loopg(void* ctx, LoopGotoStmt* loopg);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -387,7 +388,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_if = print_if,
     .visit_for = print_for,
     .visit_while = print_while,
-    .visit_break = print_break,
+    .visit_loopg = print_loopg
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -407,7 +408,7 @@ static void print_offset() {
     }
 }
 
-static void pretty_print(const char *msg, ...) {
+static void pretty_print(const char *msg) {
     printf("[PARSER DEBUG]: ");
     print_offset();
     printf("%s", msg);
@@ -629,11 +630,13 @@ static void print_while(void* ctx, WhileStmt* while_) {
     pretty_print("]\n");
 }
 
-static void print_break(void* ctx, BreakStmt* break_) {
-    pretty_print("Break: [\n");
+static void print_loopg(void* ctx, LoopGotoStmt* loopg) {
+    pretty_print("Loop Goto: [\n");
     OFFSET({
         pretty_print("Token: ");
-        token_print(break_->token);
+        token_print(loopg->token);
+        pretty_print("Kind: ");
+        printf("%s\n", (loopg->kind == LOOP_BREAK) ? "BREAK" : "CONTINUE");
     });
     pretty_print("]\n");
 }

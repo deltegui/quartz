@@ -67,6 +67,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_call = typecheck_call,
 };
 
+static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg);
 static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
 static void typecheck_print(void* ctx, PrintStmt* print);
@@ -76,7 +77,6 @@ static void typecheck_return(void* ctx, ReturnStmt* function);
 static void typecheck_if(void* ctx, IfStmt* if_);
 static void typecheck_for(void* ctx, ForStmt* for_);
 static void typecheck_while(void* ctx, WhileStmt* while_);
-static void typecheck_break(void* ctx, BreakStmt* break_);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -88,7 +88,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_if = typecheck_if,
     .visit_for = typecheck_for,
     .visit_while = typecheck_while,
-    .visit_break = typecheck_break,
+    .visit_loopg = typecheck_loopg,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -188,6 +188,9 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     ACCEPT_STMT(&checker, ast);
     free_vector(&checker.function_stack);
     return !checker.has_error;
+}
+
+static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg) {
 }
 
 static void typecheck_block(void* ctx, BlockStmt* block) {
@@ -521,10 +524,6 @@ static void typecheck_while(void* ctx, WhileStmt* while_) {
             "in while condition. The condition must evaluate to Bool.");
     }
     ACCEPT_STMT(checker, while_->body);
-}
-
-static void typecheck_break(void* ctx, BreakStmt* break_) {
-    // There is nothing to check
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {

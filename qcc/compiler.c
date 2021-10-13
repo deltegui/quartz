@@ -41,12 +41,22 @@ typedef struct {
     int next_local_index;
 
     BreakContext break_ctx;
+    int continue_ctx;
 } Compiler;
 
 #define BREAK_CTX_POP_LOOP(compiler) break_ctx_pop_loop(&compiler->break_ctx);
 #define BREAK_CTX_POP_BREAK(compiler) break_ctx_pop_break(&compiler->break_ctx);
 #define BREAK_CTX_PUSH_LOOP(compiler) break_ctx_push_loop(&compiler->break_ctx);
 #define BREAK_CTX_PUSH_BREAK(compiler, pos) break_ctx_push_break(&compiler->break_ctx, pos);
+
+#define CONTINUE_CTX_NOT_DEFINED -1
+#define CONTINUE_CTX(compiler, pos, ...)\
+    do {\
+        int prev_continue = compiler->continue_ctx;\
+        compiler->continue_ctx = pos;\
+        __VA_ARGS__\
+        compiler->continue_ctx = prev_continue;\
+    } while(false)
 
 struct IdentifierOps {
     uint8_t op_global;
@@ -122,7 +132,7 @@ static void compile_return(void* ctx, ReturnStmt* return_);
 static void compile_if(void* ctx, IfStmt* if_);
 static void compile_for(void* ctx, ForStmt* for_);
 static void compile_while(void* ctx, WhileStmt* while_);
-static void compile_break(void* ctx, BreakStmt* break_);
+static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -134,7 +144,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_if = compile_if,
     .visit_for = compile_for,
     .visit_while = compile_while,
-    .visit_break = compile_break,
+    .visit_loopg = compile_loopg,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -195,7 +205,6 @@ static void error(Compiler* const compiler, const char* message) {
 static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source) {
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
-    init_break_ctx(&compiler->break_ctx);
 
     // TODO global is a function but its special: cannot be called. Which type should it have?
     compiler->func = new_function("<GLOBAL>", 8, 0, CREATE_TYPE_UNKNOWN());
@@ -208,6 +217,9 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->function_scope_depth = 0;
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
+
+    init_break_ctx(&compiler->break_ctx);
+    compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
 }
 
 static void free_compiler(Compiler* const compiler) {
@@ -218,7 +230,6 @@ static void free_compiler(Compiler* const compiler) {
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym) {
     inner->symbols = outer->symbols;
     inner->parser = outer->parser;
-    inner->break_ctx = outer->break_ctx;
 
     inner->func = new_function(
         fn_identifier->start,
@@ -234,6 +245,9 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     inner->function_scope_depth = 0;
     inner->next_local_index = 1; // We expect to always have a function in pos 0
     memset(inner->locals, 0, UINT8_COUNT);
+
+    inner->break_ctx = outer->break_ctx;
+    inner->continue_ctx = outer->continue_ctx;
 }
 
 static Chunk* current_chunk(Compiler* const compiler) {
@@ -536,7 +550,9 @@ static void compile_for(void* ctx, ForStmt* for_) {
     }
     int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
-    ACCEPT_STMT(compiler, for_->body);
+    CONTINUE_CTX(compiler, loop_init, {
+        ACCEPT_STMT(compiler, for_->body);
+    });
     ACCEPT_STMT(compiler, for_->mod);
 
     emit_jump_to(compiler, OP_JUMP, loop_init);
@@ -556,7 +572,9 @@ static void compile_while(void* ctx, WhileStmt* while_) {
     ACCEPT_EXPR(compiler, while_->condition);
     int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
-    ACCEPT_STMT(compiler, while_->body);
+    CONTINUE_CTX(compiler, loop_init, {
+        ACCEPT_STMT(compiler, while_->body);
+    });
 
     emit_jump_to(compiler, OP_JUMP, loop_init);
 
@@ -564,10 +582,14 @@ static void compile_while(void* ctx, WhileStmt* while_) {
     patch_breaks(compiler);
 }
 
-static void compile_break(void* ctx, BreakStmt* break_) {
+static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
     Compiler* compiler = (Compiler*) ctx;
-    int break_pos = emit_jump_to(compiler, OP_JUMP, 0);
-    BREAK_CTX_PUSH_BREAK(compiler, break_pos);
+    if (loopg->kind == LOOP_BREAK) {
+        int break_pos = emit_jump_to(compiler, OP_JUMP, 0);
+        BREAK_CTX_PUSH_BREAK(compiler, break_pos);
+    } else {
+        emit_jump_to(compiler, OP_JUMP, compiler->continue_ctx);
+    }
 }
 
 static void patch_breaks(Compiler* const compiler) {

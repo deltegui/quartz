@@ -1,0 +1,5 @@
+fn hello(): Void {
+   // This is OK
+   print "ok";
+}
+hello();

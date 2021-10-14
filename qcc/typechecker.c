@@ -30,6 +30,8 @@ typedef struct {
 
 #define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack.size == 0)
 
+static bool function_returns(Stmt* fn_ast);
+
 static void function_stack_pop(Typechecker* const checker);
 static FuncMeta* function_stack_peek(Typechecker* const checker);
 static void function_stack_push(Typechecker* const checker, Token fn_token);
@@ -432,6 +434,17 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_pop(checker);
 
     checker->last_type = TYPE_FN_RETURN(symbol->type);
+
+#define FN_RETURNS_SOMETHING() !(TYPE_IS_NIL(checker->last_type) || TYPE_IS_VOID(checker->last_type))
+    if (FN_RETURNS_SOMETHING()) {
+        if (!function_returns(function->body)) {
+            error(
+                checker,
+                &function->identifier,
+                "Missing return at the end of function body\n");
+        }
+    }
+#undef FN_RETURNS_SOMETHING
 }
 
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {
@@ -663,3 +676,66 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 
 #undef ERROR
 }
+
+// TODO This part of code is used to ensure that mandatory returns are
+// present in functions. Maybe would be better to use a CFG (Control Flow Graph)
+// to detect missing returns or even realize that there is no need to add a return
+// at the bottom of a function.
+
+static void check_return_loopg(void* ctx, LoopGotoStmt* loopg);
+static void check_return_expr(void* ctx, ExprStmt* expr);
+static void check_return_var(void* ctx, VarStmt* var);
+static void check_return_print(void* ctx, PrintStmt* print);
+static void check_return_block(void* ctx, BlockStmt* block);
+static void check_return_function(void* ctx, FunctionStmt* function);
+static void check_return_return(void* ctx, ReturnStmt* function);
+static void check_return_if(void* ctx, IfStmt* if_);
+static void check_return_for(void* ctx, ForStmt* for_);
+static void check_return_while(void* ctx, WhileStmt* while_);
+
+StmtVisitor check_return_stmt_visitor = (StmtVisitor){
+    .visit_expr = check_return_expr,
+    .visit_var = check_return_var,
+    .visit_print = check_return_print,
+    .visit_block = check_return_block,
+    .visit_function = check_return_function,
+    .visit_return = check_return_return,
+    .visit_if = check_return_if,
+    .visit_for = check_return_for,
+    .visit_while = check_return_while,
+    .visit_loopg = check_return_loopg,
+};
+
+typedef struct {
+    bool have_return;
+} ReturnChecker;
+
+static bool function_returns(Stmt* fn_ast) {
+    ReturnChecker checker;
+    checker.have_return = false;
+    if (fn_ast->kind == STMT_LIST) {
+        printf("Is list");
+    }
+    stmt_dispatch(&check_return_stmt_visitor, &checker, fn_ast);
+    return checker.have_return;
+}
+
+static void check_return_loopg(void* ctx, LoopGotoStmt* loopg) {}
+static void check_return_expr(void* ctx, ExprStmt* expr) {}
+static void check_return_var(void* ctx, VarStmt* var) {}
+static void check_return_print(void* ctx, PrintStmt* print) {}
+static void check_return_function(void* ctx, FunctionStmt* function) {}
+static void check_return_if(void* ctx, IfStmt* if_) {}
+static void check_return_for(void* ctx, ForStmt* for_) {}
+static void check_return_while(void* ctx, WhileStmt* while_) {}
+
+static void check_return_block(void* ctx, BlockStmt* block) {
+    // Function body can be a single stmt or a Block stmt.
+    stmt_dispatch(&check_return_stmt_visitor, ctx, block->stmts);
+}
+
+static void check_return_return(void* ctx, ReturnStmt* function) {
+    ReturnChecker* checker = (ReturnChecker*) ctx;
+    checker->have_return = true;
+}
+

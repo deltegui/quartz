@@ -1,0 +1,17 @@
+fn hello(a: Number): Number {
+    if (a == 5) {
+    	return 0;
+    } else {
+    	return -1;
+    }
+    // Here the compiler should not complain about
+    // missing returns (but it does), because all
+    // paths returns: If the entry 'a' is 5 returns
+    // 0, else returns -1.
+    // There is no way the function doesnt return a
+    // number. This can be solved using a CFG and
+    // checking all paths.
+}
+
+print hello(5);
+print hello(3);

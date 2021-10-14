@@ -14,8 +14,8 @@ typedef enum {
 } CompilerMode;
 
 typedef struct {
-    Vector loop_len;
-    Vector breaks;
+    Vector loop_len; // Vector<int>
+    Vector breaks; // Vector<int>
 } BreakContext;
 
 static void init_break_ctx(BreakContext* const break_ctx);
@@ -588,6 +588,7 @@ static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
         int break_pos = emit_jump_to(compiler, OP_JUMP, 0);
         BREAK_CTX_PUSH_BREAK(compiler, break_pos);
     } else {
+        assert(compiler->continue_ctx != CONTINUE_CTX_NOT_DEFINED);
         emit_jump_to(compiler, OP_JUMP, compiler->continue_ctx);
     }
 }

@@ -63,6 +63,35 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_expr_equals(first->return_.inner, second->return_.inner);
         break;
     }
+    case STMT_IF: {
+        assert_expr_equals(first->if_.condition, second->if_.condition);
+        assert_stmt_equals(first->if_.then, second->if_.then);
+        if (first->if_.else_ != NULL) {
+            assert_stmt_equals(first->if_.else_, second->if_.else_);
+        }
+        break;
+    }
+    case STMT_FOR: {
+        if (first->for_.condition != NULL) {
+            assert_expr_equals(first->for_.condition, second->for_.condition);
+        }
+        if (first->for_.init != NULL) {
+            assert_stmt_equals(first->for_.init, second->for_.init);
+        }
+        if (first->for_.mod != NULL) {
+            assert_stmt_equals(first->for_.mod, second->for_.mod);
+        }
+        assert_stmt_equals(first->for_.body, second->for_.body);
+        break;
+    }
+    case STMT_WHILE: {
+        assert_expr_equals(first->while_.condition, second->while_.condition);
+        assert_stmt_equals(first->while_.body, second->while_.body);
+        break;
+    }
+    case STMT_LOOPG: {
+        break;
+    }
     }
 }
 
@@ -278,8 +307,28 @@ IdentifierExpr a_identifier = (IdentifierExpr){
         .length = 1,
         .line = 1,
         .start = "a",
-        .kind = TOKEN_IDENTIFIER
+        .kind = TOKEN_IDENTIFIER,
     },
+};
+
+LoopGotoStmt break_ = (LoopGotoStmt){
+    .token = (Token){
+        .length = 5,
+        .line = 1,
+        .start = "break",
+        .kind = TOKEN_BREAK,
+    },
+    .kind = LOOP_BREAK,
+};
+
+LoopGotoStmt continue_ = (LoopGotoStmt){
+    .token = (Token){
+        .length = 5,
+        .line = 1,
+        .start = "continue",
+        .kind = TOKEN_CONTINUE,
+    },
+    .kind = LOOP_CONTINUE,
 };
 
 static void should_parse_additions() {
@@ -513,6 +562,259 @@ static void should_fail_if_you_use_reserved_words_as_identifiers() {
     assert_has_errors(" fn {} () {} ");
 }
 
+static void should_parse_single_if() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    PrintStmt p = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    if_.then = CREATE_STMT_PRINT(p);
+    if_.else_ = NULL;
+    assert_stmt_ast("if (true) print 2;", CREATE_STMT_IF(if_));
+}
+
+static void should_parse_if_with_block() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    ListStmt* list = create_stmt_list();
+    PrintStmt p = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    stmt_list_add(list, CREATE_STMT_PRINT(p));
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(list),
+    };
+    if_.then = CREATE_STMT_BLOCK(block);
+    if_.else_ = NULL;
+    assert_stmt_ast("if (true) { print 2; }", CREATE_STMT_IF(if_));
+}
+
+static void should_parse_if_else() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    PrintStmt p_two = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    if_.then = CREATE_STMT_PRINT(p_two);
+    PrintStmt p_five = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(five),
+    };
+    if_.else_ = CREATE_STMT_PRINT(p_five);
+    assert_stmt_ast("if (true) print 2; else print 5;", CREATE_STMT_IF(if_));
+}
+
+static void should_parse_if_elif_else() {
+    IfStmt if_;
+    if_.condition = CREATE_LITERAL_EXPR(true_);
+    PrintStmt p_two = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(two),
+    };
+    if_.then = CREATE_STMT_PRINT(p_two);
+
+    IfStmt inner_if;
+    inner_if.condition = CREATE_LITERAL_EXPR(false_);
+    PrintStmt p_five = (PrintStmt){
+        .inner = CREATE_LITERAL_EXPR(five),
+    };
+    inner_if.then = CREATE_STMT_PRINT(p_five);
+    ExprStmt return_ = (ExprStmt){
+        .inner = CREATE_LITERAL_EXPR(five),
+    };
+    inner_if.else_ = CREATE_STMT_EXPR(return_);
+
+    if_.else_ = CREATE_STMT_IF(inner_if);
+    assert_stmt_ast("if (true) print 2; else if (false) print 5; else 5;", CREATE_STMT_IF(if_));
+}
+
+static void should_parse_for_with_condition() {
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = NULL;
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (;false;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_infinite() {
+    ForStmt for_;
+    for_.condition = NULL;
+    for_.init = NULL;
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (;;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_one_init_and_condition() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var));
+
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (var a = 5;false;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_two_init_and_condition() {
+    VarStmt var_a = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+
+    VarStmt var_b = (VarStmt){
+        .identifier = b_token,
+        .definition = CREATE_LITERAL_EXPR(two)
+    };
+
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_a));
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_b));
+
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = NULL;
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("for (var a = 5, var b = 2;false;) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_init_condition_mod() {
+    VarStmt var = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var));
+
+    AssignmentExpr assigment = (AssignmentExpr){
+        .name = a_token,
+        .value = CREATE_LITERAL_EXPR(two),
+    };
+    ExprStmt stmt = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(assigment),
+    };
+    ListStmt* mod_list = create_stmt_list();
+    stmt_list_add(mod_list, CREATE_STMT_EXPR(stmt));
+
+    ForStmt for_;
+    for_.condition = CREATE_LITERAL_EXPR(false_);
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = CREATE_STMT_LIST(mod_list);
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+
+    assert_stmt_ast("for (var a = 5;false;a = 2) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_parse_for_two_mod() {
+    VarStmt var_a = (VarStmt){
+        .identifier = a_token,
+        .definition = CREATE_LITERAL_EXPR(five)
+    };
+    VarStmt var_b = (VarStmt){
+        .identifier = b_token,
+        .definition = CREATE_LITERAL_EXPR(two)
+    };
+    ListStmt* init_list = create_stmt_list();
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_a));
+    stmt_list_add(init_list, CREATE_STMT_VAR(var_b));
+
+    AssignmentExpr a_assigment = (AssignmentExpr){
+        .name = a_token,
+        .value = CREATE_LITERAL_EXPR(two),
+    };
+    ExprStmt a_stmt = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(a_assigment),
+    };
+    AssignmentExpr b_assigment = (AssignmentExpr){
+        .name = b_token,
+        .value = CREATE_LITERAL_EXPR(five),
+    };
+    ExprStmt b_stmt = (ExprStmt){
+        .inner = CREATE_ASSIGNMENT_EXPR(b_assigment),
+    };
+    ListStmt* mod_list = create_stmt_list();
+    stmt_list_add(mod_list, CREATE_STMT_EXPR(a_stmt));
+    stmt_list_add(mod_list, CREATE_STMT_EXPR(b_stmt));
+
+    ForStmt for_;
+    for_.condition = NULL;
+    for_.init = CREATE_STMT_LIST(init_list);
+    for_.mod = CREATE_STMT_LIST(mod_list);
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    for_.body = CREATE_STMT_BLOCK(block);
+
+    assert_stmt_ast("for (var a = 5, var b = 2;;a = 2, b = 5) {}", CREATE_STMT_FOR(for_));
+}
+
+static void should_fail_if_for_is_malformed() {
+    assert_has_errors(" for () {}");
+    assert_has_errors(" for (;) {}");
+    assert_has_errors(" for (,;;) {}");
+    assert_has_errors(" for (;;,) {}");
+    assert_has_errors(" for (;;) ");
+}
+
+static void should_parse_while_with_condition() {
+    WhileStmt while_;
+    while_.condition = CREATE_LITERAL_EXPR(false_);
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(create_stmt_list()),
+    };
+    while_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("  while (false) {} ", CREATE_STMT_WHILE(while_));
+}
+
+static void should_fail_parse_loopg_if_is_not_inside_a_loop() {
+    assert_has_errors("break;");
+    assert_has_errors("continue;");
+}
+
+static void should_parse_break() {
+    WhileStmt while_;
+    while_.condition = CREATE_LITERAL_EXPR(false_);
+    ListStmt* list = create_stmt_list();
+    stmt_list_add(list, CREATE_STMT_LOOPG(break_));
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(list),
+    };
+    while_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("  while (false) {break;} ", CREATE_STMT_WHILE(while_));
+}
+
+static void should_parse_continue() {
+    WhileStmt while_;
+    while_.condition = CREATE_LITERAL_EXPR(false_);
+    ListStmt* list = create_stmt_list();
+    stmt_list_add(list, CREATE_STMT_LOOPG(continue_));
+    BlockStmt block = (BlockStmt){
+        .stmts = CREATE_STMT_LIST(list),
+    };
+    while_.body = CREATE_STMT_BLOCK(block);
+    assert_stmt_ast("  while (false) {continue;} ", CREATE_STMT_WHILE(while_));
+}
+
 static int test_setup(void** args) {
     init_type_pool();
     return 0;
@@ -540,7 +842,22 @@ int main(void) {
         cmocka_unit_test(should_parse_reserved_words_as_literals),
         cmocka_unit_test(should_parse_equality),
         cmocka_unit_test(should_fail_if_you_use_reserved_words_as_identifiers),
-        cmocka_unit_test(should_fail_if_return_is_not_inside_a_function)
+        cmocka_unit_test(should_fail_if_return_is_not_inside_a_function),
+        cmocka_unit_test(should_parse_single_if),
+        cmocka_unit_test(should_parse_if_with_block),
+        cmocka_unit_test(should_parse_if_else),
+        cmocka_unit_test(should_parse_if_elif_else),
+        cmocka_unit_test(should_parse_for_infinite),
+        cmocka_unit_test(should_parse_for_with_condition),
+        cmocka_unit_test(should_parse_for_one_init_and_condition),
+        cmocka_unit_test(should_parse_for_two_init_and_condition),
+        cmocka_unit_test(should_parse_for_init_condition_mod),
+        cmocka_unit_test(should_parse_for_two_mod),
+        cmocka_unit_test(should_fail_if_for_is_malformed),
+        cmocka_unit_test(should_parse_while_with_condition),
+        cmocka_unit_test(should_fail_parse_loopg_if_is_not_inside_a_loop),
+        cmocka_unit_test(should_parse_break),
+        cmocka_unit_test(should_parse_continue)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

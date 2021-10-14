@@ -1,0 +1,26 @@
+fn create_salut(salut: String): ((): String): String {
+    fn s(name: (): String): String {
+        return salut + name();
+    }
+    return s;
+}
+
+fn name_diego(): String {
+    return "diego";
+}
+
+fn name_javier(): String {
+    return "javier";
+}
+
+var salut_spanish = create_salut("hola ");
+print salut_spanish(name_diego);
+print salut_spanish(name_javier);
+
+var salut_english = create_salut("hello ");
+print salut_english(name_diego);
+print salut_english(name_javier);
+
+var salut_france: ((): String): String = create_salut("bonjour ");
+print salut_france(name_diego);
+print salut_france(name_javier);

@@ -1,0 +1,4 @@
+[Line 2] Error at 'inc': Use of unassigned variable
+1 | var inc: (): Void;
+2 | inc();
+  | ~~~^

@@ -1,0 +1,11 @@
+fn hello(): Number {
+    for (var i = 0; i <= 10; i = i + 1) {
+        if (i == 5) {
+            return 5;
+        }
+        print i;
+    }
+    // The compiler must notice that a return is missing.
+}
+hello();
+

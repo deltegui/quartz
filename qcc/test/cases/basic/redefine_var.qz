@@ -1,0 +1,4 @@
+[Line 2] Error at 'hola': Variable already declared in line 1
+1 | var b = 5;
+2 | var b = "hola";
+  | ~~~~~~~~~~~~~^

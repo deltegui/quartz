@@ -46,8 +46,8 @@ static void fn_upvalues_print(const Symbol* symbol) {
 
 static void symbol_table_print(const SymbolTable* table) {
     printf("--------[ SYMBOL TABLE ]--------\n\n");
-    printf("| Name\t| Line\t| Type  \t| Symbol upvalues \t | Function upvalues\n");
-    printf("|-------|-------|---------------|------------------------|------------\n");
+    printf("| Name\t| Line \t| Type  \t| Global? \t| Symbol upvalues \t | Function upvalues\n");
+    printf("|-------|-------|---------------|---------------|------------------------|------------\n");
     SYMBOL_TABLE_FOREACH(table, {
         Symbol* current = &elements[i];
         printf(
@@ -55,7 +55,9 @@ static void symbol_table_print(const SymbolTable* table) {
             SYMBOL_NAME_LENGTH(current->name),
             SYMBOL_NAME_START(current->name),
             current->declaration_line);
-        type_print(current->type);
+        TYPE_PRINT(current->type);
+
+        printf("\t| %s\t", (current->global ? "Yes" : "No"));
 
         printf("\t| ");
         symbol_upvalues_print(current);
@@ -129,7 +131,9 @@ static const char* OpCodeStrings[] = {
     "OP_SET_UPVALUE",
     "OP_BIND_UPVALUE",
     "OP_CLOSE",
-    "OP_BIND_CLOSED"
+    "OP_BIND_CLOSED",
+    "OP_JUMP",
+    "OP_JUMP_IF_FALSE",
 };
 
 void opcode_print(uint8_t op) {
@@ -239,7 +243,9 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_GET_GLOBAL_LONG:
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:
-        case OP_CONSTANT_LONG: {
+        case OP_CONSTANT_LONG:
+        case OP_JUMP:
+        case OP_JUMP_IF_FALSE: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_long_print(chunk, i);
             break;
@@ -321,22 +327,29 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_TYPE_NIL: return "TokenNilType";
     case TOKEN_COMMA: return "TokenComma";
     case TOKEN_RETURN: return "TokenReturn";
+    case TOKEN_IF: return "TokenIf";
+    case TOKEN_ELSE: return "TokenElse";
+    case TOKEN_FOR: return "TokenFor";
+    case TOKEN_WHILE: return "TokenWhile";
+    case TOKEN_BREAK: return "TokenBreak";
+    case TOKEN_CONTINUE: return "TokenContinue";
     default: return "Unknown";
     }
 }
 
 void token_print(Token token) {
     printf(
-        "Token{ Type: '%s', Line: '%d', Value: '%.*s', Length: '%d' }\n",
+        "Token{ Type: '%s', Line: '%d', Col: '%d', Value: '%.*s', Length: '%d' }\n",
         token_type_print(token.kind),
         token.line,
+        token.column,
         token.length,
         token.start,
         token.length);
 }
 
 static void print_offset();
-static void pretty_print(const char *msg, ...);
+static void pretty_print(const char *msg);
 
 static void print_binary(void* ctx, BinaryExpr* binary);
 static void print_unary(void* ctx, UnaryExpr* unary);
@@ -360,6 +373,10 @@ static void print_print(void* ctx, PrintStmt* var);
 static void print_block(void* ctx, BlockStmt* block);
 static void print_function(void* ctx, FunctionStmt* function);
 static void print_return(void* ctx, ReturnStmt* return_);
+static void print_if(void* ctx, IfStmt* if_);
+static void print_for(void* ctx, ForStmt* for_);
+static void print_while(void* ctx, WhileStmt* while_);
+static void print_loopg(void* ctx, LoopGotoStmt* loopg);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -368,6 +385,10 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_block = print_block,
     .visit_function = print_function,
     .visit_return = print_return,
+    .visit_if = print_if,
+    .visit_for = print_for,
+    .visit_while = print_while,
+    .visit_loopg = print_loopg
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -387,7 +408,7 @@ static void print_offset() {
     }
 }
 
-static void pretty_print(const char *msg, ...) {
+static void pretty_print(const char *msg) {
     printf("[PARSER DEBUG]: ");
     print_offset();
     printf("%s", msg);
@@ -526,6 +547,96 @@ static void print_function(void* ctx, FunctionStmt* function) {
         OFFSET({
             ACCEPT_STMT(function->body);
         });
+    });
+    pretty_print("]\n");
+}
+
+static void print_if(void* ctx, IfStmt* if_) {
+    pretty_print("If: [\n");
+    OFFSET({
+        pretty_print("Token: ");
+        token_print(if_->token);
+        pretty_print("Condition: \n");
+        OFFSET({
+            ACCEPT_EXPR(if_->condition);
+        });
+        pretty_print("Then: [\n");
+        OFFSET({
+            ACCEPT_STMT(if_->then);
+        });
+        pretty_print("]\n");
+        pretty_print("Else: [\n");
+        OFFSET({
+            if (if_->else_ != NULL) {
+                ACCEPT_STMT(if_->else_);
+            }
+        });
+        pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
+static void print_for(void* ctx, ForStmt* for_) {
+    pretty_print("for: [\n");
+    OFFSET({
+        pretty_print("Token: ");
+        token_print(for_->token);
+        pretty_print("Init: [\n");
+        OFFSET({
+            if (for_->init != NULL) {
+                ACCEPT_STMT(for_->init);
+            }
+        });
+        pretty_print("]\n");
+        pretty_print("Condition: \n");
+        OFFSET({
+            if (for_->condition != NULL) {
+                ACCEPT_EXPR(for_->condition);
+            }
+        });
+        pretty_print("Mod: [\n");
+        OFFSET({
+            if (for_->mod != NULL) {
+                ACCEPT_STMT(for_->mod);
+            }
+        });
+        pretty_print("]\n");
+        pretty_print("Body: [\n");
+        OFFSET({
+            ACCEPT_STMT(for_->body);
+        });
+        pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
+static void print_while(void* ctx, WhileStmt* while_) {
+    pretty_print("while: [\n");
+    OFFSET({
+        pretty_print("Token: ");
+        token_print(while_->token);
+        pretty_print("Condition: \n");
+        OFFSET({
+            if (while_->condition != NULL) {
+                ACCEPT_EXPR(while_->condition);
+            }
+        });
+        pretty_print("Body: [\n");
+        OFFSET({
+            ACCEPT_STMT(while_->body);
+        });
+        pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
+static void print_loopg(void* ctx, LoopGotoStmt* loopg) {
+    pretty_print("Loop Goto: [\n");
+    OFFSET({
+        pretty_print("Token: ");
+        token_print(loopg->token);
+        pretty_print("Kind: ");
+        printf("%s\n", (loopg->kind == LOOP_BREAK) ? "BREAK" : "CONTINUE");
     });
     pretty_print("]\n");
 }

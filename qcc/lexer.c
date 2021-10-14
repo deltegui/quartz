@@ -9,7 +9,7 @@ static bool is_at_end(Lexer* const lexer);
 static char peek(Lexer* const lexer);
 static bool match(Lexer* const lexer, char c);
 static bool match_next(Lexer* const lexer, char next);
-static void advance(Lexer* const lexer);
+static char advance(Lexer* const lexer);
 static bool consume(Lexer* const lexer, char expected);
 
 static Token create_token(Lexer* const lexer, TokenKind kind);
@@ -32,10 +32,16 @@ Token next_token(Lexer* const lexer);
     while(peek(lexer) != character && !is_at_end(lexer))\
         advance(lexer)
 
+#define NEW_LINE(lexer)\
+    lexer->line++;\
+    lexer->column = 0
+
 void init_lexer(Lexer* const lexer, const char* const buffer) {
+    lexer->source = buffer;
     lexer->current = buffer;
     lexer->start = buffer;
     lexer->line = 1;
+    lexer->column = 0;
 }
 
 static bool is_at_end(Lexer* const lexer) {
@@ -60,11 +66,12 @@ static bool match_next(Lexer* const lexer, char next) {
     return *(lexer->current + 1) == next;
 }
 
-static void advance(Lexer* const lexer) {
+static char advance(Lexer* const lexer) {
     if (is_at_end(lexer)) {
-        return;
+        return '\0';
     }
-    lexer->current++;
+    lexer->column++;
+    return *lexer->current++;
 }
 
 static bool consume(Lexer* const lexer, char expected) {
@@ -79,6 +86,7 @@ static Token create_token(Lexer* const lexer, TokenKind kind) {
     Token token;
     token.length = (int) (lexer->current - lexer->start);
     token.line = lexer->line;
+    token.column = lexer->column - 1;
     token.start = lexer->start;
     token.kind = kind;
 #ifdef LEXER_DEBUG
@@ -99,7 +107,7 @@ static bool skip_whitespaces(Lexer* const lexer) {
     for (;;) {
         switch (*lexer->current) {
         case '\n':
-            lexer->line++;
+            NEW_LINE(lexer);
         case ' ':
         case '\t':
         case '\r':
@@ -132,7 +140,7 @@ static bool consume_multiline_comment(Lexer* const lexer) {
             return false;
         }
         if (match(lexer, '\n')) {
-            lexer->line++;
+            NEW_LINE(lexer);
         }
         advance(lexer);
     }
@@ -179,7 +187,7 @@ static Token scan_string(Lexer* const lexer) {
     lexer->start = lexer->current; // Omit first quote
     while (!is_string_quote(lexer) && !is_at_end(lexer)) {
         if (match(lexer, '\n')) {
-            lexer->line++;
+            NEW_LINE(lexer);
         }
         advance(lexer);
     }
@@ -215,6 +223,30 @@ static Token scan_identifier(Lexer* const lexer) {
         advance(lexer);
     }
     switch (*lexer->start) {
+    case 'b': {
+        if (match_token(lexer, "reak", 1, 5)) {
+            return create_token(lexer, TOKEN_BREAK);
+        }
+        break;
+    }
+    case 'c': {
+        if (match_token(lexer, "ontinue", 1, 8)) {
+            return create_token(lexer, TOKEN_CONTINUE);
+        }
+        break;
+    }
+    case 'i': {
+        if (match_token(lexer, "f", 1, 2)) {
+            return create_token(lexer, TOKEN_IF);
+        }
+        break;
+    }
+    case 'e': {
+        if (match_token(lexer, "lse", 1, 4)) {
+            return create_token(lexer, TOKEN_ELSE);
+        }
+        break;
+    }
     case 't': {
         if (match_token(lexer, "rue", 1, 4)) {
             return create_token(lexer, TOKEN_TRUE);
@@ -227,6 +259,9 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         if (match_token(lexer, "n", 1, 2)) {
             return create_token(lexer, TOKEN_FUNCTION);
+        }
+        if (match_token(lexer, "or", 1, 3)) {
+            return create_token(lexer, TOKEN_FOR);
         }
         break;
     }
@@ -251,6 +286,12 @@ static Token scan_identifier(Lexer* const lexer) {
     case 'p': {
         if (match_token(lexer, "rint", 1, 5)) {
             return create_token(lexer, TOKEN_PRINT);
+        }
+        break;
+    }
+    case 'w': {
+        if (match_token(lexer, "hile", 1, 5)) {
+            return create_token(lexer, TOKEN_WHILE);
         }
         break;
     }
@@ -286,7 +327,7 @@ static Token scan_identifier(Lexer* const lexer) {
 }
 
 static inline Token scan_token(Lexer* const lexer) {
-    switch (*lexer->current++) {
+    switch (advance(lexer)) {
     case '+': return create_token(lexer, TOKEN_PLUS);
     case '-': return create_token(lexer, TOKEN_MINUS);
     case '*': return create_token(lexer, TOKEN_STAR);

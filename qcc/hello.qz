@@ -1,3 +1,1 @@
-var a: Number;
-
-print a + 1;
+print 'hello Quartz!';

@@ -23,7 +23,7 @@ void free_chunk(Chunk* const chunk) {
     free_valuearray(&chunk->constants);
 }
 
-void chunk_write(Chunk* const chunk, uint8_t bytecode, int line) {
+int chunk_write(Chunk* const chunk, uint8_t bytecode, int line) {
     if (chunk->capacity < chunk->size + 1) {
         size_t old = chunk->capacity;
         chunk->capacity = GROW_CAPACITY(chunk->capacity);
@@ -40,7 +40,7 @@ void chunk_write(Chunk* const chunk, uint8_t bytecode, int line) {
     }
     chunk->code[chunk->size] = bytecode;
     chunk->lines[chunk->size] = line;
-    chunk->size++;
+    return chunk->size++;
 }
 
 int chunk_add_constant(Chunk* const chunk, Value value) {
@@ -52,6 +52,10 @@ bool chunk_check_last_byte(Chunk* const chunk, uint8_t bytecode) {
         return false;
     }
     return chunk->code[chunk->size - 1] == bytecode;
+}
+
+void chunk_patch(Chunk* const chunk, int position, uint8_t bytecode) {
+    chunk->code[position] = bytecode;
 }
 
 uint16_t read_long(uint8_t** pc) {

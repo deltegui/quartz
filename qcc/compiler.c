@@ -14,6 +14,18 @@ typedef enum {
 } CompilerMode;
 
 typedef struct {
+    Vector loop_len; // Vector<int>
+    Vector breaks; // Vector<int>
+} BreakContext;
+
+static void init_break_ctx(BreakContext* const break_ctx);
+static void free_break_ctx(BreakContext* const break_ctx);
+static int break_ctx_pop_loop(BreakContext* const break_ctx);
+static int break_ctx_pop_break(BreakContext* const break_ctx);
+static void break_ctx_push_loop(BreakContext* const break_ctx);
+static void break_ctx_push_break(BreakContext* const break_ctx, int break_point);
+
+typedef struct {
     Parser parser;
     ScopedSymbolTable symbols;
 
@@ -27,7 +39,24 @@ typedef struct {
     int scope_depth;
     int function_scope_depth;
     int next_local_index;
+
+    BreakContext break_ctx;
+    int continue_ctx;
 } Compiler;
+
+#define BREAK_CTX_POP_LOOP(compiler) break_ctx_pop_loop(&compiler->break_ctx);
+#define BREAK_CTX_POP_BREAK(compiler) break_ctx_pop_break(&compiler->break_ctx);
+#define BREAK_CTX_PUSH_LOOP(compiler) break_ctx_push_loop(&compiler->break_ctx);
+#define BREAK_CTX_PUSH_BREAK(compiler, pos) break_ctx_push_break(&compiler->break_ctx, pos);
+
+#define CONTINUE_CTX_NOT_DEFINED -1
+#define CONTINUE_CTX(compiler, pos, ...)\
+    do {\
+        int prev_continue = compiler->continue_ctx;\
+        compiler->continue_ctx = pos;\
+        __VA_ARGS__\
+        compiler->continue_ctx = prev_continue;\
+    } while(false)
 
 struct IdentifierOps {
     uint8_t op_global;
@@ -49,16 +78,22 @@ static void end_scope(Compiler* const compiler);
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length);
 
-static void emit(Compiler* const compiler, uint8_t bytecode);
-static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param);
-static void emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param);
-static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
+static int emit(Compiler* const compiler, uint8_t bytecode);
+static int emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param);
+static int emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param);
+static int emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param);
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn);
 static bool last_emitted_byte_equals(Compiler* const compiler, uint8_t byte);
 static void emit_closed_variables(Compiler* const compiler, int depth);
 static void emit_close_stack_upvalue(Compiler* const compiler, Symbol* var_token);
+static void patch_breaks(Compiler* const compiler);
+static void patch_jump(Compiler* const compiler, int patch);
+static int emit_jump_to(Compiler* const compiler, uint8_t jump_op, uint16_t to);
+static void check_jump_distance(Compiler* const compiler, int distance);
 static int get_upvalue_index_in_function(Compiler* const compiler, Symbol* var_token, Symbol* fn_ref);
 static Token symbol_to_token_identifier(Symbol* symbol);
+static void patch_chunk(Compiler* const compiler, int position, uint8_t value);
+static void patch_chunk_long(Compiler* const compiler, int position, uint16_t value);
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
 static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
@@ -94,6 +129,10 @@ static void compile_print(void* ctx, PrintStmt* print);
 static void compile_block(void* ctx, BlockStmt* block);
 static void compile_function(void* ctx, FunctionStmt* function);
 static void compile_return(void* ctx, ReturnStmt* return_);
+static void compile_if(void* ctx, IfStmt* if_);
+static void compile_for(void* ctx, ForStmt* for_);
+static void compile_while(void* ctx, WhileStmt* while_);
+static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -102,6 +141,10 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_block = compile_block,
     .visit_function = compile_function,
     .visit_return = compile_return,
+    .visit_if = compile_if,
+    .visit_for = compile_for,
+    .visit_while = compile_while,
+    .visit_loopg = compile_loopg,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -120,6 +163,39 @@ struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
     .op_local = OP_SET_LOCAL,
     .op_upvalue = OP_SET_UPVALUE,
 };
+
+#define VECTOR_AS_INT(vect) VECTOR_AS(vect, int)
+#define VECTOR_ADD_INT(vect, i) VECTOR_ADD(vect, i, int)
+
+static void init_break_ctx(BreakContext* const break_ctx) {
+    init_vector(&break_ctx->loop_len, sizeof(int));
+    init_vector(&break_ctx->breaks, sizeof(int));
+}
+
+static void free_break_ctx(BreakContext* const break_ctx) {
+    free_vector(&break_ctx->loop_len);
+    free_vector(&break_ctx->breaks);
+}
+
+static int break_ctx_pop_loop(BreakContext* const break_ctx) {
+    int* loop_len = VECTOR_AS_INT(&break_ctx->loop_len);
+    return loop_len[--break_ctx->loop_len.size];
+}
+
+static int break_ctx_pop_break(BreakContext* const break_ctx) {
+    int* breaks = VECTOR_AS_INT(&break_ctx->breaks);
+    return breaks[--break_ctx->breaks.size];
+}
+
+static void break_ctx_push_loop(BreakContext* const break_ctx) {
+    VECTOR_ADD_INT(&break_ctx->loop_len, 0);
+}
+
+static void break_ctx_push_break(BreakContext* const break_ctx, int break_point) {
+    int* loop_len = VECTOR_AS_INT(&break_ctx->loop_len);
+    loop_len[break_ctx->loop_len.size - 1]++;
+    VECTOR_ADD_INT(&break_ctx->breaks, break_point);
+}
 
 static void error(Compiler* const compiler, const char* message) {
     fprintf(stderr, "[Line %d] Compile error: %s\n", compiler->last_line, message);
@@ -141,10 +217,14 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->function_scope_depth = 0;
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
+
+    init_break_ctx(&compiler->break_ctx);
+    compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
 }
 
 static void free_compiler(Compiler* const compiler) {
     free_scoped_symbol_table(&compiler->symbols);
+    free_break_ctx(&compiler->break_ctx);
 }
 
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym) {
@@ -165,6 +245,9 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     inner->function_scope_depth = 0;
     inner->next_local_index = 1; // We expect to always have a function in pos 0
     memset(inner->locals, 0, UINT8_COUNT);
+
+    inner->break_ctx = outer->break_ctx;
+    inner->continue_ctx = outer->continue_ctx;
 }
 
 static Chunk* current_chunk(Compiler* const compiler) {
@@ -185,7 +268,7 @@ CompilationResult compile(const char* source, ObjFunction** const result) {
         END_WITH(NULL);
         return PARSING_ERROR;
     }
-    if (!typecheck(ast, &compiler.symbols)) {
+    if (!typecheck(source, ast, &compiler.symbols)) {
         END_WITH(NULL);
         return TYPE_ERROR;
     }
@@ -230,28 +313,28 @@ static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int len
     return scoped_symbol_lookup_function_str(&compiler->symbols, name, length);
 }
 
-static void emit(Compiler* const compiler, uint8_t bytecode) {
-    chunk_write(current_chunk(compiler), bytecode, compiler->last_line);
+static int emit(Compiler* const compiler, uint8_t bytecode) {
+    return chunk_write(current_chunk(compiler), bytecode, compiler->last_line);
 }
 
-static void emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param) {
+static int emit_short(Compiler* const compiler, uint8_t bytecode, uint8_t param) {
     emit(compiler, bytecode);
-    emit(compiler, param);
+    return emit(compiler, param);
 }
 
-static void emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param) {
+static int emit_long(Compiler* const compiler, uint8_t bytecode, uint16_t param) {
     uint8_t high = param >> 0x8;
     uint8_t low = param & 0x00FF;
     emit(compiler, bytecode);
     emit(compiler, high);
-    emit(compiler, low);
+    return emit(compiler, low);
 }
 
-static void emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param) {
+static int emit_param(Compiler* const compiler, uint8_t op_short, uint8_t op_long,  uint16_t param) {
     if (param > UINT8_MAX) {
-        emit_long(compiler, op_long, param);
+        return emit_long(compiler, op_long, param);
     } else {
-        emit_short(compiler, op_short, param);
+        return emit_short(compiler, op_short, param);
     }
 }
 
@@ -387,6 +470,17 @@ static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token f
     }
 }
 
+static void patch_chunk(Compiler* const compiler, int position, uint8_t value) {
+    chunk_patch(current_chunk(compiler), position, value);
+}
+
+static void patch_chunk_long(Compiler* const compiler, int position, uint16_t value) {
+    uint8_t high = value >> 0x8;
+    uint8_t low = value & 0x00FF;
+    patch_chunk(compiler, position-1, high);
+    patch_chunk(compiler, position, low);
+}
+
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym) {
     if (last_emitted_byte_equals(compiler, OP_RETURN)) {
         return;
@@ -420,6 +514,117 @@ static void compile_return(void* ctx, ReturnStmt* return_) {
     emit(compiler, OP_RETURN);
 }
 
+static void compile_if(void* ctx, IfStmt* if_) {
+    Compiler* compiler = (Compiler*) ctx;
+    bool have_else = if_->else_ != NULL;
+    int patch_else_pos = 0;
+
+    ACCEPT_EXPR(ctx, if_->condition);
+
+    int patch_if_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
+    ACCEPT_STMT(ctx, if_->then);
+    if (have_else) {
+        patch_else_pos = emit_jump_to(compiler, OP_JUMP, 0);
+    }
+    patch_jump(compiler, patch_if_pos);
+
+    if (have_else) {
+        ACCEPT_STMT(ctx, if_->else_);
+        patch_jump(compiler, patch_else_pos);
+    }
+}
+
+static void compile_for(void* ctx, ForStmt* for_) {
+    Compiler* compiler = (Compiler*) ctx;
+    start_scope(compiler);
+    BREAK_CTX_PUSH_LOOP(compiler);
+
+    ACCEPT_STMT(compiler, for_->init);
+
+    int loop_init = emit(compiler, OP_NOP);
+
+    if (for_->condition != NULL) {
+        ACCEPT_EXPR(compiler, for_->condition);
+    } else {
+        emit(compiler, OP_TRUE);
+    }
+    int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
+
+    CONTINUE_CTX(compiler, loop_init, {
+        ACCEPT_STMT(compiler, for_->body);
+    });
+    ACCEPT_STMT(compiler, for_->mod);
+
+    emit_jump_to(compiler, OP_JUMP, loop_init);
+
+    patch_jump(compiler, patch_for_pos);
+    patch_breaks(compiler);
+
+    end_scope(compiler);
+}
+
+static void compile_while(void* ctx, WhileStmt* while_) {
+    Compiler* compiler = (Compiler*) ctx;
+    BREAK_CTX_PUSH_LOOP(compiler);
+
+    int loop_init = emit(compiler, OP_NOP);
+
+    ACCEPT_EXPR(compiler, while_->condition);
+    int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
+
+    CONTINUE_CTX(compiler, loop_init, {
+        ACCEPT_STMT(compiler, while_->body);
+    });
+
+    emit_jump_to(compiler, OP_JUMP, loop_init);
+
+    patch_jump(compiler, patch_for_pos);
+    patch_breaks(compiler);
+}
+
+static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
+    Compiler* compiler = (Compiler*) ctx;
+    if (loopg->kind == LOOP_BREAK) {
+        int break_pos = emit_jump_to(compiler, OP_JUMP, 0);
+        BREAK_CTX_PUSH_BREAK(compiler, break_pos);
+    } else {
+        assert(compiler->continue_ctx != CONTINUE_CTX_NOT_DEFINED);
+        emit_jump_to(compiler, OP_JUMP, compiler->continue_ctx);
+    }
+}
+
+static void patch_breaks(Compiler* const compiler) {
+    int breaks_in_loop = BREAK_CTX_POP_LOOP(compiler);
+    if (breaks_in_loop <= 0) {
+        return;
+    }
+    int jump_dst = emit(compiler, OP_NOP);
+    for (int i = 0; i < breaks_in_loop; i++) {
+        int break_to_patch = BREAK_CTX_POP_BREAK(compiler);
+        check_jump_distance(compiler, jump_dst - break_to_patch);
+        patch_chunk_long(compiler, break_to_patch, jump_dst);
+    }
+}
+
+static void patch_jump(Compiler* const compiler, int patch) {
+    int jump_dst = emit(compiler, OP_NOP);
+    check_jump_distance(compiler, jump_dst - patch);
+    patch_chunk_long(compiler, patch, jump_dst);
+}
+
+static int emit_jump_to(Compiler* const compiler, uint8_t jump_op, uint16_t to) {
+    int jump_to_init = emit_long(compiler, jump_op, to);
+    check_jump_distance(compiler, jump_to_init - (int)to);
+    return jump_to_init;
+}
+
+static void check_jump_distance(Compiler* const compiler, int distance) {
+    assert(distance > 0);
+    if (distance > UINT16_MAX) {
+        error(compiler, "Jump too large");
+    }
+}
+
 static void compile_var(void* ctx, VarStmt* var) {
     Compiler* compiler = (Compiler*) ctx;
     uint16_t variable_index = get_variable_index(compiler, &var->identifier);
@@ -438,7 +643,6 @@ static void compile_var(void* ctx, VarStmt* var) {
 }
 
 static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index) {
-    var_sym->global = compiler->scope_depth == 0;
     var_sym->constant_index = var_index;
 }
 

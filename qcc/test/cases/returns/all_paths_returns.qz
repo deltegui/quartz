@@ -1,0 +1,3 @@
+[Line 1] Type error: Missing return at the end of function body
+1 | fn hello(a: Number): Number {
+  | ~~~~~~~^

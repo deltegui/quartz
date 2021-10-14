@@ -27,6 +27,10 @@ typedef enum {
     TOKEN_LEFT_BRACE,
     TOKEN_RIGHT_BRACE,
     TOKEN_COMMA,
+    TOKEN_IF,
+    TOKEN_ELSE,
+    TOKEN_FOR,
+    TOKEN_WHILE,
 
     // Two character tokens
     TOKEN_AND,
@@ -47,6 +51,8 @@ typedef enum {
     TOKEN_STRING,
     TOKEN_PRINT,
     TOKEN_IDENTIFIER,
+    TOKEN_BREAK,
+    TOKEN_CONTINUE,
 
     TOKEN_TYPE_NUMBER,
     TOKEN_TYPE_STRING,
@@ -60,6 +66,7 @@ typedef struct {
     const char* start;
     uint8_t length;
     uint32_t line;
+    uint32_t column;
 } Token;
 
 #define VECTOR_AS_TOKENS(vect) VECTOR_AS(vect, Token)

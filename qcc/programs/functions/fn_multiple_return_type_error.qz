@@ -1,0 +1,6 @@
+fn this_err(): String {
+    if (false) {
+        return false;
+    }
+    return "yes";
+}

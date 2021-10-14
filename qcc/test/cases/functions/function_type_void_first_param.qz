@@ -1,0 +1,8 @@
+[Line 1] Error at 'Void': You can't use Void type in params of function type declaration
+1 | fn create_void_fn(): (Void, Number): Void {
+  | ~~~~~~~~~~~~~~~~~~~~~~~~~^
+
+[Line 9] Error at end: Expected block to end with '}'
+8 | var a = create_void_fn();
+9 | a();
+  | ~~~~^

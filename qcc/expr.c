@@ -2,33 +2,24 @@
 
 Expr* create_expr(ExprKind kind, const void* const expr_node) {
     Expr* expr = (Expr*) malloc(sizeof(Expr));
+
+#define CASE_EXPR(k, f, s)\
+    case k:\
+        expr->kind = k;\
+        expr->f = *(s*)expr_node;\
+        break
+
     switch(kind) {
-    case EXPR_BINARY:
-        expr->kind = EXPR_BINARY;
-        expr->binary = *(BinaryExpr*)expr_node;
-        break;
-    case EXPR_LITERAL:
-        expr->kind = EXPR_LITERAL;
-        expr->literal = *(LiteralExpr*)expr_node;
-        break;
-    case EXPR_UNARY:
-        expr->kind = EXPR_UNARY;
-        expr->unary = *(UnaryExpr*)expr_node;
-        break;
-    case EXPR_IDENTIFIER:
-        expr->kind = EXPR_IDENTIFIER;
-        expr->identifier = *(IdentifierExpr*)expr_node;
-        break;
-    case EXPR_ASSIGNMENT:
-        expr->kind = EXPR_ASSIGNMENT;
-        expr->assignment = *(AssignmentExpr*)expr_node;
-        break;
-    case EXPR_CALL:
-        expr->kind = EXPR_CALL;
-        expr->call = *(CallExpr*)expr_node;
-        break;
+    CASE_EXPR(EXPR_BINARY, binary, BinaryExpr);
+    CASE_EXPR(EXPR_LITERAL, literal, LiteralExpr);
+    CASE_EXPR(EXPR_UNARY, unary, UnaryExpr);
+    CASE_EXPR(EXPR_IDENTIFIER, identifier, IdentifierExpr);
+    CASE_EXPR(EXPR_ASSIGNMENT, assignment, AssignmentExpr);
+    CASE_EXPR(EXPR_CALL, call, CallExpr);
     }
     return expr;
+
+#undef CASE_EXPR
 }
 
 // Normally, an Expr* is a tree-like data

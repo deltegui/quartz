@@ -45,14 +45,17 @@ int run(const char* file) {
     if (source == NULL) {
         return EX_OSFILE;
     }
+    int exit_code = 0;
     ObjFunction* main_func;
     init_qvm();
     if (compile(source, &main_func) == COMPILATION_OK) {
         qvm_execute(main_func);
+    } else {
+        exit_code = EX_DATAERR;
     }
     free_qvm();
     free((char*) source);
-    return 0;
+    return exit_code;
 }
 
 static inline bool strempty(const char* str) {

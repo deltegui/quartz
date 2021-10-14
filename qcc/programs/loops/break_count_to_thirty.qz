@@ -1,0 +1,8 @@
+var a = 0;
+for (;;) {
+    if (a == 30) {
+        break;
+    }
+    print a;
+    a = a + 1;
+}

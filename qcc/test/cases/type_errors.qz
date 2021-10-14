@@ -1,5 +1,0 @@
-[Line 3] Type error: Invalid types for numeric operation for types: 'String' and 'Number'
-[Line 6] Type error: Invalid types for numeric operation for types: 'Bool' and 'Number'
-[Line 8] Type error: The type 'Bool' does not match with type 'String' in variable declaration.
-[Line 9] Type error: The type 'Number' does not match with type 'Bool' in variable declaration.
-[Line 10] Type error: The type 'String' does not match with type 'Number' in variable declaration.

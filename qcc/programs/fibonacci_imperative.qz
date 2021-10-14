@@ -1,0 +1,17 @@
+fn fibonacci(n: Number): Number {
+    var a: Number = 1;
+    var b: Number = 1;
+    var sum: Number = a;
+
+    for (var i = 2; i < n; i = i + 1) {
+        sum = a + b;
+        a = b;
+        b = sum;
+    }
+
+    return sum;
+}
+
+print fibonacci(21);
+print fibonacci(34);
+print fibonacci(3);

@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "expr.h"
 #include "symbol.h"
+#include "error.h"
 
 typedef struct {
     Token name;
@@ -20,9 +21,16 @@ typedef struct {
     bool has_error;
 
     Vector function_stack; // Vector<FuncMeta>
+
+    bool is_defining_variable;
+    Symbol* defining_variable;
+
+    const char* source;
 } Typechecker;
 
 #define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack.size == 0)
+
+static bool function_returns(Stmt* fn_ast);
 
 static void function_stack_pop(Typechecker* const checker);
 static FuncMeta* function_stack_peek(Typechecker* const checker);
@@ -30,7 +38,9 @@ static void function_stack_push(Typechecker* const checker, Token fn_token);
 static void function_stack_start_scope(Typechecker* const checker);
 static void function_stack_end_scope(Typechecker* const checker);
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
+static void error_ctx(Typechecker* const checker, Token* token);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
+static void have_error(Typechecker* const checker);
 
 static void start_scope(Typechecker* const checker);
 static void end_scope(Typechecker* const checker);
@@ -39,6 +49,9 @@ static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int le
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var);
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var);
+
+static void start_variable_definition(Typechecker* const checker, Symbol* var);
+static void end_variable_definition(Typechecker* const checker);
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal);
 static void typecheck_identifier(void* ctx, IdentifierExpr* identifier);
@@ -56,12 +69,16 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_call = typecheck_call,
 };
 
+static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg);
 static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
 static void typecheck_print(void* ctx, PrintStmt* print);
 static void typecheck_block(void* ctx, BlockStmt* block);
 static void typecheck_function(void* ctx, FunctionStmt* function);
 static void typecheck_return(void* ctx, ReturnStmt* function);
+static void typecheck_if(void* ctx, IfStmt* if_);
+static void typecheck_for(void* ctx, ForStmt* for_);
+static void typecheck_while(void* ctx, WhileStmt* while_);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -70,6 +87,10 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_block = typecheck_block,
     .visit_function = typecheck_function,
     .visit_return = typecheck_return,
+    .visit_if = typecheck_if,
+    .visit_for = typecheck_for,
+    .visit_while = typecheck_while,
+    .visit_loopg = typecheck_loopg,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -111,29 +132,42 @@ static void function_stack_end_scope(Typechecker* const checker) {
 
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
     Type* last_type = checker->last_type;
-    error(checker, where, "The type '");
-    type_print(first);
-    printf("' does not match with type '");
-    type_print(last_type);
-    printf("' %s\n", message);
+    have_error(checker);
+    fprintf(stderr, "[Line %d] Type error: The Type '", where->line);
+    ERR_TYPE_PRINT(first);
+    fprintf(stderr, "' does not match with type '");
+    ERR_TYPE_PRINT(last_type);
+    fprintf(stderr, "' %s\n", message);
+    error_ctx(checker, where);
+}
+
+static void error_ctx(Typechecker* const checker, Token* token) {
+    print_error_context(checker->source, token);
 }
 
 static void error(Typechecker* const checker, Token* token, const char* message, ...) {
-    checker->has_error = true;
-    checker->last_type = CREATE_TYPE_UNKNOWN();
+    have_error(checker);
     va_list params;
     va_start(params, message);
-    printf("[Line %d] Type error: ",token->line);
-    vprintf(message, params);
+    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    vfprintf(stderr, message, params);
     va_end(params);
+    error_ctx(checker, token);
+}
+
+static void have_error(Typechecker* const checker) {
+    checker->has_error = true;
+    checker->last_type = CREATE_TYPE_UNKNOWN();
 }
 
 static void start_scope(Typechecker* const checker) {
     symbol_start_scope(checker->symbols);
+    function_stack_start_scope(checker);
 }
 
 static void end_scope(Typechecker* const checker) {
     symbol_end_scope(checker->symbols);
+    function_stack_end_scope(checker);
 }
 
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length) {
@@ -144,15 +178,21 @@ static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int le
     return scoped_symbol_lookup_levels(checker->symbols, &name, level);
 }
 
-bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
+bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
+    checker.is_defining_variable = false;
+    checker.defining_variable = NULL;
+    checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
     free_vector(&checker.function_stack);
     return !checker.has_error;
+}
+
+static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg) {
 }
 
 static void typecheck_block(void* ctx, BlockStmt* block) {
@@ -175,6 +215,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
 
     Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
+
     if (var->definition == NULL) {
         if (TYPE_IS_UNKNOWN(symbol->type)) {
             error(
@@ -194,7 +235,11 @@ static void typecheck_var(void* ctx, VarStmt* var) {
         }
         return;
     }
+
+    start_variable_definition(checker, symbol);
     ACCEPT_EXPR(ctx, var->definition);
+    end_variable_definition(checker);
+
     if (TYPE_IS_VOID(checker->last_type)) {
         error(
             checker,
@@ -221,7 +266,9 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
 
     Symbol* symbol = lookup_str(checker, identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
-    if (symbol->declaration_line == identifier->name.line) {
+    // TODO this check in theory is not needed because you cant use a variable that is not defined,
+    // so, using a variable in it's declaration cant happend anyway.
+    if (checker->is_defining_variable && symbol == checker->defining_variable) {
         error(
             checker,
             &identifier->name,
@@ -302,10 +349,11 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         Type* last = checker->last_type;
         if (! type_equals(last, def_type)) {
             error(checker, &call->identifier, "Type of param number %d in function call (", i);
-            type_print(last);
+            ERR_TYPE_PRINT(last);
             printf(") does not match with function definition (");
-            type_print(def_type);
+            ERR_TYPE_PRINT(def_type);
             printf(")\n");
+            print_error_context(checker->source, &call->identifier);
         }
     }
 
@@ -322,8 +370,9 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
         SYMBOL_NAME_START(var->name));
 #endif
     if (TYPECHECK_IS_GLOBAL_FN(checker)) {
+    // if (var->global) {
 #ifdef TYPECHECKER_DEBUG
-        printf("No, you are using it in global.\n");
+        printf("No, it's in global.\n");
 #endif
         return;
     }
@@ -351,8 +400,22 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
 
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var) {
     FuncMeta* meta = function_stack_peek(checker);
-    Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance);
+    // We use scope_distance - 1 because we count how many scopes we have until we reach
+    // the closest function. But lookup_levels thinks that a scope_distance of 0 is just
+    // search in the current scope, a scope_distance of 1 is current scope and one above
+    // and so on.
+    Symbol* var_sym = lookup_levels(checker, var->name, meta->scope_distance - 1);
     return var_sym != NULL;
+}
+
+static void start_variable_definition(Typechecker* const checker, Symbol* var) {
+    checker->is_defining_variable = true;
+    checker->defining_variable = var;
+}
+
+static void end_variable_definition(Typechecker* const checker) {
+    checker->is_defining_variable = false;
+    checker->defining_variable = NULL;
 }
 
 static void typecheck_function(void* ctx, FunctionStmt* function) {
@@ -360,9 +423,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_push(checker, function->identifier);
 
     start_scope(checker);
-    function_stack_start_scope(checker);
     ACCEPT_STMT(ctx, function->body);
-    function_stack_end_scope(checker);
     end_scope(checker);
 
     Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
@@ -373,6 +434,17 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_pop(checker);
 
     checker->last_type = TYPE_FN_RETURN(symbol->type);
+
+#define FN_RETURNS_SOMETHING() !(TYPE_IS_NIL(checker->last_type) || TYPE_IS_VOID(checker->last_type))
+    if (FN_RETURNS_SOMETHING()) {
+        if (!function_returns(function->body)) {
+            error(
+                checker,
+                &function->identifier,
+                "Missing return at the end of function body\n");
+        }
+    }
+#undef FN_RETURNS_SOMETHING
 }
 
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {
@@ -417,6 +489,56 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     }
 }
 
+static void typecheck_if(void* ctx, IfStmt* if_) {
+    Typechecker* checker = (Typechecker*) ctx;
+    ACCEPT_EXPR(ctx, if_->condition);
+    if (! TYPE_IS_BOOL(checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &if_->token,
+            CREATE_TYPE_BOOL(),
+            "in if condition. The condition must evaluate to Bool.");
+    }
+    ACCEPT_STMT(ctx, if_->then);
+    // TODO this null check shouldnt be neccesary
+    if (if_->else_ != NULL) {
+        ACCEPT_STMT(ctx, if_->else_);
+    }
+}
+
+static void typecheck_for(void* ctx, ForStmt* for_) {
+    Typechecker* checker = (Typechecker*) ctx;
+    start_scope(checker);
+
+    ACCEPT_STMT(checker, for_->init);
+    ACCEPT_EXPR(checker, for_->condition);
+    if (for_->condition != NULL && !TYPE_IS_BOOL(checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &for_->token,
+            CREATE_TYPE_BOOL(),
+            "in for condition. The condition must evaluate to Bool.");
+    }
+    ACCEPT_STMT(checker, for_->mod);
+    ACCEPT_STMT(checker, for_->body);
+
+    end_scope(checker);
+}
+
+static void typecheck_while(void* ctx, WhileStmt* while_) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    ACCEPT_EXPR(checker, while_->condition);
+    if (!TYPE_IS_BOOL(checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &while_->token,
+            CREATE_TYPE_BOOL(),
+            "in while condition. The condition must evaluate to Bool.");
+    }
+    ACCEPT_STMT(checker, while_->body);
+}
+
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     Typechecker* checker = (Typechecker*) ctx;
 
@@ -452,12 +574,13 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     ACCEPT_EXPR(checker, binary->right);
     Type* right_type = checker->last_type;
 
-#define ERROR(msg) error(checker, &binary->op, "%s", msg);\
-    printf(" for types: '");\
-    type_print(left_type);\
-    printf("' and '");\
-    type_print(right_type);\
-    printf("'\n")
+#define ERROR(msg) have_error(checker);\
+    fprintf(stderr, "[Line %d] Type error: %s for types '", binary->op.line, msg);\
+    ERR_TYPE_PRINT(left_type);\
+    fprintf(stderr, "' and '");\
+    ERR_TYPE_PRINT(right_type);\
+    fprintf(stderr, "'\n");\
+    error_ctx(checker, &binary->op)
 
     switch (binary->op.kind) {
     case TOKEN_PLUS: {
@@ -467,16 +590,23 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
         }
         // just continue to TYPE_NUMBER
     }
-    case TOKEN_LOWER:
-    case TOKEN_LOWER_EQUAL:
-    case TOKEN_GREATER:
-    case TOKEN_GREATER_EQUAL:
     case TOKEN_MINUS:
     case TOKEN_STAR:
     case TOKEN_PERCENT:
     case TOKEN_SLASH: {
         if (TYPE_IS_NUMBER(left_type) && TYPE_IS_NUMBER(right_type)) {
             checker->last_type = CREATE_TYPE_NUMBER();
+            return;
+        }
+        ERROR("Invalid types for numeric operation");
+        return;
+    }
+    case TOKEN_LOWER:
+    case TOKEN_LOWER_EQUAL:
+    case TOKEN_GREATER:
+    case TOKEN_GREATER_EQUAL: {
+        if (TYPE_IS_NUMBER(left_type) && TYPE_IS_NUMBER(right_type)) {
+            checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
         ERROR("Invalid types for numeric operation");
@@ -514,10 +644,11 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     ACCEPT_EXPR(checker, unary->expr);
     Type* inner_type = checker->last_type;
 
-#define ERROR(msg) error(checker, &unary->op, "%s", msg);\
-    printf(" for type: '");\
-    type_print(inner_type);\
-    printf("'\n")
+#define ERROR(msg) have_error(checker);\
+    fprintf(stderr, "[Line %d] Type error: %s for type '", unary->op.line, msg);\
+    ERR_TYPE_PRINT(inner_type);\
+    fprintf(stderr, "'\n");\
+    error_ctx(checker, &unary->op)
 
     switch (unary->op.kind) {
     case TOKEN_BANG: {
@@ -545,3 +676,66 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 
 #undef ERROR
 }
+
+// TODO This part of code is used to ensure that mandatory returns are
+// present in functions. Maybe would be better to use a CFG (Control Flow Graph)
+// to detect missing returns or even realize that there is no need to add a return
+// at the bottom of a function.
+
+static void check_return_loopg(void* ctx, LoopGotoStmt* loopg);
+static void check_return_expr(void* ctx, ExprStmt* expr);
+static void check_return_var(void* ctx, VarStmt* var);
+static void check_return_print(void* ctx, PrintStmt* print);
+static void check_return_block(void* ctx, BlockStmt* block);
+static void check_return_function(void* ctx, FunctionStmt* function);
+static void check_return_return(void* ctx, ReturnStmt* function);
+static void check_return_if(void* ctx, IfStmt* if_);
+static void check_return_for(void* ctx, ForStmt* for_);
+static void check_return_while(void* ctx, WhileStmt* while_);
+
+StmtVisitor check_return_stmt_visitor = (StmtVisitor){
+    .visit_expr = check_return_expr,
+    .visit_var = check_return_var,
+    .visit_print = check_return_print,
+    .visit_block = check_return_block,
+    .visit_function = check_return_function,
+    .visit_return = check_return_return,
+    .visit_if = check_return_if,
+    .visit_for = check_return_for,
+    .visit_while = check_return_while,
+    .visit_loopg = check_return_loopg,
+};
+
+typedef struct {
+    bool have_return;
+} ReturnChecker;
+
+static bool function_returns(Stmt* fn_ast) {
+    ReturnChecker checker;
+    checker.have_return = false;
+    if (fn_ast->kind == STMT_LIST) {
+        printf("Is list");
+    }
+    stmt_dispatch(&check_return_stmt_visitor, &checker, fn_ast);
+    return checker.have_return;
+}
+
+static void check_return_loopg(void* ctx, LoopGotoStmt* loopg) {}
+static void check_return_expr(void* ctx, ExprStmt* expr) {}
+static void check_return_var(void* ctx, VarStmt* var) {}
+static void check_return_print(void* ctx, PrintStmt* print) {}
+static void check_return_function(void* ctx, FunctionStmt* function) {}
+static void check_return_if(void* ctx, IfStmt* if_) {}
+static void check_return_for(void* ctx, ForStmt* for_) {}
+static void check_return_while(void* ctx, WhileStmt* while_) {}
+
+static void check_return_block(void* ctx, BlockStmt* block) {
+    // Function body can be a single stmt or a Block stmt.
+    stmt_dispatch(&check_return_stmt_visitor, ctx, block->stmts);
+}
+
+static void check_return_return(void* ctx, ReturnStmt* function) {
+    ReturnChecker* checker = (ReturnChecker*) ctx;
+    checker->have_return = true;
+}
+

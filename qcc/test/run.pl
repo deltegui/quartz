@@ -3,22 +3,36 @@ use strict;
 use warnings;
 use Term::ANSIColor;
 
+sub file_is_valid {
+    return (($_[0] ne "") and ($_[0] ne ".") and ($_[0] ne ".."));
+}
+
 sub read_files {
-	opendir my $dir, $_[0] or die "Cannot open $_[0] dir $!";
-	my @files = readdir $dir;
-	closedir $dir;
-	return @files;
+    opendir my $dir, $_[0] or die "Cannot open $_[0] dir $!";
+    my @files = readdir $dir;
+    closedir $dir;
+    return @files;
 }
 
 sub read_files_as_hash {
-	my %hash;
-	my $base_path = $_[0];
-	foreach(read_files($base_path)) {
-		$hash{$_} = "$base_path/$_";
-	}
-	delete $hash{"."};
-	delete $hash{".."};
-	return %hash;
+    my %hash;
+    my $base_path = $_[0];
+    foreach(read_files($base_path)) {
+        if (file_is_valid($_)) {
+            my $full_route = "$base_path/$_";
+            if (-d $full_route) {
+                my %raw = read_files_as_hash($full_route);
+                my %final;
+                foreach my $key (keys %raw) {
+                    $final{"$_/$key"} = $raw{$key};
+                }
+                %hash = (%hash, %final);
+            } else {
+                $hash{$_} = $full_route;
+            }
+        }
+    }
+    return %hash;
 }
 
 sub read_text {

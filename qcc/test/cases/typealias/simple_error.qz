@@ -1,0 +1,4 @@
+[Line 10] Type error: The Type 'Number' does not match with type 'Alias: 'Name' = String' in variable declaration.
+9 | 
+10 | var first: Number = generate_name(0);
+   | ~~~~~~~~~^

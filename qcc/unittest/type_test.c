@@ -56,13 +56,22 @@ static void complex_types_should_be_equal() {
     });
 }
 
+static void two_typealias_should_be_equal() {
+    TYPE_POOL({
+        Type* a = create_type_alias("Hola", 4, CREATE_TYPE_NUMBER());
+        Type* b = CREATE_TYPE_NUMBER();
+        assert_true(type_equals(a, b));
+    });
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(complex_types_should_be_equal),
         cmocka_unit_test(simple_type_should_be_not_equal),
         cmocka_unit_test(simple_type_should_be_equal),
         cmocka_unit_test(creating_other_types_should_use_pool),
-        cmocka_unit_test(simple_types_share_same_pointer)
+        cmocka_unit_test(simple_types_share_same_pointer),
+        cmocka_unit_test(two_typealias_should_be_equal)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

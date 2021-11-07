@@ -47,6 +47,7 @@ static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
 static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static bool register_symbol(Parser* const parser, Symbol symbol);
+static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
@@ -59,6 +60,7 @@ static Stmt* declaration(Parser* const parser);
 static Stmt* parse_variable(Parser* const parser);
 static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
+static Stmt* typealias_decl(Parser* const parser);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym);
@@ -273,6 +275,12 @@ static bool register_symbol(Parser* const parser, Symbol symbol) {
     return true;
 }
 
+static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type) {
+    Symbol symbol = create_symbol_from_token(token, type);
+    symbol.global = parser->scope_depth == 0;
+    return symbol;
+}
+
 static void advance(Parser* const parser) {
     if (parser->current.kind == TOKEN_END) {
         return;
@@ -327,6 +335,7 @@ static Stmt* declaration_block(Parser* const parser, TokenKind limit_token) {
     ListStmt* list = create_stmt_list();
     while (parser->current.kind != limit_token && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
+        assert(stmt != NULL);
         if (parser->panic_mode) {
             // That stmt is not inside the abstract syntax tree. You need to free it.
             free_stmt(stmt);
@@ -344,6 +353,8 @@ static Stmt* declaration(Parser* const parser) {
         return variable_decl(parser);
     case TOKEN_FUNCTION:
         return function_decl(parser);
+    case TOKEN_TYPEDEF:
+        return typealias_decl(parser);
     default:
         return statement(parser);
     }
@@ -407,9 +418,8 @@ static Stmt* parse_variable(Parser* const parser) {
         var.definition = expression(parser);
     }
 
-    Symbol symbol = create_symbol_from_token(&var.identifier, var_type);
+    Symbol symbol = create_symbol_calc_global(parser, &var.identifier, var_type);
     symbol.assigned = var.definition != NULL;
-    symbol.global = parser->scope_depth == 0;
     if (! register_symbol(parser, symbol)) {
         free_symbol(&symbol);
     }
@@ -423,6 +433,33 @@ static Stmt* variable_decl(Parser* const parser) {
     return var;
 }
 
+static Stmt* typealias_decl(Parser* const parser) {
+    advance(parser); // consume typedef
+
+    TypealiasStmt stmt = (TypealiasStmt) {
+        .identifier = parser->current,
+    };
+    advance(parser); // consume alias
+
+    consume(parser, TOKEN_EQUAL, "Expected '=' after type alias name");
+    Type* def = parse_type(parser);
+    advance(parser); // consume type
+    consume(parser, TOKEN_SEMICOLON, "Expected semicolon at the end of type alias");
+
+    Type* alias = create_type_alias(
+        stmt.identifier.start,
+        stmt.identifier.length,
+        def);
+    Symbol symbol = create_symbol_calc_global(parser, &stmt.identifier, alias);
+    symbol.kind = SYMBOL_TYPEALIAS;
+    if (! register_symbol(parser, symbol)) {
+        free_symbol(&symbol);
+        error(parser, "Type alias already defined");
+    }
+
+    return CREATE_STMT_TYPEALIAS(stmt);
+}
+
 static Stmt* function_decl(Parser* const parser) {
     advance(parser); // consume fn
 
@@ -432,8 +469,7 @@ static Stmt* function_decl(Parser* const parser) {
     FunctionStmt fn = (FunctionStmt){
         .identifier = parser->current,
     };
-    Symbol symbol = create_symbol_from_token(&fn.identifier, create_type_function());
-    symbol.global = parser->scope_depth == 0;
+    Symbol symbol = create_symbol_calc_global(parser, &fn.identifier, create_type_function());
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
@@ -457,7 +493,7 @@ static Stmt* function_decl(Parser* const parser) {
     }
 
     // Insert symbol before parsing the function body
-    // so you can call the founction inside the function
+    // so you can call a function inside a function
     if (! register_symbol(parser, symbol)) {
         free_symbol(&symbol);
     }
@@ -520,7 +556,31 @@ static Type* parse_type(Parser* const parser) {
     if (parser->current.kind == TOKEN_LEFT_PAREN) {
         return parse_function_type(parser);
     }
-    return CREATE_TYPE_UNKNOWN();
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        return CREATE_TYPE_UNKNOWN();
+    }
+    // We don't create new types here. If the type is an identifier
+    // it should have been declared before.
+    Symbol* symbol = lookup_str(parser, parser->current.start, parser->current.length);
+    if (symbol == NULL) {
+        error(
+            parser,
+            "The type '%.*s' is not defined",
+            parser->current.length,
+            parser->current.start);
+        return CREATE_TYPE_UNKNOWN();
+    }
+    switch (symbol->kind) {
+    case SYMBOL_TYPEALIAS:
+        return symbol->type;
+    default:
+        error(
+            parser,
+            "The identifier '%.*s' is not a type",
+            parser->current.length,
+            parser->current.start);
+        return CREATE_TYPE_UNKNOWN();
+    }
 }
 
 static Type* parse_function_type(Parser* const parser) {

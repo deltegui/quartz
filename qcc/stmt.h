@@ -4,6 +4,7 @@
 #include "expr.h"
 
 typedef enum {
+    STMT_TYPEALIAS,
     STMT_EXPR,
     STMT_VAR,
     STMT_FUNCTION,
@@ -27,6 +28,10 @@ typedef struct {
     Token identifier;
     Expr* definition; // Optional (can be NULL)
 } VarStmt;
+
+typedef struct {
+    Token identifier;
+} TypealiasStmt;
 
 typedef struct {
     Token identifier;
@@ -99,6 +104,7 @@ typedef struct _Stmt {
         ForStmt for_;
         WhileStmt while_;
         LoopGotoStmt loopg;
+        TypealiasStmt typealias;
     };
 } Stmt;
 
@@ -113,6 +119,7 @@ typedef struct {
     void (*visit_for)(void* ctx, ForStmt* forstmt);
     void (*visit_while)(void* ctx, WhileStmt* whilestmt);
     void (*visit_loopg)(void* ctx, LoopGotoStmt* loopg);
+    void (*visit_typealias)(void* ctx, TypealiasStmt* typealias);
 } StmtVisitor;
 
 #define STMT_IS_VAR(stmt) (stmt.kind == STMT_VAR)
@@ -126,6 +133,7 @@ typedef struct {
 #define STMT_IS_FOR(stmt) (stmt.kind == STMT_FOR)
 #define STMT_IS_WHILE(stmt) (stmt.kind == STMT_WHILE)
 #define STMT_IS_LOOPG(stmt) (stmt.kind == STMT_LOOPG)
+#define STMT_IS_TYPEALIAS(stmt) (stmt.kind == STMT_TYPEALIAS)
 
 #define CREATE_STMT_RETURN(return_) create_stmt(STMT_RETURN, &return_)
 #define CREATE_STMT_VAR(var) create_stmt(STMT_VAR, &var)
@@ -139,6 +147,7 @@ typedef struct {
 #define CREATE_STMT_FOR(for_) create_stmt(STMT_FOR, &for_)
 #define CREATE_STMT_WHILE(while_) create_stmt(STMT_WHILE, &while_)
 #define CREATE_STMT_LOOPG(loopg) create_stmt(STMT_LOOPG, &loopg)
+#define CREATE_STMT_TYPEALIAS(typealias) create_stmt(STMT_TYPEALIAS, &typealias)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* const stmt);

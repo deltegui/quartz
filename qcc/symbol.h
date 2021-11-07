@@ -16,6 +16,7 @@ SymbolName create_symbol_name(const char* start, int length);
 #define SYMBOL_NAME_HASH(name) ((name).key.hash)
 
 typedef enum {
+    SYMBOL_TYPEALIAS,
     SYMBOL_FUNCTION,
     SYMBOL_VAR
 } SymbolKind;

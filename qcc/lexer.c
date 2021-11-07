@@ -251,6 +251,9 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "rue", 1, 4)) {
             return create_token(lexer, TOKEN_TRUE);
         }
+        if (match_token(lexer, "ypedef", 1, 7)) {
+            return create_token(lexer, TOKEN_TYPEDEF);
+        }
         break;
     }
     case 'f': {

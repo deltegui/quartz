@@ -44,6 +44,7 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     CASE_STMT(STMT_FOR, for_, ForStmt);
     CASE_STMT(STMT_WHILE, while_, WhileStmt);
     CASE_STMT(STMT_LOOPG, loopg, LoopGotoStmt);
+    CASE_STMT(STMT_TYPEALIAS, typealias, TypealiasStmt);
     case STMT_LIST:
         stmt->kind = STMT_LIST;
         stmt->list = (ListStmt*)stmt_node;
@@ -51,7 +52,7 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     }
     return stmt;
 
-#undef SET_STMT
+#undef CASE_STMT
 }
 
 static void free_list_stmt(ListStmt* const list_stmt) {
@@ -103,6 +104,7 @@ void free_stmt(Stmt* const stmt) {
         free_expr(stmt->while_.condition);
         free_stmt(stmt->while_.body);
         break;
+    case STMT_TYPEALIAS:
     case STMT_LOOPG:
         break;
     }
@@ -132,6 +134,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_FOR: DISPATCH(visit_for, for_); break;
     case STMT_WHILE: DISPATCH(visit_while, while_); break;
     case STMT_LOOPG: DISPATCH(visit_loopg, loopg); break;
+    case STMT_TYPEALIAS: DISPATCH(visit_typealias, typealias); break;
     default: assert(false);
     }
 #undef DISPATCH

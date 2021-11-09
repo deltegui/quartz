@@ -92,6 +92,14 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
     case STMT_LOOPG: {
         break;
     }
+    case STMT_TYPEALIAS: {
+        // TODO if the type should be part of the node, check it too!
+        assert_true(
+            t_token_equals(
+                &first->typealias.identifier,
+                &second->typealias.identifier));
+        break;
+    }
     }
 }
 
@@ -815,6 +823,17 @@ static void should_parse_continue() {
     assert_stmt_ast("  while (false) {continue;} ", CREATE_STMT_WHILE(while_));
 }
 
+static void should_parse_typealias() {
+    TypealiasStmt typealias;
+    typealias.identifier = b_token;
+    assert_stmt_ast(" typedef b = Number;", CREATE_STMT_TYPEALIAS(typealias));
+}
+
+static void should_fail_typealias() {
+    assert_has_errors("typedef Hola Number;");
+    assert_has_errors("typedef Hola = Number");
+}
+
 static int test_setup(void** args) {
     init_type_pool();
     return 0;
@@ -857,7 +876,9 @@ int main(void) {
         cmocka_unit_test(should_parse_while_with_condition),
         cmocka_unit_test(should_fail_parse_loopg_if_is_not_inside_a_loop),
         cmocka_unit_test(should_parse_break),
-        cmocka_unit_test(should_parse_continue)
+        cmocka_unit_test(should_parse_continue),
+        cmocka_unit_test(should_parse_typealias),
+        cmocka_unit_test(should_fail_typealias)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

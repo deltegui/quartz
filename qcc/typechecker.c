@@ -69,6 +69,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_call = typecheck_call,
 };
 
+static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
 static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg);
 static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
@@ -91,6 +92,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_for = typecheck_for,
     .visit_while = typecheck_while,
     .visit_loopg = typecheck_loopg,
+    .visit_typealias = typecheck_typealias,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -193,6 +195,9 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
 }
 
 static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg) {
+}
+
+static void typecheck_typealias(void* ctx, TypealiasStmt* alias) {
 }
 
 static void typecheck_block(void* ctx, BlockStmt* block) {
@@ -316,7 +321,9 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     assert(symbol != NULL);
     assert(symbol->type != NULL);
 
-    if (! TYPE_IS_FUNCTION(symbol->type)) {
+    Type* type = RESOLVE_IF_TYPEALIAS(symbol->type);
+
+    if (! TYPE_IS_FUNCTION(type)) {
         error(
             checker,
             &call->identifier,
@@ -326,7 +333,7 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         return;
     }
 
-    uint32_t fn_param_type_size = TYPE_FN_PARAMS(symbol->type).size;
+    uint32_t fn_param_type_size = TYPE_FN_PARAMS(type).size;
     if (fn_param_type_size != call->params.size) {
         error(
             checker,
@@ -340,8 +347,8 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     }
 
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
-    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(symbol->type));
-    assert(call->params.size == TYPE_FN_PARAMS(symbol->type).size);
+    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(type));
+    assert(call->params.size == TYPE_FN_PARAMS(type).size);
 
     for (uint32_t i = 0; i < call->params.size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
@@ -359,10 +366,12 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
     check_and_mark_upvalue(checker, symbol);
 
-    checker->last_type = TYPE_FN_RETURN(symbol->type);
+    checker->last_type = TYPE_FN_RETURN(type);
 }
 
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
+    assert(var->kind == SYMBOL_FUNCTION || var->kind == SYMBOL_VAR);
+
 #ifdef TYPECHECKER_DEBUG
     printf(
         "[TYPECHECKER DEBUG] Checking variable '%.*s'\n[TYPECHECKER DEBUG] Upvalue? ",

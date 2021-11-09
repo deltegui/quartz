@@ -377,6 +377,7 @@ static void print_if(void* ctx, IfStmt* if_);
 static void print_for(void* ctx, ForStmt* for_);
 static void print_while(void* ctx, WhileStmt* while_);
 static void print_loopg(void* ctx, LoopGotoStmt* loopg);
+static void print_typealias(void* ctx, TypealiasStmt* alias);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -388,7 +389,8 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_if = print_if,
     .visit_for = print_for,
     .visit_while = print_while,
-    .visit_loopg = print_loopg
+    .visit_loopg = print_loopg,
+    .visit_typealias = print_typealias,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -637,6 +639,15 @@ static void print_loopg(void* ctx, LoopGotoStmt* loopg) {
         token_print(loopg->token);
         pretty_print("Kind: ");
         printf("%s\n", (loopg->kind == LOOP_BREAK) ? "BREAK" : "CONTINUE");
+    });
+    pretty_print("]\n");
+}
+
+static void print_typealias(void* ctx, TypealiasStmt* alias) {
+    pretty_print("Type Alias: [\n");
+    OFFSET({
+        pretty_print("Identifier: ");
+        token_print(alias->identifier);
     });
     pretty_print("]\n");
 }

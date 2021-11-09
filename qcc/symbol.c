@@ -67,6 +67,7 @@ void free_symbol(Symbol* const symbol) {
         free_symbol_set(symbol->function.upvalues);
         break;
     }
+    case SYMBOL_TYPEALIAS:
     case SYMBOL_VAR:
         break;
     }

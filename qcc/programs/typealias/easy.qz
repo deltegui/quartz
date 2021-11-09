@@ -1,0 +1,12 @@
+typedef MyFunc = (Number): Void;
+
+fn hello_num_gen(hello: String): MyFunc {
+    fn hello_num(a: Number) {
+        print hello + ' ' ;
+        print a;
+    }
+    return hello_num;
+}
+
+var f: MyFunc = hello_num_gen('hola');
+f(1);

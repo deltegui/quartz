@@ -4,57 +4,33 @@
 #include "chunk.h"
 #include "compiler.h"
 #include "vm.h"
+#include "module.h"
 
 #ifdef DEBUG
 #include "debug.h"
 #endif
 
-// Reads a file from "source_name" and returns a string with
-// the contents of the file. The ownership of that string is
-// up to you, so delete it. It can also return null, meaning
-// that was an error.
-const char* read_file(const char* source_name) {
-    FILE* source = fopen(source_name, "r");
-    if (source == NULL) {
-        fprintf(stderr, "Error while reading source file: \n");
-        return NULL;
-    }
-    fseek(source, 0, SEEK_END);
-    size_t size = ftell(source);
-    fseek(source, 0, SEEK_SET);
-    // Size of the file plus \0 character
-    char* buffer = (char*) malloc(size + 1);
-    if (buffer == NULL) {
-        fclose(source);
-        fprintf(stderr, "Error while allocating file buffer!\n");
-        return NULL;
-    }
-    fread(buffer, 1, size, source);
-    buffer[size] = '\0';
-    fclose(source);
-    return buffer;
-}
-
-int run(const char* file) {
-    const char* source = read_file(file);
+int run(const char* file, int length) {
+    init_module_system();
+    Module main = module_read(file, length);
 
 #ifdef DEBUG
-    printf("Read buffer:\n%s\n", source);
+    printf("Read buffer:\n%s\n", main.source);
 #endif
 
-    if (source == NULL) {
+    if (main.source == NULL) {
         return EX_OSFILE;
     }
     int exit_code = 0;
     ObjFunction* main_func;
     init_qvm();
-    if (compile(source, &main_func) == COMPILATION_OK) {
+    if (compile(main.source, &main_func) == COMPILATION_OK) {
         qvm_execute(main_func);
     } else {
         exit_code = EX_DATAERR;
     }
     free_qvm();
-    free((char*) source);
+    free_module_system();
     return exit_code;
 }
 
@@ -67,6 +43,7 @@ void repl() {
     char input_buffer[BUFFER_SIZE];
     ObjFunction* main_func;
     for (;;) {
+        init_module_system();
         printf("<qz> ");
         if (!fgets(input_buffer, BUFFER_SIZE, stdin)) {
             fprintf(stderr, "Error while reading from stdin!\n");
@@ -80,6 +57,7 @@ void repl() {
             qvm_execute(main_func);
         }
         free_qvm();
+        free_module_system();
     }
 #undef BUFFER_SIZE
 }
@@ -88,5 +66,6 @@ int main(int argc, char** argv) {
     if (argc <= 1) {
         repl();
     }
-    return run(argv[1]);
+    int length = strlen(argv[1]);
+    return run(argv[1], length);
 }

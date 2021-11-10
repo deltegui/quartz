@@ -658,7 +658,7 @@ static void print_import(void* ctx, ImportStmt* import) {
     pretty_print("Type Alias: [\n");
     OFFSET({
         pretty_print("File: ");
-        token_print(alias->identifier);
+        token_print(import->filename);
         pretty_print("AST: [\n");
         OFFSET({
             ACCEPT_STMT(import->ast);

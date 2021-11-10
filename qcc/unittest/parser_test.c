@@ -100,6 +100,14 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
                 &second->typealias.identifier));
         break;
     }
+    case STMT_IMPORT: {
+        assert_true(
+            t_token_equals(
+                &first->import.filename,
+                &second->import.filename));
+        assert_stmt_equals(first->import.ast, second->import.ast);
+        break;
+    }
     }
 }
 

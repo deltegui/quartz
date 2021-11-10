@@ -1,11 +1,14 @@
-typedef Name = (String, Number): Void;
+import './other.qz';
+import './name.qz';
 
-fn first(index: Number): Name {
-    fn a(s: String, n: Number) {
-        print s;
-        print n;
-    }
-    return a;
-}
+var first: Name = generate_name(0);
+print first;
 
-var demo: (String, String): Void = first(0);
+var infer = generate_name(1);
+print infer;
+
+var str: String = generate_name(2);
+print str;
+
+var other: Name = generate_name(3);
+print other;

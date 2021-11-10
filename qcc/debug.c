@@ -655,13 +655,17 @@ static void print_typealias(void* ctx, TypealiasStmt* alias) {
 }
 
 static void print_import(void* ctx, ImportStmt* import) {
-    pretty_print("Type Alias: [\n");
+    pretty_print("Import: [\n");
     OFFSET({
         pretty_print("File: ");
         token_print(import->filename);
         pretty_print("AST: [\n");
         OFFSET({
-            ACCEPT_STMT(import->ast);
+            if (import->ast == NULL) {
+                pretty_print("<Already imported>\n");
+            } else {
+                ACCEPT_STMT(import->ast);
+            }
         });
         pretty_print("]\n");
     });

@@ -1,0 +1,8 @@
+import './name.qz';
+
+fn generate_name(index: Number): Name {
+    if (index == 0) return 'Javier';
+    if (index == 1) return 'Diego';
+    if (index == 2) return 'Maria';
+    return 'Antonio';
+}

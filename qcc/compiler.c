@@ -134,6 +134,7 @@ static void compile_for(void* ctx, ForStmt* for_);
 static void compile_while(void* ctx, WhileStmt* while_);
 static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 static void compile_typealias(void* ctx, TypealiasStmt* alias);
+static void compile_import(void* ctx, ImportStmt* import);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -147,6 +148,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_while = compile_while,
     .visit_loopg = compile_loopg,
     .visit_typealias = compile_typealias,
+    .visit_import = compile_import,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -597,6 +599,10 @@ static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
 
 static void compile_typealias(void* ctx, TypealiasStmt* alias) {
     // Nothing to see here
+}
+
+static void compile_import(void* ctx, ImportStmt* import) {
+    ACCEPT_STMT(ctx, import->ast);
 }
 
 static void patch_breaks(Compiler* const compiler) {

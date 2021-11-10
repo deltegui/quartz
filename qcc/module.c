@@ -20,7 +20,7 @@ void init_module_system() {
 
 void free_module_system() {
     Module* mods = VECTOR_AS_MODULES();
-    for (int i = 0; i < modules.data.capacity; i++) {
+    for (uint32_t i = 0; i < modules.data.capacity; i++) {
         free_module(mods[i]);
     }
     free_ctable(&modules);
@@ -75,13 +75,17 @@ Module module_read(const char* path, int length) {
     if (is_module_loaded(path, length)) {
         return find_module(path, length);
     }
-    // We dont copy the path. Take care of those pointer pls!
+
+    char* cpy_path = (char*) malloc(sizeof(char) * length + 1);
+    memcpy(cpy_path, path, length);
+    cpy_path[length] = '\0';
+
     Module module;
-    module.path = path;
+    module.path = cpy_path;
     module.path_length = length;
-    module.source = read_file(path);
+    module.source = read_file(cpy_path);
     if (module.source == NULL) {
-        fprintf(stderr, "File not found: '%*.s'", length, path);
+        fprintf(stderr, "File not found: '%.*s'", length, path);
     }
     module.is_already_loaded = true; // We save it as if was loaded.
     register_module(module);
@@ -91,5 +95,7 @@ Module module_read(const char* path, int length) {
 
 static void free_module(Module module) {
     free((void*) module.path);
-    free((void*) module.source);
+    if (module.source != NULL) {
+        free((void*) module.source);
+    }
 }

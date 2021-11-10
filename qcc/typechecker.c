@@ -722,9 +722,6 @@ typedef struct {
 static bool function_returns(Stmt* fn_ast) {
     ReturnChecker checker;
     checker.have_return = false;
-    if (fn_ast->kind == STMT_LIST) {
-        printf("Is list");
-    }
     stmt_dispatch(&check_return_stmt_visitor, &checker, fn_ast);
     return checker.have_return;
 }

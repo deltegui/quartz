@@ -149,7 +149,7 @@ Type* create_type_function() {
 Type* create_type_alias(const char* identifier, int length, Type* original) {
     // So, the token pool outlives other compiler data structures like the original
     // code buffer, the AST or the Symbol Table. Knowing that, the alias identifier
-    // must be compied.
+    // must be copied.
     AliasType* alias = (AliasType*) malloc(sizeof(AliasType) + (sizeof(char) * length + 1));
     memcpy(alias->identifier, identifier, length);
     alias->identifier[length] = '\0';

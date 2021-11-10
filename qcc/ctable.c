@@ -91,7 +91,6 @@ CTableEntry* ctable_find(CTable* const table, CTableKey* key) {
     return entry;
 }
 
-
 CTableEntry* ctable_next_add_position(CTable* const table, CTableKey key) {
     if (SHOULD_GROW(table)) {
         grow_symbol_table(table);

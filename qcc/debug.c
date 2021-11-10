@@ -378,6 +378,7 @@ static void print_for(void* ctx, ForStmt* for_);
 static void print_while(void* ctx, WhileStmt* while_);
 static void print_loopg(void* ctx, LoopGotoStmt* loopg);
 static void print_typealias(void* ctx, TypealiasStmt* alias);
+static void print_import(void* ctx, ImportStmt* import);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -391,6 +392,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_while = print_while,
     .visit_loopg = print_loopg,
     .visit_typealias = print_typealias,
+    .visit_import = print_import,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -648,6 +650,20 @@ static void print_typealias(void* ctx, TypealiasStmt* alias) {
     OFFSET({
         pretty_print("Identifier: ");
         token_print(alias->identifier);
+    });
+    pretty_print("]\n");
+}
+
+static void print_import(void* ctx, ImportStmt* import) {
+    pretty_print("Type Alias: [\n");
+    OFFSET({
+        pretty_print("File: ");
+        token_print(alias->identifier);
+        pretty_print("AST: [\n");
+        OFFSET({
+            ACCEPT_STMT(import->ast);
+        });
+        pretty_print("]\n");
     });
     pretty_print("]\n");
 }

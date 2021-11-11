@@ -20,7 +20,7 @@ void init_module_system() {
 
 void free_module_system() {
     Module* mods = VECTOR_AS_MODULES();
-    for (uint32_t i = 0; i < modules.data.capacity; i++) {
+    for (uint32_t i = 0; i < modules.data.size; i++) {
         free_module(mods[i]);
     }
     free_ctable(&modules);

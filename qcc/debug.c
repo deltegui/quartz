@@ -191,7 +191,11 @@ static int chunk_long_print(const Chunk* chunk, int i) {
     uint16_t num = read_long(&pc);
     i++;
     chunk_format_print(chunk, i, "%04x\t", num);
-    chunk_value_print(chunk, num);
+    if (num < chunk->constants.size) {
+        chunk_value_print(chunk, num);
+    } else {
+        printf("\n");
+    }
     return ++i;
 }
 

@@ -5,6 +5,7 @@
 #include "symbol.h"
 #include "type.h"
 #include "error.h"
+#include "module.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -61,6 +62,7 @@ static Stmt* parse_variable(Parser* const parser);
 static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
+static Stmt* import_decl(Parser* const parser);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym);
@@ -355,6 +357,8 @@ static Stmt* declaration(Parser* const parser) {
         return function_decl(parser);
     case TOKEN_TYPEDEF:
         return typealias_decl(parser);
+    case TOKEN_IMPORT:
+        return import_decl(parser);
     default:
         return statement(parser);
     }
@@ -459,6 +463,34 @@ static Stmt* typealias_decl(Parser* const parser) {
     }
 
     return CREATE_STMT_TYPEALIAS(stmt);
+}
+
+static Stmt* import_decl(Parser* const parser) {
+    advance(parser); // consume import
+    ImportStmt import = (ImportStmt) {
+        .filename = parser->current,
+        .ast = NULL,
+    };
+    advance(parser); // consume filename
+    consume(parser, TOKEN_SEMICOLON, "Expected semicolon at end of import statment");
+    Module module = module_read(
+        import.filename.start,
+        import.filename.length);
+    if (module.is_already_loaded) {
+        return CREATE_STMT_IMPORT(import);
+    }
+    if (module.source == NULL) {
+        parser->has_error = true;
+        return CREATE_STMT_IMPORT(import);
+    }
+    Parser subparser;
+    init_parser(&subparser, module.source, parser->symbols);
+    Stmt* subast = parse(&subparser);
+    if (subparser.has_error) {
+        parser->has_error = true;
+    }
+    import.ast = subast;
+    return CREATE_STMT_IMPORT(import);
 }
 
 static Stmt* function_decl(Parser* const parser) {

@@ -16,9 +16,10 @@ typedef enum {
     STMT_FOR,
     STMT_WHILE,
     STMT_LOOPG,
+    STMT_IMPORT,
 } StmtKind;
 
-struct _Stmt;
+struct s_stmt;
 
 typedef struct {
     Expr* inner;
@@ -35,7 +36,7 @@ typedef struct {
 
 typedef struct {
     Token identifier;
-    struct _Stmt* body;
+    struct s_stmt* body;
 } FunctionStmt;
 
 typedef struct {
@@ -45,11 +46,11 @@ typedef struct {
 typedef struct {
     int capacity;
     int size;
-    struct _Stmt** stmts;
+    struct s_stmt** stmts;
 } ListStmt;
 
 typedef struct {
-    struct _Stmt* stmts;
+    struct s_stmt* stmts;
 } BlockStmt;
 
 typedef struct {
@@ -59,22 +60,22 @@ typedef struct {
 typedef struct {
     Token token; // Just to know where the if is.
     Expr* condition;
-    struct _Stmt* then;
-    struct _Stmt* else_; // Optional (can be NULL)
+    struct s_stmt* then;
+    struct s_stmt* else_; // Optional (can be NULL)
 } IfStmt;
 
 typedef struct {
     Token token; // Just to know where the For is.
-    struct _Stmt* init; // Optional (can be NULL)
+    struct s_stmt* init; // Optional (can be NULL)
     Expr* condition; // Optional (can be NULL)
-    struct _Stmt* mod; // Optional (can be NULL)
-    struct _Stmt* body;
+    struct s_stmt* mod; // Optional (can be NULL)
+    struct s_stmt* body;
 } ForStmt;
 
 typedef struct {
     Token token; // Just to know where the While is.
     Expr* condition;
-    struct _Stmt* body;
+    struct s_stmt* body;
 } WhileStmt;
 
 typedef enum {
@@ -87,10 +88,15 @@ typedef struct {
     LoopGotoKind kind;
 } LoopGotoStmt;
 
-ListStmt* create_stmt_list();
-void stmt_list_add(ListStmt* const list, struct _Stmt* stmt);
+typedef struct {
+    Token filename;
+    struct s_stmt* ast;
+} ImportStmt;
 
-typedef struct _Stmt {
+ListStmt* create_stmt_list();
+void stmt_list_add(ListStmt* const list, struct s_stmt* stmt);
+
+typedef struct s_stmt {
     StmtKind kind;
     union {
         ExprStmt expr;
@@ -105,6 +111,7 @@ typedef struct _Stmt {
         WhileStmt while_;
         LoopGotoStmt loopg;
         TypealiasStmt typealias;
+        ImportStmt import;
     };
 } Stmt;
 
@@ -120,6 +127,7 @@ typedef struct {
     void (*visit_while)(void* ctx, WhileStmt* whilestmt);
     void (*visit_loopg)(void* ctx, LoopGotoStmt* loopg);
     void (*visit_typealias)(void* ctx, TypealiasStmt* typealias);
+    void (*visit_import)(void* ctx, ImportStmt* import);
 } StmtVisitor;
 
 #define STMT_IS_VAR(stmt) (stmt.kind == STMT_VAR)
@@ -134,6 +142,7 @@ typedef struct {
 #define STMT_IS_WHILE(stmt) (stmt.kind == STMT_WHILE)
 #define STMT_IS_LOOPG(stmt) (stmt.kind == STMT_LOOPG)
 #define STMT_IS_TYPEALIAS(stmt) (stmt.kind == STMT_TYPEALIAS)
+#define STMT_IS_IMPORT(stmt) (stmt.kind == STMT_IMPORT)
 
 #define CREATE_STMT_RETURN(return_) create_stmt(STMT_RETURN, &return_)
 #define CREATE_STMT_VAR(var) create_stmt(STMT_VAR, &var)
@@ -148,6 +157,7 @@ typedef struct {
 #define CREATE_STMT_WHILE(while_) create_stmt(STMT_WHILE, &while_)
 #define CREATE_STMT_LOOPG(loopg) create_stmt(STMT_LOOPG, &loopg)
 #define CREATE_STMT_TYPEALIAS(typealias) create_stmt(STMT_TYPEALIAS, &typealias)
+#define CREATE_STMT_IMPORT(import) create_stmt(STMT_IMPORT, &import)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* const stmt);

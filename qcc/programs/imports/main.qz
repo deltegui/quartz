@@ -1,5 +1,5 @@
-import './other.qz';
-import './name.qz';
+import '../programs/imports/other.qz';
+import '../programs/imports/name.qz';
 
 var first: Name = generate_name(0);
 print first;

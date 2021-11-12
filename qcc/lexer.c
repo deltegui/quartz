@@ -239,6 +239,9 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "f", 1, 2)) {
             return create_token(lexer, TOKEN_IF);
         }
+        if (match_token(lexer, "mport", 1, 6)) {
+            return create_token(lexer, TOKEN_IMPORT);
+        }
         break;
     }
     case 'e': {

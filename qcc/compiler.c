@@ -18,7 +18,7 @@ typedef struct {
     Vector breaks; // Vector<int>
 } BreakContext;
 
-static void init_break_ctx(BreakContext* const break_ctx);
+static BreakContext* create_break_ctx();
 static void free_break_ctx(BreakContext* const break_ctx);
 static int break_ctx_pop_loop(BreakContext* const break_ctx);
 static int break_ctx_pop_break(BreakContext* const break_ctx);
@@ -40,14 +40,14 @@ typedef struct {
     int function_scope_depth;
     int next_local_index;
 
-    BreakContext break_ctx;
+    BreakContext* break_ctx;
     int continue_ctx;
 } Compiler;
 
-#define BREAK_CTX_POP_LOOP(compiler) break_ctx_pop_loop(&compiler->break_ctx);
-#define BREAK_CTX_POP_BREAK(compiler) break_ctx_pop_break(&compiler->break_ctx);
-#define BREAK_CTX_PUSH_LOOP(compiler) break_ctx_push_loop(&compiler->break_ctx);
-#define BREAK_CTX_PUSH_BREAK(compiler, pos) break_ctx_push_break(&compiler->break_ctx, pos);
+#define BREAK_CTX_POP_LOOP(compiler) break_ctx_pop_loop(compiler->break_ctx);
+#define BREAK_CTX_POP_BREAK(compiler) break_ctx_pop_break(compiler->break_ctx);
+#define BREAK_CTX_PUSH_LOOP(compiler) break_ctx_push_loop(compiler->break_ctx);
+#define BREAK_CTX_PUSH_BREAK(compiler, pos) break_ctx_push_break(compiler->break_ctx, pos);
 
 #define CONTINUE_CTX_NOT_DEFINED -1
 #define CONTINUE_CTX(compiler, pos, ...)\
@@ -134,6 +134,7 @@ static void compile_for(void* ctx, ForStmt* for_);
 static void compile_while(void* ctx, WhileStmt* while_);
 static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 static void compile_typealias(void* ctx, TypealiasStmt* alias);
+static void compile_import(void* ctx, ImportStmt* import);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -147,6 +148,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_while = compile_while,
     .visit_loopg = compile_loopg,
     .visit_typealias = compile_typealias,
+    .visit_import = compile_import,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -169,14 +171,17 @@ struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
 #define VECTOR_AS_INT(vect) VECTOR_AS(vect, int)
 #define VECTOR_ADD_INT(vect, i) VECTOR_ADD(vect, i, int)
 
-static void init_break_ctx(BreakContext* const break_ctx) {
+static BreakContext* create_break_ctx() {
+    BreakContext* break_ctx = (BreakContext*) malloc(sizeof(BreakContext));
     init_vector(&break_ctx->loop_len, sizeof(int));
     init_vector(&break_ctx->breaks, sizeof(int));
+    return break_ctx;
 }
 
 static void free_break_ctx(BreakContext* const break_ctx) {
     free_vector(&break_ctx->loop_len);
     free_vector(&break_ctx->breaks);
+    free(break_ctx);
 }
 
 static int break_ctx_pop_loop(BreakContext* const break_ctx) {
@@ -220,13 +225,13 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
 
-    init_break_ctx(&compiler->break_ctx);
+    compiler->break_ctx = create_break_ctx();
     compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
 }
 
 static void free_compiler(Compiler* const compiler) {
     free_scoped_symbol_table(&compiler->symbols);
-    free_break_ctx(&compiler->break_ctx);
+    free_break_ctx(compiler->break_ctx);
 }
 
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym) {
@@ -597,6 +602,10 @@ static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
 
 static void compile_typealias(void* ctx, TypealiasStmt* alias) {
     // Nothing to see here
+}
+
+static void compile_import(void* ctx, ImportStmt* import) {
+    ACCEPT_STMT(ctx, import->ast);
 }
 
 static void patch_breaks(Compiler* const compiler) {

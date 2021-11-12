@@ -19,6 +19,7 @@ int run(const char* file, int length) {
 #endif
 
     if (main.source == NULL) {
+        free_module_system();
         return EX_OSFILE;
     }
     int exit_code = 0;
@@ -47,6 +48,7 @@ void repl() {
         printf("<qz> ");
         if (!fgets(input_buffer, BUFFER_SIZE, stdin)) {
             fprintf(stderr, "Error while reading from stdin!\n");
+            free_module_system();
             exit(EX_IOERR);
         }
         if (strempty(input_buffer)) {

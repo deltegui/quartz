@@ -1,6 +1,14 @@
 #include "module.h"
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "ctable.h"
+
+#if defined(WIN32) || defined(_WIN32)
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 CTable modules; // Ctable<Module>
 
@@ -8,11 +16,27 @@ CTable modules; // Ctable<Module>
 #define FIND_MODULE(key) ctable_find(&modules, &key)
 #define VECTOR_AS_MODULES() VECTOR_AS(&modules.data, Module)
 
+static bool is_directory(const char* path);
 static bool is_module_loaded(const char* path, int len);
 static Module find_module(const char* path, int lengh);
 static void register_module(Module module);
 static const char* read_file(const char* source_name);
 static void free_module(Module module);
+
+static bool is_directory(const char* path) {
+#if defined(WIN32) || defined(_WIN32)
+    bool path_access = _access(path, 0);
+#else
+    bool path_access = access(path, 0);
+#endif
+
+    if (path_access == 0) {
+        struct stat path_stat;
+        stat(path, &path_stat);
+        return S_ISDIR(path_stat.st_mode);
+    }
+    return false;
+}
 
 void init_module_system() {
     init_ctable(&modules, sizeof(Module));
@@ -50,9 +74,14 @@ static void register_module(Module module) {
 // up to you, so delete it. It can also return null, meaning
 // that was an error.
 static const char* read_file(const char* source_name) {
+    if (is_directory(source_name)) {
+        fprintf(stderr, "Error while reading source file '%s': Is a directory\n", source_name);
+        return NULL;
+    }
     FILE* source = fopen(source_name, "r");
     if (source == NULL) {
-        fprintf(stderr, "Error while reading source file: \n");
+        fprintf(stderr, "Error while reading source file '%s': ", source_name);
+        perror(NULL);
         return NULL;
     }
     fseek(source, 0, SEEK_END);
@@ -84,9 +113,6 @@ Module module_read(const char* path, int length) {
     module.path = cpy_path;
     module.path_length = length;
     module.source = read_file(cpy_path);
-    if (module.source == NULL) {
-        fprintf(stderr, "File not found: '%.*s'", length, path);
-    }
     module.is_already_loaded = true; // We save it as if was loaded.
     register_module(module);
     module.is_already_loaded = false; // Then we say that this is the first time

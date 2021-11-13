@@ -4,7 +4,7 @@
 #include "chunk.h"
 #include "compiler.h"
 #include "vm.h"
-#include "module.h"
+#include "import.h"
 
 #ifdef DEBUG
 #include "debug.h"
@@ -12,20 +12,21 @@
 
 int run(const char* file, int length) {
     init_module_system();
-    Module main = module_read(file, length);
+    Import main = import(file, length);
+    assert(!main.is_native);
 
 #ifdef DEBUG
     printf("Read buffer:\n%s\n", main.source);
 #endif
 
-    if (main.source == NULL) {
+    if (main.file.source == NULL) {
         free_module_system();
         return EX_OSFILE;
     }
     int exit_code = 0;
     ObjFunction* main_func;
     init_qvm();
-    if (compile(main.source, &main_func) == COMPILATION_OK) {
+    if (compile(main.file.source, &main_func) == COMPILATION_OK) {
         qvm_execute(main_func);
     } else {
         exit_code = EX_DATAERR;

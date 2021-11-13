@@ -383,6 +383,7 @@ static void print_while(void* ctx, WhileStmt* while_);
 static void print_loopg(void* ctx, LoopGotoStmt* loopg);
 static void print_typealias(void* ctx, TypealiasStmt* alias);
 static void print_import(void* ctx, ImportStmt* import);
+static void print_native(void* ctx, NativeFunctionStmt* native);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -397,6 +398,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_loopg = print_loopg,
     .visit_typealias = print_typealias,
     .visit_import = print_import,
+    .visit_native = print_native,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -672,6 +674,15 @@ static void print_import(void* ctx, ImportStmt* import) {
             }
         });
         pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
+static void print_native(void* ctx, NativeFunctionStmt* native) {
+    pretty_print("Native Function: [\n");
+    OFFSET({
+        pretty_print("Name: ");
+        printf("%.*s", native.length, native.name);
     });
     pretty_print("]\n");
 }

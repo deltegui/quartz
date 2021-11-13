@@ -1,8 +1,9 @@
-#include "module.h"
+#include "import.h"
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "ctable.h"
+#include "stdlib/stdlib.h"
 
 #if defined(WIN32) || defined(_WIN32)
 #include <io.h>
@@ -10,18 +11,19 @@
 #include <unistd.h>
 #endif
 
-CTable modules; // Ctable<Module>
+CTable modules; // Ctable<FileImport>
 
-#define REGISTER_MODULE(key, module) CTABLE_SET(&modules, key, module, Module)
-#define FIND_MODULE(key) ctable_find(&modules, &key)
-#define VECTOR_AS_MODULES() VECTOR_AS(&modules.data, Module)
+#define REGISTER_IMPORT(key, import) CTABLE_SET(&modules, key, import, FileImport)
+#define FIND_IMPORT(key) ctable_find(&modules, &key)
+#define VECTOR_AS_IMPORTS() VECTOR_AS(&modules.data, FileImport)
 
 static bool is_directory(const char* path);
-static bool is_module_loaded(const char* path, int len);
-static Module find_module(const char* path, int lengh);
-static void register_module(Module module);
+static bool is_import_loaded(const char* path, int len);
+static FileImport find_import(const char* path, int lengh);
+static void register_import(FileImport import);
 static const char* read_file(const char* source_name);
-static void free_module(Module module);
+FileImport import_file(const char* path, int length);
+static void free_import(FileImport import);
 
 static bool is_directory(const char* path) {
 #if defined(WIN32) || defined(_WIN32)
@@ -39,34 +41,34 @@ static bool is_directory(const char* path) {
 }
 
 void init_module_system() {
-    init_ctable(&modules, sizeof(Module));
+    init_ctable(&modules, sizeof(FileImport));
 }
 
 void free_module_system() {
-    Module* mods = VECTOR_AS_MODULES();
+    FileImport* mods = VECTOR_AS_IMPORTS();
     for (uint32_t i = 0; i < modules.data.size; i++) {
-        free_module(mods[i]);
+        free_import(mods[i]);
     }
     free_ctable(&modules);
 }
 
-static bool is_module_loaded(const char* path, int length) {
+static bool is_import_loaded(const char* path, int length) {
     CTableKey key = create_ctable_key(path, length);
-    CTableEntry* entry = FIND_MODULE(key);
+    CTableEntry* entry = FIND_IMPORT(key);
     return entry != NULL;
 }
 
-static Module find_module(const char* path, int length) {
+static FileImport find_import(const char* path, int length) {
     CTableKey key = create_ctable_key(path, length);
-    CTableEntry* entry = FIND_MODULE(key);
+    CTableEntry* entry = FIND_IMPORT(key);
     assert(entry != NULL);
-    Module* mods = VECTOR_AS_MODULES();
+    FileImport* mods = VECTOR_AS_IMPORTS();
     return mods[entry->vector_pos];
 }
 
-static void register_module(Module module) {
-    CTableKey key = create_ctable_key(module.path, module.path_length);
-    REGISTER_MODULE(key, module);
+static void register_import(FileImport import) {
+    CTableKey key = create_ctable_key(import.path, import.path_length);
+    REGISTER_IMPORT(key, import);
 }
 
 // Reads a file from "source_name" and returns a string with
@@ -100,28 +102,40 @@ static const char* read_file(const char* source_name) {
     return buffer;
 }
 
-Module module_read(const char* path, int length) {
-    if (is_module_loaded(path, length)) {
-        return find_module(path, length);
+Import import(const char* path, int length) {
+    Import import;
+    NativeImport* native_import = import_stdlib(path, length);
+    import.is_native = native_import != NULL;
+    if (import.is_native) {
+        import.file = import_file(path, length);
+    } else {
+        import.native = *native_import;
+    }
+    return import;
+}
+
+FileImport import_file(const char* path, int length) {
+    if (is_import_loaded(path, length)) {
+        return find_import(path, length);
     }
 
     char* cpy_path = (char*) malloc(sizeof(char) * length + 1);
     memcpy(cpy_path, path, length);
     cpy_path[length] = '\0';
 
-    Module module;
-    module.path = cpy_path;
-    module.path_length = length;
-    module.source = read_file(cpy_path);
-    module.is_already_loaded = true; // We save it as if was loaded.
-    register_module(module);
-    module.is_already_loaded = false; // Then we say that this is the first time
-    return module;
+    FileImport import;
+    import.path = cpy_path;
+    import.path_length = length;
+    import.source = read_file(cpy_path);
+    import.is_already_loaded = true; // We save it as if was loaded.
+    register_import(import);
+    import.is_already_loaded = false; // Then we say that this is the first time
+    return import;
 }
 
-static void free_module(Module module) {
-    free((void*) module.path);
-    if (module.source != NULL) {
-        free((void*) module.source);
+static void free_import(FileImport import) {
+    free((void*) import.path);
+    if (import.source != NULL) {
+        free((void*) import.source);
     }
 }

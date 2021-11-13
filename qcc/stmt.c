@@ -46,6 +46,7 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     CASE_STMT(STMT_LOOPG, loopg, LoopGotoStmt);
     CASE_STMT(STMT_TYPEALIAS, typealias, TypealiasStmt);
     CASE_STMT(STMT_IMPORT, import, ImportStmt);
+    CASE_STMT(STMT_NATIVE, native, NativeFunctionStmt);
     case STMT_LIST:
         stmt->kind = STMT_LIST;
         stmt->list = (ListStmt*)stmt_node;
@@ -108,6 +109,7 @@ void free_stmt(Stmt* const stmt) {
     case STMT_IMPORT:
         free_stmt(stmt->import.ast);
         break;
+    case STMT_NATIVE:
     case STMT_TYPEALIAS:
     case STMT_LOOPG:
         break;

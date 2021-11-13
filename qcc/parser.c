@@ -5,7 +5,7 @@
 #include "symbol.h"
 #include "type.h"
 #include "error.h"
-#include "module.h"
+#include "import.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -63,6 +63,8 @@ static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
+static Stmt* native_import(Parser* const parser, NativeImport import);
+static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym);
@@ -467,30 +469,50 @@ static Stmt* typealias_decl(Parser* const parser) {
 
 static Stmt* import_decl(Parser* const parser) {
     advance(parser); // consume import
-    ImportStmt import = (ImportStmt) {
+    ImportStmt import_stmt = (ImportStmt) {
         .filename = parser->current,
         .ast = NULL,
     };
     advance(parser); // consume filename
     consume(parser, TOKEN_SEMICOLON, "Expected semicolon at end of import statment");
-    Module module = module_read(
-        import.filename.start,
-        import.filename.length);
-    if (module.is_already_loaded) {
-        return CREATE_STMT_IMPORT(import);
+    Import imp = import(
+        import_stmt.filename.start,
+        import_stmt.filename.length);
+    import_stmt.ast = (imp.is_native) ?
+        native_import(parser, imp.native) :
+        file_import(parser, imp.file);
+    return CREATE_STMT_IMPORT(imp);
+}
+
+static Stmt* native_import(Parser* const parser, NativeImport import) {
+    ListStmt* list = create_stmt_list();
+    for (int i = 0; i < import.functions_length; i++) {
+        NativeFunction fn = import.functions[i];
+        NativeFunctionStmt stmt = (NativeFunctionStmt) {
+            .name = fn.name,
+            .length = fn.length,
+            .function = fn.function,
+        };
+        stmt_list_add(list, CREATE_STMT_NATIVE(stmt));
     }
-    if (module.source == NULL) {
+    return CREATE_STMT_LIST(list);
+}
+
+static Stmt* file_import(Parser* const parser, FileImport import) {
+    if (import.is_already_loaded) {
+        return NULL;
+    }
+    if (import.source == NULL) {
         parser->has_error = true;
-        return CREATE_STMT_IMPORT(import);
+        return NULL;
     }
     Parser subparser;
-    init_parser(&subparser, module.source, parser->symbols);
+    init_parser(&subparser, import.source, parser->symbols);
     Stmt* subast = parse(&subparser);
     if (subparser.has_error) {
         parser->has_error = true;
     }
-    import.ast = subast;
-    return CREATE_STMT_IMPORT(import);
+    return subast;
 }
 
 static Stmt* function_decl(Parser* const parser) {

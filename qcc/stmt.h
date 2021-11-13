@@ -2,6 +2,7 @@
 #define QUARTZ_STMT_H_
 
 #include "expr.h"
+#include "native.h"
 
 typedef enum {
     STMT_TYPEALIAS,
@@ -17,6 +18,7 @@ typedef enum {
     STMT_WHILE,
     STMT_LOOPG,
     STMT_IMPORT,
+    STMT_NATIVE,
 } StmtKind;
 
 struct s_stmt;
@@ -38,6 +40,12 @@ typedef struct {
     Token identifier;
     struct s_stmt* body;
 } FunctionStmt;
+
+typedef struct {
+    const char* name;
+    int length;
+    native_fn_t function;
+} NativeFunctionStmt;
 
 typedef struct {
     Expr* inner;
@@ -112,6 +120,7 @@ typedef struct s_stmt {
         LoopGotoStmt loopg;
         TypealiasStmt typealias;
         ImportStmt import;
+        NativeFunctionStmt native;
     };
 } Stmt;
 
@@ -128,6 +137,7 @@ typedef struct {
     void (*visit_loopg)(void* ctx, LoopGotoStmt* loopg);
     void (*visit_typealias)(void* ctx, TypealiasStmt* typealias);
     void (*visit_import)(void* ctx, ImportStmt* import);
+    void (*visit_native)(void* ctx, NativeFunctionStmt* native);
 } StmtVisitor;
 
 #define STMT_IS_VAR(stmt) (stmt.kind == STMT_VAR)
@@ -143,6 +153,7 @@ typedef struct {
 #define STMT_IS_LOOPG(stmt) (stmt.kind == STMT_LOOPG)
 #define STMT_IS_TYPEALIAS(stmt) (stmt.kind == STMT_TYPEALIAS)
 #define STMT_IS_IMPORT(stmt) (stmt.kind == STMT_IMPORT)
+#define STMT_IS_NATIVE(stmt) (stmt.kind == STMT_NATIVE)
 
 #define CREATE_STMT_RETURN(return_) create_stmt(STMT_RETURN, &return_)
 #define CREATE_STMT_VAR(var) create_stmt(STMT_VAR, &var)
@@ -158,6 +169,7 @@ typedef struct {
 #define CREATE_STMT_LOOPG(loopg) create_stmt(STMT_LOOPG, &loopg)
 #define CREATE_STMT_TYPEALIAS(typealias) create_stmt(STMT_TYPEALIAS, &typealias)
 #define CREATE_STMT_IMPORT(import) create_stmt(STMT_IMPORT, &import)
+#define CREATE_STMT_NATIVE(native) create_stmt(STMT_NATIVE, &native)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* const stmt);

@@ -81,6 +81,7 @@ static void typecheck_if(void* ctx, IfStmt* if_);
 static void typecheck_for(void* ctx, ForStmt* for_);
 static void typecheck_while(void* ctx, WhileStmt* while_);
 static void typecheck_import(void* ctx, ImportStmt* import);
+static void typecheck_native(void* ctx, NativeFunctionStmt* native);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -95,6 +96,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_loopg = typecheck_loopg,
     .visit_typealias = typecheck_typealias,
     .visit_import = typecheck_import,
+    .visit_native = typecheck_native,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -456,6 +458,10 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
         }
     }
 #undef FN_RETURNS_SOMETHING
+}
+
+static void typecheck_native(void* ctx, NativeFunctionStmt* native) {
+    // TODO Probably check that type params arent null
 }
 
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {

@@ -135,6 +135,7 @@ static void compile_while(void* ctx, WhileStmt* while_);
 static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 static void compile_typealias(void* ctx, TypealiasStmt* alias);
 static void compile_import(void* ctx, ImportStmt* import);
+static void compile_native(void* ctx, NativeFunctionStmt* native);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -149,6 +150,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_loopg = compile_loopg,
     .visit_typealias = compile_typealias,
     .visit_import = compile_import,
+    .visit_native = compile_native,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -463,6 +465,10 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_variable_declaration(compiler, fn_index);
 
     emit_bind_upvalues(compiler, symbol, function->identifier);
+}
+
+static void compile_native(void* ctx, NativeFunctionStmt* native) {
+    // TODO compile native function to OBJ_NATIVE. Check upvalues are correctly generated
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {

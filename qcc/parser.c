@@ -481,7 +481,7 @@ static Stmt* import_decl(Parser* const parser) {
     import_stmt.ast = (imp.is_native) ?
         native_import(parser, imp.native) :
         file_import(parser, imp.file);
-    return CREATE_STMT_IMPORT(imp);
+    return CREATE_STMT_IMPORT(import_stmt);
 }
 
 static Stmt* native_import(Parser* const parser, NativeImport import) {

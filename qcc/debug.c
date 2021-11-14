@@ -337,6 +337,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_WHILE: return "TokenWhile";
     case TOKEN_BREAK: return "TokenBreak";
     case TOKEN_CONTINUE: return "TokenContinue";
+    case TOKEN_IMPORT: return "TokenImport";
     default: return "Unknown";
     }
 }
@@ -682,7 +683,7 @@ static void print_native(void* ctx, NativeFunctionStmt* native) {
     pretty_print("Native Function: [\n");
     OFFSET({
         pretty_print("Name: ");
-        printf("%.*s", native.length, native.name);
+        printf("'%.*s'\n", native->length, native->name);
     });
     pretty_print("]\n");
 }

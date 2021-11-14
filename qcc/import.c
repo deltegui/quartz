@@ -107,9 +107,9 @@ Import import(const char* path, int length) {
     NativeImport* native_import = import_stdlib(path, length);
     import.is_native = native_import != NULL;
     if (import.is_native) {
-        import.file = import_file(path, length);
-    } else {
         import.native = *native_import;
+    } else {
+        import.file = import_file(path, length);
     }
     return import;
 }

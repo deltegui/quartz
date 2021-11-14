@@ -142,6 +142,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_LOOPG: DISPATCH(visit_loopg, loopg); break;
     case STMT_TYPEALIAS: DISPATCH(visit_typealias, typealias); break;
     case STMT_IMPORT: DISPATCH(visit_import, import); break;
+    case STMT_NATIVE: DISPATCH(visit_native, native); break;
     default: assert(false);
     }
 #undef DISPATCH

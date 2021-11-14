@@ -3,6 +3,7 @@
 #include "math.h"
 #include "vm_memory.h"
 #include "type.h" // to init and free type_pool
+#include "stdlib/stdlib.h" // to init and free stdlib
 
 #ifdef VM_DEBUG
 #include "debug.h"
@@ -24,6 +25,7 @@ static void free_gray_stack() {
 
 void init_qvm() {
     init_type_pool();
+    init_stdlib();
 
     init_table(&qvm.strings);
     init_table(&qvm.globals);
@@ -43,6 +45,7 @@ void init_qvm() {
 }
 
 void free_qvm() {
+    free_stdlib();
     free_type_pool();
     free_table(&qvm.strings);
     free_table(&qvm.globals);

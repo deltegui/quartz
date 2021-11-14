@@ -1,14 +1,1 @@
-import './other.qz';
-import './name.qz';
-
-var first: Name = generate_name(0);
-print first;
-
-var infer = generate_name(1);
-print infer;
-
-var str: String = generate_name(2);
-print str;
-
-var other: Name = generate_name(3);
-print other;
+import 'stdio';

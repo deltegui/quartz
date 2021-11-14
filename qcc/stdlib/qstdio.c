@@ -28,10 +28,9 @@ void register_stdio(CTable* table) {
     };
 
 #define FN_LENGTH 2
-    NativeFunction functions[FN_LENGTH] = {
-        println,
-        print,
-    };
+    static NativeFunction functions[FN_LENGTH];
+    functions[0] = println;
+    functions[1] = print;
 
     NativeImport stdio_import = (NativeImport) {
         .name = "stdio",

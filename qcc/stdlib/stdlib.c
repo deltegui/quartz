@@ -3,6 +3,7 @@
 
 #include "qstdio.h"
 #include "qstdconv.h"
+#include "qstdtime.h"
 
 void populate_imports();
 void print_loaded_imports();
@@ -34,6 +35,7 @@ NativeImport* import_stdlib(const char* import_name, int length) {
 void populate_imports() {
     register_stdio(&stdlib_imports);
     register_stdconv(&stdlib_imports);
+    register_stdtime(&stdlib_imports);
 }
 
 void print_loaded_imports() {

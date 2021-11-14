@@ -44,6 +44,7 @@ typedef struct {
 
     bool global;
     bool assigned;
+    bool native;
 
     // This is used for in upvalue refereces. That is, other functions that
     // this variable requested to closed over them. Is mainly used to close

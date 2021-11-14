@@ -5,6 +5,7 @@
 #include "chunk.h"
 #include "obj_kind.h"
 #include "type.h"
+#include "native.h"
 
 typedef struct s_obj {
     ObjKind kind;
@@ -42,6 +43,14 @@ typedef struct {
     Upvalue upvalues[];
 } ObjFunction;
 
+typedef struct {
+    Obj obj;
+    const char* name;
+    int length;
+    native_fn_t function;
+    int arity;
+} ObjNative;
+
 void print_object(Obj* const obj);
 bool object_is_kind(Obj* const obj, ObjKind kind);
 void mark_object(Obj* const obj);
@@ -66,5 +75,10 @@ Value* function_get_upvalue(ObjFunction* const function, int slot);
 #define OBJ_AS_CLOSED(obj) ((ObjClosed*) obj)
 
 ObjClosed* new_closed(Value value);
+
+#define OBJ_IS_NATIVE(obj) (object_is_kind(obj, OBJ_NATIVE))
+#define OBJ_AS_NATIVE(obj) ((ObjNative*) obj)
+
+ObjNative* new_native(const char* name, int length, native_fn_t function, Type* type);
 
 #endif

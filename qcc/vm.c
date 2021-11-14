@@ -75,15 +75,33 @@ static void runtime_error(const char* message) {
     printf("%s\n", message);
 }
 
+static inline void call_native(ObjNative* native, uint8_t param_count) {
+    assert(native->arity == param_count);
+    Value* params = ALLOC(Value, param_count);
+    for (int i = param_count - 1; i >= 0; i--) {
+        params[i] = stack_pop();
+    }
+    stack_pop(); // pop obj native value from stack
+    stack_push(native->function(param_count, params));
+    FREE(Value, params);
+}
+
 static inline void call(uint8_t param_count) {
+    Value* fn_ptr = (qvm.stack_top - param_count - 1);
+    Value fn_value = *fn_ptr;
+    Obj* obj = VALUE_AS_OBJ(fn_value);
+
+    if (obj->kind == OBJ_NATIVE) {
+        call_native(OBJ_AS_NATIVE(obj), param_count);
+        return;
+    }
+
     if (qvm.frame_count + 1 >= FRAMES_MAX) {
         runtime_error("Frame overflow");
         return;
     }
+    ObjFunction* fn = OBJ_AS_FUNCTION(obj);
     qvm.frame_count++;
-    Value* fn_ptr = (qvm.stack_top - param_count - 1);
-    Value fn_value = *fn_ptr;
-    ObjFunction* fn = OBJ_AS_FUNCTION(VALUE_AS_OBJ(fn_value));
     qvm.frame = &qvm.frames[qvm.frame_count - 1];
     qvm.frame->func = fn;
     qvm.frame->pc = fn->chunk.code;

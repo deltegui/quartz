@@ -468,7 +468,30 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 }
 
 static void compile_native(void* ctx, NativeFunctionStmt* native) {
-    // TODO compile native function to OBJ_NATIVE. Check upvalues are correctly generated
+    Compiler* compiler = (Compiler*) ctx;
+
+    Symbol* symbol = lookup_str(compiler, native->name, native->length);
+    assert(symbol != NULL);
+
+    Token identifier;
+    identifier.kind = TOKEN_IDENTIFIER;
+    identifier.start = native->name;
+    identifier.length = native->length;
+    identifier.line = symbol->declaration_line;
+    identifier.column = 0;
+
+    uint16_t native_index = get_variable_index(compiler, &identifier);
+    update_symbol_variable_info(compiler, symbol, native_index);
+
+    ObjNative* obj = new_native(
+        native->name,
+        native->length,
+        native->function,
+        symbol->type);
+
+    uint16_t default_value = make_constant(compiler, OBJ_VALUE(obj, symbol->type));
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
+    emit_variable_declaration(compiler, native_index);
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {

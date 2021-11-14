@@ -27,7 +27,7 @@ int run(const char* file, int length) {
     ObjFunction* main_func;
     init_qvm();
     if (compile(main.file.source, &main_func) == COMPILATION_OK) {
-        // qvm_execute(main_func);
+        qvm_execute(main_func);
     } else {
         exit_code = EX_DATAERR;
     }

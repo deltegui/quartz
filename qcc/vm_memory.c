@@ -59,6 +59,10 @@ static void free_object(Obj* obj) {
         FREE(ObjClosed, obj);
         break;
     }
+    case OBJ_NATIVE: {
+        FREE(ObjNative, obj);
+        break;
+    }
     }
 }
 
@@ -172,6 +176,7 @@ static void trace_objects() {
 
 static void blacken_object(Obj* obj) {
     switch (obj->kind) {
+    case OBJ_NATIVE:
     case OBJ_STRING:
         break;
     case OBJ_FUNCTION: {

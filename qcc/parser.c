@@ -63,7 +63,7 @@ static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
-static Stmt* native_import(Parser* const parser, NativeImport import);
+static Stmt* native_import(Parser* const parser, NativeImport import, int line);
 static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
@@ -479,21 +479,38 @@ static Stmt* import_decl(Parser* const parser) {
         import_stmt.filename.start,
         import_stmt.filename.length);
     import_stmt.ast = (imp.is_native) ?
-        native_import(parser, imp.native) :
+        native_import(parser, imp.native, import_stmt.filename.line) :
         file_import(parser, imp.file);
     return CREATE_STMT_IMPORT(import_stmt);
 }
 
-static Stmt* native_import(Parser* const parser, NativeImport import) {
+static Stmt* native_import(Parser* const parser, NativeImport import, int line) {
     ListStmt* list = create_stmt_list();
     for (int i = 0; i < import.functions_length; i++) {
         NativeFunction fn = import.functions[i];
+
         NativeFunctionStmt stmt = (NativeFunctionStmt) {
             .name = fn.name,
             .length = fn.length,
             .function = fn.function,
         };
         stmt_list_add(list, CREATE_STMT_NATIVE(stmt));
+
+        // This symbol is not a function. Lets say its a variable
+        // that holds an OBJ_NATIVE and acts like a function. We
+        // must override the kind because it infers from the type
+        // that is a function. create_symbol also reserves memory
+        // in case you are a function, so we must lie him saying
+        // we are TYPE_UNKNOWN.
+        Symbol native_symbol = create_symbol(
+            create_symbol_name(fn.name, fn.length),
+            line,
+            CREATE_TYPE_UNKNOWN());
+        native_symbol.kind = SYMBOL_VAR;
+        native_symbol.type = fn.type;
+        native_symbol.global = parser->scope_depth == 0;
+        native_symbol.native = true;
+        register_symbol(parser, native_symbol);
     }
     return CREATE_STMT_LIST(list);
 }

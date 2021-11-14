@@ -289,12 +289,6 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
-    case 'p': {
-        if (match_token(lexer, "rint", 1, 5)) {
-            return create_token(lexer, TOKEN_PRINT);
-        }
-        break;
-    }
     case 'w': {
         if (match_token(lexer, "hile", 1, 5)) {
             return create_token(lexer, TOKEN_WHILE);

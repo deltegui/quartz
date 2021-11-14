@@ -1,6 +1,9 @@
+import 'stdio';
+import 'stdconv';
+
 for (var a = 0;;) {
     if (a <= 30) {
-        print a;
+        println(ntos(a));
         a = a + 1;
         continue;
     }

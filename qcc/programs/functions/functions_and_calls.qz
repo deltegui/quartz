@@ -1,10 +1,13 @@
+import 'stdio';
+import 'stdconv';
+
 fn print_age(age: Number): Nil {
-    print age;
+    println(ntos(age));
     return nil;
 }
 
 fn say_hi_to(name: String, age: Number): Nil {
-    print "Hi to: " + name;
+    println("Hi to: " + name);
     print_age(age);
     print_age(age);
     return nil;

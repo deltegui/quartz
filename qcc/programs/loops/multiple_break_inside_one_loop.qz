@@ -1,6 +1,9 @@
+import 'stdio';
+import 'stdconv';
+
 fn lo(a: Number) {
     for (;;) {
-        print a;
+        println(ntos(a));
         if (a <= 10) {
             break;
         }

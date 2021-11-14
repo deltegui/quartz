@@ -186,6 +186,7 @@ void table_delete_white(Table* const table) {
             continue;
         }
         Entry* current = &table->entries[i];
+        // TODO if current->value is an object? Its released by GC or not?
         Obj* key = (Obj*) current->key;
         if (! key->is_marked) {
             table_delete(table, current->key);

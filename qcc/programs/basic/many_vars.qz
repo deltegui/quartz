@@ -306,4 +306,7 @@ var mmmmmmmmmmmmm = 298;
 var nnnnnnnnnnnnn = 299;
 
 
-print nnnnnnnnnnnnn;
+import 'stdio';
+import 'stdconv';
+
+println(ntos(nnnnnnnnnnnnn));

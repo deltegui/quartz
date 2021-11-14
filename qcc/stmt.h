@@ -10,7 +10,6 @@ typedef enum {
     STMT_VAR,
     STMT_FUNCTION,
     STMT_LIST,
-    STMT_PRINT,
     STMT_BLOCK,
     STMT_RETURN,
     STMT_IF,
@@ -46,10 +45,6 @@ typedef struct {
     int length;
     native_fn_t function;
 } NativeFunctionStmt;
-
-typedef struct {
-    Expr* inner;
-} PrintStmt;
 
 typedef struct {
     int capacity;
@@ -111,7 +106,6 @@ typedef struct s_stmt {
         VarStmt var;
         FunctionStmt function;
         ListStmt* list;
-        PrintStmt print;
         BlockStmt block;
         ReturnStmt return_;
         IfStmt if_;
@@ -128,7 +122,6 @@ typedef struct {
     void (*visit_expr)(void* ctx, ExprStmt* expr);
     void (*visit_var)(void* ctx, VarStmt* var);
     void (*visit_function)(void* ctx, FunctionStmt* function);
-    void (*visit_print)(void* ctx, PrintStmt* print);
     void (*visit_block)(void* ctx, BlockStmt* block);
     void (*visit_return)(void* ctx, ReturnStmt* ret);
     void (*visit_if)(void* ctx, IfStmt* ifstmt);
@@ -144,7 +137,6 @@ typedef struct {
 #define STMT_IS_FUNCTION(stmt) (stmt.kind == STMT_FUNCTION)
 #define STMT_IS_EXPR(stmt) (stmt.kind == STMT_EXPR)
 #define STMT_IS_LIST(stmt) (stmt.kind == STMT_LIST)
-#define STMT_IS_PRINT(stmt) (stmt.kind == STMT_PRINT)
 #define STMT_IS_BLOCK(stmt) (stmt.kind == STMT_BLOCK)
 #define STMT_IS_RETURN(stmt) (stmt.kind == STMT_RETURN)
 #define STMT_IS_IF(stmt) (stmt.kind == STMT_IF)
@@ -161,7 +153,6 @@ typedef struct {
 #define CREATE_STMT_EXPR(expr) create_stmt(STMT_EXPR, &expr)
 // ListStmt is always a pointer (Because is created using create_list_stmt)
 #define CREATE_STMT_LIST(list) create_stmt(STMT_LIST, list)
-#define CREATE_STMT_PRINT(print) create_stmt(STMT_PRINT, &print)
 #define CREATE_STMT_BLOCK(block) create_stmt(STMT_BLOCK, &block)
 #define CREATE_STMT_IF(if_) create_stmt(STMT_IF, &if_)
 #define CREATE_STMT_FOR(for_) create_stmt(STMT_FOR, &for_)

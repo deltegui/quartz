@@ -1,6 +1,8 @@
 import 'stdio';
+
 println('hello');
 for (var i = 0; i < 10; i = i + 1) {
     print('pussyyy ');
 }
+
 println('');

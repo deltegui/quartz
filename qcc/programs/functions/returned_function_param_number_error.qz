@@ -1,6 +1,9 @@
+import 'stdio';
+import 'stdconv';
+
 fn hola(): (Number): Void {
     fn mama(a: Number): Void {
-        print a;
+        println(ntos(a));
     }
     return mama;
 }

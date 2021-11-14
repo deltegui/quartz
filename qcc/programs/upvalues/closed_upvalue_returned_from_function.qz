@@ -1,7 +1,10 @@
+import 'stdio';
+import 'stdconv';
+
 fn hola(): (): Void {
     var a = 0;
     fn pipo() {
-        print a;
+        println(ntos(a));
         a = a + 1;
     }
     return pipo;

@@ -1,8 +1,11 @@
+import 'stdio';
+import 'stdconv';
+
 var a = 0;
 for (;;) {
     if (a == 30) {
         break;
     }
-    print a;
+    println(ntos(a));
     a = a + 1;
 }

@@ -73,7 +73,6 @@ static Type* parse_function_type(Parser* const parser);
 
 static Stmt* statement(Parser* const parser);
 static Stmt* block_stmt(Parser* const parser);
-static Stmt* print_stmt(Parser* const parser);
 static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
 static Stmt* for_stmt(Parser* const parser);
@@ -133,7 +132,6 @@ ParseRule rules[] = {
     [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_PRINT]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_IDENTIFIER]    = {identifier,  NULL,   PREC_NONE},
 
     [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
@@ -238,7 +236,6 @@ static void syncronize(Parser* const parser) {
         case TOKEN_WHILE:
         case TOKEN_FOR:
         case TOKEN_RETURN:
-        case TOKEN_PRINT:
         case TOKEN_END:
             return;
         default:
@@ -370,8 +367,6 @@ static Stmt* statement(Parser* const parser) {
     switch (parser->current.kind) {
     case TOKEN_LEFT_BRACE:
         return block_stmt(parser);
-    case TOKEN_PRINT:
-        return print_stmt(parser);
     case TOKEN_RETURN:
         return return_stmt(parser);
     case TOKEN_IF:
@@ -683,16 +678,6 @@ static Type* parse_function_type(Parser* const parser) {
     }
     TYPE_FN_RETURN(fn_type) = return_type;
     return fn_type;
-}
-
-static Stmt* print_stmt(Parser* const parser) {
-    advance(parser); // consume print
-    Expr* expr = expression(parser);
-    PrintStmt print_stmt = (PrintStmt){
-        .inner = expr,
-    };
-    consume(parser, TOKEN_SEMICOLON, "Expected print statment to end with ';'");
-    return CREATE_STMT_PRINT(print_stmt);
 }
 
 static Stmt* return_stmt(Parser* const parser) {

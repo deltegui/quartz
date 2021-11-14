@@ -73,7 +73,6 @@ static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
 static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg);
 static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
-static void typecheck_print(void* ctx, PrintStmt* print);
 static void typecheck_block(void* ctx, BlockStmt* block);
 static void typecheck_function(void* ctx, FunctionStmt* function);
 static void typecheck_return(void* ctx, ReturnStmt* function);
@@ -86,7 +85,6 @@ static void typecheck_native(void* ctx, NativeFunctionStmt* native);
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
     .visit_var = typecheck_var,
-    .visit_print = typecheck_print,
     .visit_block = typecheck_block,
     .visit_function = typecheck_function,
     .visit_return = typecheck_return,
@@ -209,10 +207,6 @@ static void typecheck_block(void* ctx, BlockStmt* block) {
     start_scope(checker);
     ACCEPT_STMT(ctx, block->stmts);
     end_scope(checker);
-}
-
-static void typecheck_print(void* ctx, PrintStmt* print) {
-    ACCEPT_EXPR(ctx, print->inner);
 }
 
 static void typecheck_expr(void* ctx, ExprStmt* expr) {
@@ -706,7 +700,6 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 static void check_return_loopg(void* ctx, LoopGotoStmt* loopg);
 static void check_return_expr(void* ctx, ExprStmt* expr);
 static void check_return_var(void* ctx, VarStmt* var);
-static void check_return_print(void* ctx, PrintStmt* print);
 static void check_return_block(void* ctx, BlockStmt* block);
 static void check_return_function(void* ctx, FunctionStmt* function);
 static void check_return_return(void* ctx, ReturnStmt* function);
@@ -717,7 +710,6 @@ static void check_return_while(void* ctx, WhileStmt* while_);
 StmtVisitor check_return_stmt_visitor = (StmtVisitor){
     .visit_expr = check_return_expr,
     .visit_var = check_return_var,
-    .visit_print = check_return_print,
     .visit_block = check_return_block,
     .visit_function = check_return_function,
     .visit_return = check_return_return,
@@ -741,7 +733,6 @@ static bool function_returns(Stmt* fn_ast) {
 static void check_return_loopg(void* ctx, LoopGotoStmt* loopg) {}
 static void check_return_expr(void* ctx, ExprStmt* expr) {}
 static void check_return_var(void* ctx, VarStmt* var) {}
-static void check_return_print(void* ctx, PrintStmt* print) {}
 static void check_return_function(void* ctx, FunctionStmt* function) {}
 static void check_return_if(void* ctx, IfStmt* if_) {}
 static void check_return_for(void* ctx, ForStmt* for_) {}

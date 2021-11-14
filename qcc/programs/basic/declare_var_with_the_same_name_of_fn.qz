@@ -8,9 +8,12 @@
 //
 // Will output '5'. The same as this Quartz code:
 
+import 'stdio';
+import 'stdconv';
+
 fn hola() {
     var hola = 5;
-    print hola;
+    println(ntos(hola));
 }
 
 hola();

@@ -1,9 +1,12 @@
+import 'stdio';
+import 'stdconv';
+
 {
     var a = 1;
     var b = "hola" + a;
     {
         var a = true;
-        print a + 1;
+        println(ntos(a + 1));
     }
     var c: Bool = 'true';
     var num: Number = false;

@@ -1,5 +1,7 @@
+import 'stdio';
+
 fn hola() {
-    print "hola";
+    println("hola");
     hola();
 }
 

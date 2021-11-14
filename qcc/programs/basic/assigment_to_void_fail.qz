@@ -1,7 +1,9 @@
+import 'stdio';
+
 fn hello(): Void {
-    print "Hola";
+    println("Hola");
 }
 
 var a: Void;
 a = hello();
-print a;
+a;

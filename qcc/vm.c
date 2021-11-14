@@ -11,6 +11,13 @@
 
 QVM qvm;
 
+static void init_gray_stack();
+static void free_gray_stack();
+static void runtime_error(const char* message);
+static inline void call_native(ObjNative* native, uint8_t param_count);
+static inline void call(uint8_t param_count);
+static inline Value stack_peek(uint8_t distance);
+
 static void init_gray_stack() {
     qvm.gray_stack = NULL;
     qvm.gray_stack_capacity = 0;
@@ -77,13 +84,20 @@ static void runtime_error(const char* message) {
 
 static inline void call_native(ObjNative* native, uint8_t param_count) {
     assert(native->arity == param_count);
-    Value* params = ALLOC(Value, param_count);
+
+    Value* params = (Value*) malloc(sizeof(Value) * param_count);
     for (int i = param_count - 1; i >= 0; i--) {
-        params[i] = stack_pop();
+        int distance_to_peek = param_count - (i + 1);
+        params[i] = stack_peek(distance_to_peek);
+    }
+    Value result = native->function(param_count, params);
+    free(params);
+
+    for (int i = 0; i < param_count; i++) {
+        stack_pop();
     }
     stack_pop(); // pop obj native value from stack
-    stack_push(native->function(param_count, params));
-    FREE(Value, params);
+    stack_push(result);
 }
 
 static inline void call(uint8_t param_count) {
@@ -328,11 +342,6 @@ static void run(ObjFunction* func) {
         case OP_CALL: {
             uint8_t param_count = READ_BYTE();
             call(param_count);
-            break;
-        }
-        case OP_PRINT: {
-            value_print(stack_pop());
-            printf("\n");
             break;
         }
         case OP_POP: {

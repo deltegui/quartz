@@ -1,4 +1,4 @@
-[Line 8] Type error: Function 'b' expects 1 params, but was called with 2 params
-7 | var b = hola();
-8 | b(6, "hola");
-  | ~^
+[Line 11] Type error: Function 'b' expects 1 params, but was called with 2 params
+10 | var b = hola();
+11 | b(6, "hola");
+   | ~^

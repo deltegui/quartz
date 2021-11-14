@@ -112,7 +112,6 @@ static const char* OpCodeStrings[] = {
     "OP_FALSE",
     "OP_NIL",
     "OP_NOP",
-    "OP_PRINT",
     "OP_RETURN",
     "OP_POP",
     "OP_CALL",
@@ -224,7 +223,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_EQUAL:
         case OP_LOWER:
         case OP_POP:
-        case OP_PRINT:
         case OP_GREATER:
         case OP_CLOSE:
         case OP_END: {
@@ -322,7 +320,6 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_LOWER_EQUAL: return "TokenLowerEqual";
     case TOKEN_GREATER_EQUAL: return "TokenGreaterEqual";
     case TOKEN_IDENTIFIER: return "TokenIdentifier";
-    case TOKEN_PRINT: return "TokenPrint";
     case TOKEN_SEMICOLON: return "TokenSemicolon";
     case TOKEN_COLON: return "TokenColon";
     case TOKEN_TYPE_NUMBER: return "TokenNumberType";
@@ -374,7 +371,6 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
 
 static void print_expr(void* ctx, ExprStmt* expr);
 static void print_var(void* ctx, VarStmt* var);
-static void print_print(void* ctx, PrintStmt* var);
 static void print_block(void* ctx, BlockStmt* block);
 static void print_function(void* ctx, FunctionStmt* function);
 static void print_return(void* ctx, ReturnStmt* return_);
@@ -389,7 +385,6 @@ static void print_native(void* ctx, NativeFunctionStmt* native);
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
     .visit_var = print_var,
-    .visit_print = print_print,
     .visit_block = print_block,
     .visit_function = print_function,
     .visit_return = print_return,
@@ -431,14 +426,6 @@ static void print_block(void* ctx, BlockStmt* block) {
         ACCEPT_STMT(block->stmts);
     });
     pretty_print("}\n");
-}
-
-static void print_print(void* ctx, PrintStmt* print) {
-    pretty_print("Print: [\n");
-    OFFSET({
-        ACCEPT_EXPR(print->inner);
-    });
-    pretty_print("]\n");
 }
 
 static void print_expr(void* ctx, ExprStmt* expr) {

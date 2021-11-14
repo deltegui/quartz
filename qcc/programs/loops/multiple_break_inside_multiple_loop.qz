@@ -1,13 +1,16 @@
+import 'stdio';
+import 'stdconv';
+
 fn lo(a: Number) {
     for (;;) {
-        print a;
+        println(ntos(a));
         if (a <= 6) {
             while(true) {
                 if (a <= 3) {
                     break;
                 }
                 a = a * 2;
-                print a;
+                println(ntos(a));
                 if (a >= 2000) {
                     break;
                 }

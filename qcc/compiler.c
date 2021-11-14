@@ -125,7 +125,6 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
 
 static void compile_expr(void* ctx, ExprStmt* expr);
 static void compile_var(void* ctx, VarStmt* var);
-static void compile_print(void* ctx, PrintStmt* print);
 static void compile_block(void* ctx, BlockStmt* block);
 static void compile_function(void* ctx, FunctionStmt* function);
 static void compile_return(void* ctx, ReturnStmt* return_);
@@ -140,7 +139,6 @@ static void compile_native(void* ctx, NativeFunctionStmt* native);
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
     .visit_var = compile_var,
-    .visit_print = compile_print,
     .visit_block = compile_block,
     .visit_function = compile_function,
     .visit_return = compile_return,
@@ -365,12 +363,6 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
         copy_string(identifier->start, identifier->length),
         CREATE_TYPE_STRING());
     return make_constant(compiler, value);
-}
-
-static void compile_print(void* ctx, PrintStmt* print) {
-    Compiler* compiler = (Compiler*)ctx;
-    ACCEPT_EXPR(compiler, print->inner);
-    emit(compiler, OP_PRINT);
 }
 
 static void compile_block(void* ctx, BlockStmt* block) {

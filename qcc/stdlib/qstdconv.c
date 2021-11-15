@@ -7,6 +7,7 @@
 
 static Value stdconv_ntos(int argc, Value* argv);
 static Value stdconv_btos(int argc, Value* argv);
+static Value stdconv_sum(int argc, Value* argv);
 
 #define DEFINE_TYPE(name, param_type)\
     Type* name = create_type_function();\
@@ -30,10 +31,23 @@ void register_stdconv(CTable* table) {
         .type = btos_type,
     };
 
-#define FN_LENGTH 2
+    Type* sum_type = create_type_function();
+    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_NUMBER());
+    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_NUMBER());
+    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_BOOL());
+    sum_type->function->return_type = CREATE_TYPE_VOID();
+    NativeFunction sum = (NativeFunction) {
+        .name = "__t_sum",
+        .length = 7,
+        .function = stdconv_sum,
+        .type = sum_type,
+    };
+
+#define FN_LENGTH 3
     static NativeFunction functions[FN_LENGTH];
     functions[0] = ntos;
     functions[1] = btos;
+    functions[2] = sum;
 
     NativeImport stdconv_import = (NativeImport) {
         .name = "stdconv",
@@ -68,4 +82,13 @@ static Value stdconv_btos(int argc, Value* argv) {
         str = copy_string("false", 5);
     }
     return OBJ_VALUE(str, CREATE_TYPE_STRING());
+}
+
+static Value stdconv_sum(int argc, Value* argv) {
+    assert(argc == 3);
+    double a = VALUE_AS_NUMBER(argv[0]);
+    double b = VALUE_AS_NUMBER(argv[1]);
+    bool c = VALUE_AS_BOOL(argv[2]);
+    printf("SUM(%f, %f, %d) -> %f\n", a, b , c, a + b);
+    return NIL_VALUE();
 }

@@ -384,7 +384,8 @@ static Stmt* statement(Parser* const parser) {
 }
 
 static Stmt* block_stmt(Parser* const parser) {
-    advance(parser); // consume {
+    // TODO maybe all these advance() should be like this
+    consume(parser, TOKEN_LEFT_BRACE, "Expected block to start with '{'");
     BlockStmt block;
     create_scope(parser);
     block.stmts = declaration_block(parser, TOKEN_RIGHT_BRACE);

@@ -2,11 +2,12 @@ import 'stdio';
 import 'stdtime';
 import 'stdconv';
 
-fn benchmark(n: Number, str: String, callback: (Number): Number) {
+typedef Callback = (Number): Number;
+
+fn benchmark(n: Number, str: String, callback: Callback) {
     var init_time = time();
     var result = callback(n);
-    var end_time = time();
-    var spend = end_time - init_time;
+    var spend = time() - init_time;
     println(
         "El resultado de " +
         str +

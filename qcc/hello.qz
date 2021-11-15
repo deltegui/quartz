@@ -2,4 +2,12 @@ import 'stdio';
 import "stdconv";
 import 'stdtime';
 
-println(ntos(time()));
+fn salut(lang: String): (String): Void {
+    fn to(name: String) {
+        println(name + lang);
+    }
+    return to;
+}
+
+var spanish = salut('hola');
+spanish('diego');

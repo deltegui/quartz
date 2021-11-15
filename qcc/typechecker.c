@@ -39,6 +39,7 @@ static void function_stack_start_scope(Typechecker* const checker);
 static void function_stack_end_scope(Typechecker* const checker);
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
 static void error_ctx(Typechecker* const checker, Token* token);
+static void error_param_number(Typechecker* const checker, Token* token, Type* type, Type* actual_type, int param_num);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
 static void have_error(Typechecker* const checker);
 
@@ -147,6 +148,17 @@ static void error_last_type_match(Typechecker* const checker, Token* where, Type
 
 static void error_ctx(Typechecker* const checker, Token* token) {
     print_error_context(checker->source, token);
+}
+
+static void error_param_number(Typechecker* const checker, Token* token, Type* type, Type* actual_type, int param_num) {
+    have_error(checker);
+    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    fprintf(stderr, "Type of param number %d in function call (", param_num);
+    ERR_TYPE_PRINT(type);
+    fprintf(stderr, ") does not match with function definition (");
+    ERR_TYPE_PRINT(actual_type);
+    fprintf(stderr, ")\n");
+    error_ctx(checker, token);
 }
 
 static void error(Typechecker* const checker, Token* token, const char* message, ...) {
@@ -353,12 +365,12 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
         if (! type_equals(last, def_type)) {
-            error(checker, &call->identifier, "Type of param number %d in function call (", i);
-            ERR_TYPE_PRINT(last);
-            printf(") does not match with function definition (");
-            ERR_TYPE_PRINT(def_type);
-            printf(")\n");
-            print_error_context(checker->source, &call->identifier);
+            error_param_number(
+                checker,
+                &call->identifier,
+                last,
+                def_type,
+                i);
         }
     }
 

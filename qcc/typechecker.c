@@ -39,6 +39,7 @@ static void function_stack_start_scope(Typechecker* const checker);
 static void function_stack_end_scope(Typechecker* const checker);
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message);
 static void error_ctx(Typechecker* const checker, Token* token);
+static void error_param_number(Typechecker* const checker, Token* token, Type* type, Type* actual_type, int param_num);
 static void error(Typechecker* const checker, Token* token, const char* message, ...);
 static void have_error(Typechecker* const checker);
 
@@ -69,21 +70,22 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_call = typecheck_call,
 };
 
+static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
 static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg);
 static void typecheck_expr(void* ctx, ExprStmt* expr);
 static void typecheck_var(void* ctx, VarStmt* var);
-static void typecheck_print(void* ctx, PrintStmt* print);
 static void typecheck_block(void* ctx, BlockStmt* block);
 static void typecheck_function(void* ctx, FunctionStmt* function);
 static void typecheck_return(void* ctx, ReturnStmt* function);
 static void typecheck_if(void* ctx, IfStmt* if_);
 static void typecheck_for(void* ctx, ForStmt* for_);
 static void typecheck_while(void* ctx, WhileStmt* while_);
+static void typecheck_import(void* ctx, ImportStmt* import);
+static void typecheck_native(void* ctx, NativeFunctionStmt* native);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
     .visit_var = typecheck_var,
-    .visit_print = typecheck_print,
     .visit_block = typecheck_block,
     .visit_function = typecheck_function,
     .visit_return = typecheck_return,
@@ -91,6 +93,9 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_for = typecheck_for,
     .visit_while = typecheck_while,
     .visit_loopg = typecheck_loopg,
+    .visit_typealias = typecheck_typealias,
+    .visit_import = typecheck_import,
+    .visit_native = typecheck_native,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -145,6 +150,17 @@ static void error_ctx(Typechecker* const checker, Token* token) {
     print_error_context(checker->source, token);
 }
 
+static void error_param_number(Typechecker* const checker, Token* token, Type* type, Type* actual_type, int param_num) {
+    have_error(checker);
+    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    fprintf(stderr, "Type of param number %d in function call (", param_num);
+    ERR_TYPE_PRINT(type);
+    fprintf(stderr, ") does not match with function definition (");
+    ERR_TYPE_PRINT(actual_type);
+    fprintf(stderr, ")\n");
+    error_ctx(checker, token);
+}
+
 static void error(Typechecker* const checker, Token* token, const char* message, ...) {
     have_error(checker);
     va_list params;
@@ -195,15 +211,14 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
 static void typecheck_loopg(void* ctx, LoopGotoStmt* loopg) {
 }
 
+static void typecheck_typealias(void* ctx, TypealiasStmt* alias) {
+}
+
 static void typecheck_block(void* ctx, BlockStmt* block) {
     Typechecker* checker = (Typechecker*) ctx;
     start_scope(checker);
     ACCEPT_STMT(ctx, block->stmts);
     end_scope(checker);
-}
-
-static void typecheck_print(void* ctx, PrintStmt* print) {
-    ACCEPT_EXPR(ctx, print->inner);
 }
 
 static void typecheck_expr(void* ctx, ExprStmt* expr) {
@@ -266,8 +281,6 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
 
     Symbol* symbol = lookup_str(checker, identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
-    // TODO this check in theory is not needed because you cant use a variable that is not defined,
-    // so, using a variable in it's declaration cant happend anyway.
     if (checker->is_defining_variable && symbol == checker->defining_variable) {
         error(
             checker,
@@ -316,7 +329,9 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     assert(symbol != NULL);
     assert(symbol->type != NULL);
 
-    if (! TYPE_IS_FUNCTION(symbol->type)) {
+    Type* type = RESOLVE_IF_TYPEALIAS(symbol->type);
+
+    if (! TYPE_IS_FUNCTION(type)) {
         error(
             checker,
             &call->identifier,
@@ -326,7 +341,7 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         return;
     }
 
-    uint32_t fn_param_type_size = TYPE_FN_PARAMS(symbol->type).size;
+    uint32_t fn_param_type_size = TYPE_FN_PARAMS(type).size;
     if (fn_param_type_size != call->params.size) {
         error(
             checker,
@@ -340,29 +355,31 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     }
 
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
-    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(symbol->type));
-    assert(call->params.size == TYPE_FN_PARAMS(symbol->type).size);
+    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(type));
+    assert(call->params.size == TYPE_FN_PARAMS(type).size);
 
     for (uint32_t i = 0; i < call->params.size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
         if (! type_equals(last, def_type)) {
-            error(checker, &call->identifier, "Type of param number %d in function call (", i);
-            ERR_TYPE_PRINT(last);
-            printf(") does not match with function definition (");
-            ERR_TYPE_PRINT(def_type);
-            printf(")\n");
-            print_error_context(checker->source, &call->identifier);
+            error_param_number(
+                checker,
+                &call->identifier,
+                last,
+                def_type,
+                i);
         }
     }
 
     check_and_mark_upvalue(checker, symbol);
 
-    checker->last_type = TYPE_FN_RETURN(symbol->type);
+    checker->last_type = TYPE_FN_RETURN(type);
 }
 
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
+    assert(var->kind == SYMBOL_FUNCTION || var->kind == SYMBOL_VAR);
+
 #ifdef TYPECHECKER_DEBUG
     printf(
         "[TYPECHECKER DEBUG] Checking variable '%.*s'\n[TYPECHECKER DEBUG] Upvalue? ",
@@ -447,6 +464,9 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
 #undef FN_RETURNS_SOMETHING
 }
 
+static void typecheck_native(void* ctx, NativeFunctionStmt* native) {
+}
+
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {
     Vector* vector_types = &TYPE_FN_PARAMS(symbol->type);
     Vector* vector_names = &symbol->function.param_names;
@@ -500,10 +520,7 @@ static void typecheck_if(void* ctx, IfStmt* if_) {
             "in if condition. The condition must evaluate to Bool.");
     }
     ACCEPT_STMT(ctx, if_->then);
-    // TODO this null check shouldnt be neccesary
-    if (if_->else_ != NULL) {
-        ACCEPT_STMT(ctx, if_->else_);
-    }
+    ACCEPT_STMT(ctx, if_->else_);
 }
 
 static void typecheck_for(void* ctx, ForStmt* for_) {
@@ -537,6 +554,10 @@ static void typecheck_while(void* ctx, WhileStmt* while_) {
             "in while condition. The condition must evaluate to Bool.");
     }
     ACCEPT_STMT(checker, while_->body);
+}
+
+static void typecheck_import(void* ctx, ImportStmt* import) {
+    ACCEPT_STMT(ctx, import->ast);
 }
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
@@ -685,7 +706,6 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
 static void check_return_loopg(void* ctx, LoopGotoStmt* loopg);
 static void check_return_expr(void* ctx, ExprStmt* expr);
 static void check_return_var(void* ctx, VarStmt* var);
-static void check_return_print(void* ctx, PrintStmt* print);
 static void check_return_block(void* ctx, BlockStmt* block);
 static void check_return_function(void* ctx, FunctionStmt* function);
 static void check_return_return(void* ctx, ReturnStmt* function);
@@ -696,7 +716,6 @@ static void check_return_while(void* ctx, WhileStmt* while_);
 StmtVisitor check_return_stmt_visitor = (StmtVisitor){
     .visit_expr = check_return_expr,
     .visit_var = check_return_var,
-    .visit_print = check_return_print,
     .visit_block = check_return_block,
     .visit_function = check_return_function,
     .visit_return = check_return_return,
@@ -713,9 +732,6 @@ typedef struct {
 static bool function_returns(Stmt* fn_ast) {
     ReturnChecker checker;
     checker.have_return = false;
-    if (fn_ast->kind == STMT_LIST) {
-        printf("Is list");
-    }
     stmt_dispatch(&check_return_stmt_visitor, &checker, fn_ast);
     return checker.have_return;
 }
@@ -723,7 +739,6 @@ static bool function_returns(Stmt* fn_ast) {
 static void check_return_loopg(void* ctx, LoopGotoStmt* loopg) {}
 static void check_return_expr(void* ctx, ExprStmt* expr) {}
 static void check_return_var(void* ctx, VarStmt* var) {}
-static void check_return_print(void* ctx, PrintStmt* print) {}
 static void check_return_function(void* ctx, FunctionStmt* function) {}
 static void check_return_if(void* ctx, IfStmt* if_) {}
 static void check_return_for(void* ctx, ForStmt* for_) {}

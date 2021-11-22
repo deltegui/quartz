@@ -1,0 +1,38 @@
+// NOTE: THIS ALGORITHM IS INEFFICIENT AND IS DONE ON PURPOSE
+// Comparision of performance between golox, clox and other real languages (JUST FOR FUN. IS NOT A REAL COMPARISION):
+// NODE V8: node ./prime.js                             0,25s user 0,02s system 96% cpu 0,281 total
+// QUARTZ: ./quartz ./programs/primos_bench.qz          2.05s user 0.00s system 99% cpu 2.048 total (-O3)
+// CLOX: ./build/clox ./programs/primos.lox             1,31s user 0,00s system 99% cpu 1,317 total (-O3)
+// GOLOX: ./build/golox ../clox/programs/primos.lox     62,87s user 2,12s system 108% cpu 59,932 total
+// RUBY 2.6.3p62: ruby ./prime.rb                       1,32s user 0,05s system 97% cpu 1,399 total
+// PYTHON 2.7.16: python ./prime.py                     4,42s user 0,05s system 99% cpu 4,486 total
+// PYTHON 3.7.3: python3 ./prime.py                     6,06s user 0,07s system 98% cpu 6,253 total
+// PHP 7.3.9: php ./primes.php                          1,05s user 0,02s system 98% cpu 1,080 total
+// C: ./primes                                          0,11s user 0,01s system 24% cpu 0,494 total
+
+import 'stdio';
+import 'stdconv';
+import 'stdtime';
+
+fn primes() {
+    var found = 0;
+    var i = 2;
+    var primo: Bool;
+    while(found <= 1000) {
+        primo = true;
+        for(var j = i - 1; j > 1; j = j - 1) {
+            if(i % j == 0) {
+                primo = false;
+            }
+        }
+        if(primo) {
+            println(ntos(i));
+            found = found + 1;
+        }
+        i = i + 1;
+    }
+}
+
+var init = time();
+primes();
+println("DONE! in " + ntos(time() - init));

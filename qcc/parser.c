@@ -5,6 +5,7 @@
 #include "symbol.h"
 #include "type.h"
 #include "error.h"
+#include "import.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -47,6 +48,7 @@ static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
 static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static bool register_symbol(Parser* const parser, Symbol symbol);
+static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
@@ -59,6 +61,10 @@ static Stmt* declaration(Parser* const parser);
 static Stmt* parse_variable(Parser* const parser);
 static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
+static Stmt* typealias_decl(Parser* const parser);
+static Stmt* import_decl(Parser* const parser);
+static Stmt* native_import(Parser* const parser, NativeImport import, int line);
+static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym);
@@ -67,7 +73,6 @@ static Type* parse_function_type(Parser* const parser);
 
 static Stmt* statement(Parser* const parser);
 static Stmt* block_stmt(Parser* const parser);
-static Stmt* print_stmt(Parser* const parser);
 static Stmt* return_stmt(Parser* const parser);
 static Stmt* if_stmt(Parser* const parser);
 static Stmt* for_stmt(Parser* const parser);
@@ -127,7 +132,6 @@ ParseRule rules[] = {
     [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
-    [TOKEN_PRINT]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_IDENTIFIER]    = {identifier,  NULL,   PREC_NONE},
 
     [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
@@ -232,7 +236,6 @@ static void syncronize(Parser* const parser) {
         case TOKEN_WHILE:
         case TOKEN_FOR:
         case TOKEN_RETURN:
-        case TOKEN_PRINT:
         case TOKEN_END:
             return;
         default:
@@ -271,6 +274,12 @@ static bool register_symbol(Parser* const parser, Symbol symbol) {
     }
     insert(parser, symbol);
     return true;
+}
+
+static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type) {
+    Symbol symbol = create_symbol_from_token(token, type);
+    symbol.global = parser->scope_depth == 0;
+    return symbol;
 }
 
 static void advance(Parser* const parser) {
@@ -327,6 +336,7 @@ static Stmt* declaration_block(Parser* const parser, TokenKind limit_token) {
     ListStmt* list = create_stmt_list();
     while (parser->current.kind != limit_token && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
+        assert(stmt != NULL);
         if (parser->panic_mode) {
             // That stmt is not inside the abstract syntax tree. You need to free it.
             free_stmt(stmt);
@@ -344,6 +354,10 @@ static Stmt* declaration(Parser* const parser) {
         return variable_decl(parser);
     case TOKEN_FUNCTION:
         return function_decl(parser);
+    case TOKEN_TYPEDEF:
+        return typealias_decl(parser);
+    case TOKEN_IMPORT:
+        return import_decl(parser);
     default:
         return statement(parser);
     }
@@ -353,8 +367,6 @@ static Stmt* statement(Parser* const parser) {
     switch (parser->current.kind) {
     case TOKEN_LEFT_BRACE:
         return block_stmt(parser);
-    case TOKEN_PRINT:
-        return print_stmt(parser);
     case TOKEN_RETURN:
         return return_stmt(parser);
     case TOKEN_IF:
@@ -372,7 +384,7 @@ static Stmt* statement(Parser* const parser) {
 }
 
 static Stmt* block_stmt(Parser* const parser) {
-    advance(parser); // consume {
+    consume(parser, TOKEN_LEFT_BRACE, "Expected block to start with '{'");
     BlockStmt block;
     create_scope(parser);
     block.stmts = declaration_block(parser, TOKEN_RIGHT_BRACE);
@@ -383,7 +395,7 @@ static Stmt* block_stmt(Parser* const parser) {
 }
 
 static Stmt* parse_variable(Parser* const parser) {
-    advance(parser); // consume var
+    consume(parser, TOKEN_VAR, "Expected variable declaration to start with 'var'");
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         error(parser, "Expected identifier to be var name");
     }
@@ -407,7 +419,7 @@ static Stmt* parse_variable(Parser* const parser) {
         var.definition = expression(parser);
     }
 
-    Symbol symbol = create_symbol_from_token(&var.identifier, var_type);
+    Symbol symbol = create_symbol_calc_global(parser, &var.identifier, var_type);
     symbol.assigned = var.definition != NULL;
     symbol.global = parser->scope_depth == 0;
     if (! register_symbol(parser, symbol)) {
@@ -423,8 +435,100 @@ static Stmt* variable_decl(Parser* const parser) {
     return var;
 }
 
+static Stmt* typealias_decl(Parser* const parser) {
+    consume(parser, TOKEN_TYPEDEF, "Expected type alias to start with 'typedef'");
+
+    TypealiasStmt stmt = (TypealiasStmt) {
+        .identifier = parser->current,
+    };
+    advance(parser); // consume alias
+
+    consume(parser, TOKEN_EQUAL, "Expected '=' after type alias name");
+    Type* def = parse_type(parser);
+    advance(parser); // consume type
+    consume(parser, TOKEN_SEMICOLON, "Expected semicolon at the end of type alias");
+
+    Type* alias = create_type_alias(
+        stmt.identifier.start,
+        stmt.identifier.length,
+        def);
+    Symbol symbol = create_symbol_calc_global(parser, &stmt.identifier, alias);
+    symbol.kind = SYMBOL_TYPEALIAS;
+    if (! register_symbol(parser, symbol)) {
+        free_symbol(&symbol);
+        error(parser, "Type alias already defined");
+    }
+
+    return CREATE_STMT_TYPEALIAS(stmt);
+}
+
+static Stmt* import_decl(Parser* const parser) {
+    consume(parser, TOKEN_IMPORT, "Expected import to start with 'import'");
+    ImportStmt import_stmt = (ImportStmt) {
+        .filename = parser->current,
+        .ast = NULL,
+    };
+    advance(parser); // consume filename
+    consume(parser, TOKEN_SEMICOLON, "Expected semicolon at end of import statment");
+    Import imp = import(
+        import_stmt.filename.start,
+        import_stmt.filename.length);
+    import_stmt.ast = (imp.is_native) ?
+        native_import(parser, imp.native, import_stmt.filename.line) :
+        file_import(parser, imp.file);
+    return CREATE_STMT_IMPORT(import_stmt);
+}
+
+static Stmt* native_import(Parser* const parser, NativeImport import, int line) {
+    ListStmt* list = create_stmt_list();
+    for (int i = 0; i < import.functions_length; i++) {
+        NativeFunction fn = import.functions[i];
+
+        NativeFunctionStmt stmt = (NativeFunctionStmt) {
+            .name = fn.name,
+            .length = fn.length,
+            .function = fn.function,
+        };
+        stmt_list_add(list, CREATE_STMT_NATIVE(stmt));
+
+        // This symbol is not a function. Lets say its a variable
+        // that holds an OBJ_NATIVE and acts like a function. We
+        // must override the kind because it infers from the type
+        // that is a function. create_symbol also reserves memory
+        // in case you are a function, so we must lie him saying
+        // we are TYPE_UNKNOWN.
+        Symbol native_symbol = create_symbol(
+            create_symbol_name(fn.name, fn.length),
+            line,
+            CREATE_TYPE_UNKNOWN());
+        native_symbol.kind = SYMBOL_VAR;
+        native_symbol.type = fn.type;
+        native_symbol.global = parser->scope_depth == 0;
+        native_symbol.native = true;
+        register_symbol(parser, native_symbol);
+    }
+    return CREATE_STMT_LIST(list);
+}
+
+static Stmt* file_import(Parser* const parser, FileImport import) {
+    if (import.is_already_loaded) {
+        return NULL;
+    }
+    if (import.source == NULL) {
+        parser->has_error = true;
+        return NULL;
+    }
+    Parser subparser;
+    init_parser(&subparser, import.source, parser->symbols);
+    Stmt* subast = parse(&subparser);
+    if (subparser.has_error) {
+        parser->has_error = true;
+    }
+    return subast;
+}
+
 static Stmt* function_decl(Parser* const parser) {
-    advance(parser); // consume fn
+    consume(parser, TOKEN_FUNCTION, "Expected function declaration to start with 'fn'");
 
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         error(parser, "Expected identifier to be function name");
@@ -432,8 +536,7 @@ static Stmt* function_decl(Parser* const parser) {
     FunctionStmt fn = (FunctionStmt){
         .identifier = parser->current,
     };
-    Symbol symbol = create_symbol_from_token(&fn.identifier, create_type_function());
-    symbol.global = parser->scope_depth == 0;
+    Symbol symbol = create_symbol_calc_global(parser, &fn.identifier, create_type_function());
 
     advance(parser); // consume identifier
     consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after function name in function declaration");
@@ -457,7 +560,7 @@ static Stmt* function_decl(Parser* const parser) {
     }
 
     // Insert symbol before parsing the function body
-    // so you can call the founction inside the function
+    // so you can call a function inside a function
     if (! register_symbol(parser, symbol)) {
         free_symbol(&symbol);
     }
@@ -520,7 +623,31 @@ static Type* parse_type(Parser* const parser) {
     if (parser->current.kind == TOKEN_LEFT_PAREN) {
         return parse_function_type(parser);
     }
-    return CREATE_TYPE_UNKNOWN();
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        return CREATE_TYPE_UNKNOWN();
+    }
+    // We don't create new types here. If the type is an identifier
+    // it should have been declared before.
+    Symbol* symbol = lookup_str(parser, parser->current.start, parser->current.length);
+    if (symbol == NULL) {
+        error(
+            parser,
+            "The type '%.*s' is not defined",
+            parser->current.length,
+            parser->current.start);
+        return CREATE_TYPE_UNKNOWN();
+    }
+    switch (symbol->kind) {
+    case SYMBOL_TYPEALIAS:
+        return symbol->type;
+    default:
+        error(
+            parser,
+            "The identifier '%.*s' is not a type",
+            parser->current.length,
+            parser->current.start);
+        return CREATE_TYPE_UNKNOWN();
+    }
 }
 
 static Type* parse_function_type(Parser* const parser) {
@@ -553,21 +680,11 @@ static Type* parse_function_type(Parser* const parser) {
     return fn_type;
 }
 
-static Stmt* print_stmt(Parser* const parser) {
-    advance(parser); // consume print
-    Expr* expr = expression(parser);
-    PrintStmt print_stmt = (PrintStmt){
-        .inner = expr,
-    };
-    consume(parser, TOKEN_SEMICOLON, "Expected print statment to end with ';'");
-    return CREATE_STMT_PRINT(print_stmt);
-}
-
 static Stmt* return_stmt(Parser* const parser) {
     if (parser->function_deep_count == 0) {
         error(parser, "Cannot use return outside a function!");
     }
-    advance(parser); // consume return
+    consume(parser, TOKEN_RETURN, "Expected return statement to start with 'return'");
     ReturnStmt return_stmt;
     if (parser->current.kind == TOKEN_SEMICOLON) {
         advance(parser); // consume semicolon
@@ -581,7 +698,7 @@ static Stmt* return_stmt(Parser* const parser) {
 
 static Stmt* if_stmt(Parser* const parser) {
     Token token = parser->current;
-    advance(parser); // consume if
+    consume(parser, TOKEN_IF, "Expected if statement to start with 'if'");
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren in if condition");
     Expr* condition = expression(parser);
     consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in if condition");
@@ -603,7 +720,7 @@ static Stmt* if_stmt(Parser* const parser) {
 static Stmt* while_stmt(Parser* const parser) {
     WhileStmt while_stmt;
     while_stmt.token = parser->current;
-    advance(parser); // consume while
+    consume(parser, TOKEN_WHILE, "Expected while statement to start with 'while'");
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren before while condition");
     while_stmt.condition = expression(parser);
     consume(parser, TOKEN_RIGHT_PAREN, "expected right paren after while condition");
@@ -637,7 +754,7 @@ static Stmt* for_stmt(Parser* const parser) {
     // to the for body.
     create_scope(parser);
 
-    advance(parser); // consume for
+    consume(parser, TOKEN_FOR, "Expected for statement to start with 'for'");
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren in for condition");
 
     parse_for_init(parser, &for_stmt);
@@ -665,7 +782,6 @@ static void parse_for_init(Parser* const parser, ForStmt* for_stmt) {
         return;
     }
 
-    // TODO this block of code is similar than (parse_for_mod)
     ListStmt* vars = create_stmt_list();
     for (;;) {
         Stmt* var = parse_variable(parser);

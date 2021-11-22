@@ -1,3 +1,6 @@
+import 'stdio';
+import 'stdconv';
+
 fn factorial(n: Number): Number {
     var result = 1;
     while (n>1) {
@@ -7,6 +10,10 @@ fn factorial(n: Number): Number {
     return result;
 }
 
-print factorial(7);
-print factorial(10);
-print factorial(55);
+fn println_number(n: Number) {
+    println(ntos(n));
+}
+
+println_number(factorial(7));
+println_number(factorial(10));
+println_number(factorial(55));

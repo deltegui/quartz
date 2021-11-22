@@ -1,0 +1,4 @@
+[Line 13] Type error: The Type '(String, String): Void' does not match with type 'Alias: 'Name' = (String, Number): Void' in variable declaration.
+12 | 
+13 | var demo: (String, String): Void = first(0);
+   | ~~~~~~~~^

@@ -1,3 +1,6 @@
+import 'stdio';
+import 'stdconv';
+
 var my_global_num: Number = 0;
 var my_global_str: String = "";
 var my_global_bool: Bool = false;
@@ -5,10 +8,10 @@ var my_global_bool: Bool = false;
     var my_local_num: Number = 1;
     var my_local_str: String = "local";
     var my_local_bool: Bool = true;
-    print my_local_num;
-    print my_local_str;
-    print my_local_bool;
+    println(ntos(my_local_num));
+    println(my_local_str);
+    println(btos(my_local_bool));
 }
-print my_global_num;
-print my_global_str;
-print my_global_bool;
+println(ntos(my_global_num));
+println(my_global_str);
+println(btos(my_global_bool));

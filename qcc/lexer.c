@@ -239,6 +239,9 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "f", 1, 2)) {
             return create_token(lexer, TOKEN_IF);
         }
+        if (match_token(lexer, "mport", 1, 6)) {
+            return create_token(lexer, TOKEN_IMPORT);
+        }
         break;
     }
     case 'e': {
@@ -250,6 +253,9 @@ static Token scan_identifier(Lexer* const lexer) {
     case 't': {
         if (match_token(lexer, "rue", 1, 4)) {
             return create_token(lexer, TOKEN_TRUE);
+        }
+        if (match_token(lexer, "ypedef", 1, 7)) {
+            return create_token(lexer, TOKEN_TYPEDEF);
         }
         break;
     }
@@ -280,12 +286,6 @@ static Token scan_identifier(Lexer* const lexer) {
     case 'r': {
         if (match_token(lexer, "eturn", 1, 6)) {
             return create_token(lexer, TOKEN_RETURN);
-        }
-        break;
-    }
-    case 'p': {
-        if (match_token(lexer, "rint", 1, 5)) {
-            return create_token(lexer, TOKEN_PRINT);
         }
         break;
     }

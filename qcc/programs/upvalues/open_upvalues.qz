@@ -1,10 +1,13 @@
+import 'stdio';
+import 'stdconv';
+
 fn hola() {
-    print "exec hola";
+    println("exec hola");
     var a = 5;
     a = a + 1;
-    print a;
+    println(ntos(a));
     fn pipo() {
-        print a;
+        println(ntos(a));
     }
     pipo();
 }

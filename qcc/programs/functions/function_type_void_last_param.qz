@@ -1,6 +1,8 @@
+import 'stdio';
+
 fn create_void_fn(): (Number, Void): Void {
     fn hello() {
-        print "Hello";
+        println("Hello");
     }
     return hello;
 }

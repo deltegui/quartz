@@ -1,5 +1,7 @@
+import 'stdio';
+
 fn imvoid(): Void {
-    print "This should work!";
+    println("This should work!");
     return;
 }
 

@@ -1,5 +1,6 @@
 #include "type.h"
 #include <stdio.h>
+#include <string.h>
 
 // These variables are here to store only one instance
 // of these types. Simple types only stores it's kind,
@@ -41,6 +42,7 @@ static void free_pool_node(PoolNode* const node);
 static void free_type(Type* const type);
 static Type* type_pool_add(Type type);
 static PoolNode* alloc_node();
+static void type_alias_print(FILE* out, const Type* const type);
 static void function_type_print(FILE* out, const Type* const type);
 static bool fn_params_equals(FunctionType* first, FunctionType* second);
 
@@ -82,6 +84,10 @@ static void free_type(Type* const type) {
     case TYPE_FUNCTION: {
         free_vector(&type->function->param_types);
         free(type->function);
+        break;
+    }
+    case TYPE_ALIAS: {
+        free(type->alias);
         break;
     }
     default:
@@ -140,6 +146,21 @@ Type* create_type_function() {
     return type_pool_add(type);
 }
 
+Type* create_type_alias(const char* identifier, int length, Type* original) {
+    // So, the token pool outlives other compiler data structures like the original
+    // code buffer, the AST or the Symbol Table. Knowing that, the alias identifier
+    // must be copied.
+    AliasType* alias = (AliasType*) malloc(sizeof(AliasType) + (sizeof(char) * length + 1));
+    memcpy(alias->identifier, identifier, length);
+    alias->identifier[length] = '\0';
+    alias->def = original;
+    Type type = (Type) {
+        .kind = TYPE_ALIAS,
+        .alias = alias,
+    };
+    return type_pool_add(type);
+}
+
 Type* simple_type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return CREATE_TYPE_NUMBER();
@@ -153,6 +174,7 @@ Type* simple_type_from_token_kind(TokenKind kind) {
 
 void type_fprint(FILE* out, const Type* const type) {
     switch (type->kind) {
+    case TYPE_ALIAS: type_alias_print(out, type); break;
     case TYPE_NUMBER: fprintf(out, "Number"); break;
     case TYPE_BOOL: fprintf(out, "Bool"); break;
     case TYPE_NIL: fprintf(out, "Nil"); break;
@@ -161,6 +183,15 @@ void type_fprint(FILE* out, const Type* const type) {
     case TYPE_VOID: fprintf(out, "Void"); break;
     case TYPE_UNKNOWN: fprintf(out, "Unknown"); break;
     }
+}
+
+static void type_alias_print(FILE* out, const Type* const type) {
+    assert(type->kind == TYPE_ALIAS);
+    fprintf(
+        out,
+        "Alias: '%s' = ",
+        type->alias->identifier);
+    type_fprint(out, type->alias->def);
 }
 
 static void function_type_print(FILE* out, const Type* const type) {
@@ -183,6 +214,8 @@ bool type_equals(Type* first, Type* second) {
     if (first == second) {
         return true;
     }
+    first = RESOLVE_IF_TYPEALIAS(first);
+    second = RESOLVE_IF_TYPEALIAS(second);
     if (first->kind != second->kind) {
         return false;
     }

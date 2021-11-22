@@ -1,6 +1,8 @@
+import 'stdio';
+
 fn hola(): (Number): Void {
     fn mama(a: String, b: Number): Void {
-        print a;
+        println(a);
     }
     return mama;
 }

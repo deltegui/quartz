@@ -1,8 +1,9 @@
-[Line 1] Error at 'var': Expected identifier to be var name
-1 | var var = 5;
-  | ~~~~~~^
-
-[Line 3] Error at 'var': Expected expression
+[Line 3] Error at 'var': Expected identifier to be var name
 2 | 
-3 | print var;
-  | ~~~~~~~~~^
+3 | var var = 5;
+  | ~~~~~~~^
+
+[Line 5] Error at ')': Expected identifier to be var name
+4 | 
+5 | print(var);
+  | ~~~~~~~~~~^

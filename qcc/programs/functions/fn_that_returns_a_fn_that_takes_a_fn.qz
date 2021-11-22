@@ -1,3 +1,5 @@
+import 'stdio';
+
 fn create_salut(salut: String): ((): String): String {
     fn s(name: (): String): String {
         return salut + name();
@@ -14,13 +16,13 @@ fn name_javier(): String {
 }
 
 var salut_spanish = create_salut("hola ");
-print salut_spanish(name_diego);
-print salut_spanish(name_javier);
+println(salut_spanish(name_diego));
+println(salut_spanish(name_javier));
 
 var salut_english = create_salut("hello ");
-print salut_english(name_diego);
-print salut_english(name_javier);
+println(salut_english(name_diego));
+println(salut_english(name_javier));
 
 var salut_france: ((): String): String = create_salut("bonjour ");
-print salut_france(name_diego);
-print salut_france(name_javier);
+println(salut_france(name_diego));
+println(salut_france(name_javier));

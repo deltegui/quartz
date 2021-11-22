@@ -1,0 +1,9 @@
+[Line 3] Error at 'println': Expected block to start with '{'
+2 | 
+3 | fn salut(name: String): Void println("Hola " + name + "!");
+  | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+
+[Line 5] Error at end: Expected block to end with '}'
+4 | 
+5 | salut('Javier');
+  | ~~~~~~~~~~~~~~~~^

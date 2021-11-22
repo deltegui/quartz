@@ -1,0 +1,13 @@
+import 'stdio';
+import 'stdconv';
+
+typedef Name = (String, Number): Void;
+
+fn first(index: Number): Name {
+    fn a(s: String, n: Number) {
+        println(s + ntos(n));
+    }
+    return a;
+}
+
+var demo: (String, String): Void = first(0);

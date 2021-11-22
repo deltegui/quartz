@@ -427,6 +427,27 @@ static void should_tokenize_continue_correctly() {
     );
 }
 
+static void should_tokenize_typedef_correctly() {
+    assert_types(
+        "   typedef hola = Number; ",
+        5,
+        TOKEN_TYPEDEF,
+        TOKEN_IDENTIFIER,
+        TOKEN_EQUAL,
+        TOKEN_TYPE_NUMBER,
+        TOKEN_SEMICOLON
+    );
+}
+
+static void should_import_correctly() {
+    assert_types(
+        "   import './hello.qz' ",
+        2,
+        TOKEN_IMPORT,
+        TOKEN_STRING
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -450,7 +471,9 @@ int main(void) {
         cmocka_unit_test(should_tokenize_for_correctly),
         cmocka_unit_test(should_tokenize_while_correctly),
         cmocka_unit_test(should_tokenize_break_correctly),
-        cmocka_unit_test(should_tokenize_continue_correctly)
+        cmocka_unit_test(should_tokenize_continue_correctly),
+        cmocka_unit_test(should_tokenize_typedef_correctly),
+        cmocka_unit_test(should_import_correctly)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

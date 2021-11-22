@@ -36,6 +36,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .declaration_line = line,
         .type = type,
         .constant_index = UINT16_MAX,
+        .native = false, // normally its not native
         .global = false, // we dont know
         .assigned = true, // normally is
     };
@@ -67,6 +68,7 @@ void free_symbol(Symbol* const symbol) {
         free_symbol_set(symbol->function.upvalues);
         break;
     }
+    case SYMBOL_TYPEALIAS:
     case SYMBOL_VAR:
         break;
     }

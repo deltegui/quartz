@@ -18,7 +18,7 @@ typedef struct {
     Vector breaks; // Vector<int>
 } BreakContext;
 
-static void init_break_ctx(BreakContext* const break_ctx);
+static BreakContext* create_break_ctx();
 static void free_break_ctx(BreakContext* const break_ctx);
 static int break_ctx_pop_loop(BreakContext* const break_ctx);
 static int break_ctx_pop_break(BreakContext* const break_ctx);
@@ -40,14 +40,14 @@ typedef struct {
     int function_scope_depth;
     int next_local_index;
 
-    BreakContext break_ctx;
+    BreakContext* break_ctx;
     int continue_ctx;
 } Compiler;
 
-#define BREAK_CTX_POP_LOOP(compiler) break_ctx_pop_loop(&compiler->break_ctx);
-#define BREAK_CTX_POP_BREAK(compiler) break_ctx_pop_break(&compiler->break_ctx);
-#define BREAK_CTX_PUSH_LOOP(compiler) break_ctx_push_loop(&compiler->break_ctx);
-#define BREAK_CTX_PUSH_BREAK(compiler, pos) break_ctx_push_break(&compiler->break_ctx, pos);
+#define BREAK_CTX_POP_LOOP(compiler) break_ctx_pop_loop(compiler->break_ctx);
+#define BREAK_CTX_POP_BREAK(compiler) break_ctx_pop_break(compiler->break_ctx);
+#define BREAK_CTX_PUSH_LOOP(compiler) break_ctx_push_loop(compiler->break_ctx);
+#define BREAK_CTX_PUSH_BREAK(compiler, pos) break_ctx_push_break(compiler->break_ctx, pos);
 
 #define CONTINUE_CTX_NOT_DEFINED -1
 #define CONTINUE_CTX(compiler, pos, ...)\
@@ -125,7 +125,6 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
 
 static void compile_expr(void* ctx, ExprStmt* expr);
 static void compile_var(void* ctx, VarStmt* var);
-static void compile_print(void* ctx, PrintStmt* print);
 static void compile_block(void* ctx, BlockStmt* block);
 static void compile_function(void* ctx, FunctionStmt* function);
 static void compile_return(void* ctx, ReturnStmt* return_);
@@ -133,11 +132,13 @@ static void compile_if(void* ctx, IfStmt* if_);
 static void compile_for(void* ctx, ForStmt* for_);
 static void compile_while(void* ctx, WhileStmt* while_);
 static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
+static void compile_typealias(void* ctx, TypealiasStmt* alias);
+static void compile_import(void* ctx, ImportStmt* import);
+static void compile_native(void* ctx, NativeFunctionStmt* native);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
     .visit_var = compile_var,
-    .visit_print = compile_print,
     .visit_block = compile_block,
     .visit_function = compile_function,
     .visit_return = compile_return,
@@ -145,6 +146,9 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_for = compile_for,
     .visit_while = compile_while,
     .visit_loopg = compile_loopg,
+    .visit_typealias = compile_typealias,
+    .visit_import = compile_import,
+    .visit_native = compile_native,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -167,14 +171,17 @@ struct IdentifierOps ops_set_identifier = (struct IdentifierOps) {
 #define VECTOR_AS_INT(vect) VECTOR_AS(vect, int)
 #define VECTOR_ADD_INT(vect, i) VECTOR_ADD(vect, i, int)
 
-static void init_break_ctx(BreakContext* const break_ctx) {
+static BreakContext* create_break_ctx() {
+    BreakContext* break_ctx = (BreakContext*) malloc(sizeof(BreakContext));
     init_vector(&break_ctx->loop_len, sizeof(int));
     init_vector(&break_ctx->breaks, sizeof(int));
+    return break_ctx;
 }
 
 static void free_break_ctx(BreakContext* const break_ctx) {
     free_vector(&break_ctx->loop_len);
     free_vector(&break_ctx->breaks);
+    free(break_ctx);
 }
 
 static int break_ctx_pop_loop(BreakContext* const break_ctx) {
@@ -218,13 +225,13 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
 
-    init_break_ctx(&compiler->break_ctx);
+    compiler->break_ctx = create_break_ctx();
     compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
 }
 
 static void free_compiler(Compiler* const compiler) {
     free_scoped_symbol_table(&compiler->symbols);
-    free_break_ctx(&compiler->break_ctx);
+    free_break_ctx(compiler->break_ctx);
 }
 
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym) {
@@ -358,12 +365,6 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
     return make_constant(compiler, value);
 }
 
-static void compile_print(void* ctx, PrintStmt* print) {
-    Compiler* compiler = (Compiler*)ctx;
-    ACCEPT_EXPR(compiler, print->inner);
-    emit(compiler, OP_PRINT);
-}
-
 static void compile_block(void* ctx, BlockStmt* block) {
     Compiler* compiler = (Compiler*)ctx;
 
@@ -456,6 +457,33 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_variable_declaration(compiler, fn_index);
 
     emit_bind_upvalues(compiler, symbol, function->identifier);
+}
+
+static void compile_native(void* ctx, NativeFunctionStmt* native) {
+    Compiler* compiler = (Compiler*) ctx;
+
+    Symbol* symbol = lookup_str(compiler, native->name, native->length);
+    assert(symbol != NULL);
+
+    Token identifier;
+    identifier.kind = TOKEN_IDENTIFIER;
+    identifier.start = native->name;
+    identifier.length = native->length;
+    identifier.line = symbol->declaration_line;
+    identifier.column = 0;
+
+    uint16_t native_index = get_variable_index(compiler, &identifier);
+    update_symbol_variable_info(compiler, symbol, native_index);
+
+    ObjNative* obj = new_native(
+        native->name,
+        native->length,
+        native->function,
+        symbol->type);
+
+    uint16_t default_value = make_constant(compiler, OBJ_VALUE(obj, symbol->type));
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
+    emit_variable_declaration(compiler, native_index);
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {
@@ -591,6 +619,14 @@ static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
         assert(compiler->continue_ctx != CONTINUE_CTX_NOT_DEFINED);
         emit_jump_to(compiler, OP_JUMP, compiler->continue_ctx);
     }
+}
+
+static void compile_typealias(void* ctx, TypealiasStmt* alias) {
+    // Nothing to see here
+}
+
+static void compile_import(void* ctx, ImportStmt* import) {
+    ACCEPT_STMT(ctx, import->ast);
 }
 
 static void patch_breaks(Compiler* const compiler) {

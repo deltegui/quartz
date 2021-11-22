@@ -3,12 +3,20 @@
 #include "math.h"
 #include "vm_memory.h"
 #include "type.h" // to init and free type_pool
+#include "stdlib/stdlib.h" // to init and free stdlib
 
 #ifdef VM_DEBUG
 #include "debug.h"
 #endif
 
 QVM qvm;
+
+static void init_gray_stack();
+static void free_gray_stack();
+static void runtime_error(const char* message);
+static inline void call_native(ObjNative* native, uint8_t param_count);
+static inline void call(uint8_t param_count);
+static inline Value stack_peek(uint8_t distance);
 
 static void init_gray_stack() {
     qvm.gray_stack = NULL;
@@ -24,6 +32,7 @@ static void free_gray_stack() {
 
 void init_qvm() {
     init_type_pool();
+    init_stdlib();
 
     init_table(&qvm.strings);
     init_table(&qvm.globals);
@@ -43,6 +52,7 @@ void init_qvm() {
 }
 
 void free_qvm() {
+    free_stdlib();
     free_type_pool();
     free_table(&qvm.strings);
     free_table(&qvm.globals);
@@ -72,15 +82,40 @@ static void runtime_error(const char* message) {
     printf("%s\n", message);
 }
 
+static inline void call_native(ObjNative* native, uint8_t param_count) {
+    assert(native->arity == param_count);
+
+    Value* params = (Value*) malloc(sizeof(Value) * param_count);
+    for (int i = param_count - 1; i >= 0; i--) {
+        int distance_to_peek = param_count - (i + 1);
+        params[i] = stack_peek(distance_to_peek);
+    }
+    Value result = native->function(param_count, params);
+    free(params);
+
+    for (int i = 0; i < param_count; i++) {
+        stack_pop();
+    }
+    stack_pop(); // pop obj native value from stack
+    stack_push(result);
+}
+
 static inline void call(uint8_t param_count) {
+    Value* fn_ptr = (qvm.stack_top - param_count - 1);
+    Value fn_value = *fn_ptr;
+    Obj* obj = VALUE_AS_OBJ(fn_value);
+
+    if (obj->kind == OBJ_NATIVE) {
+        call_native(OBJ_AS_NATIVE(obj), param_count);
+        return;
+    }
+
     if (qvm.frame_count + 1 >= FRAMES_MAX) {
         runtime_error("Frame overflow");
         return;
     }
+    ObjFunction* fn = OBJ_AS_FUNCTION(obj);
     qvm.frame_count++;
-    Value* fn_ptr = (qvm.stack_top - param_count - 1);
-    Value fn_value = *fn_ptr;
-    ObjFunction* fn = OBJ_AS_FUNCTION(VALUE_AS_OBJ(fn_value));
     qvm.frame = &qvm.frames[qvm.frame_count - 1];
     qvm.frame->func = fn;
     qvm.frame->pc = fn->chunk.code;
@@ -307,11 +342,6 @@ static void run(ObjFunction* func) {
         case OP_CALL: {
             uint8_t param_count = READ_BYTE();
             call(param_count);
-            break;
-        }
-        case OP_PRINT: {
-            value_print(stack_pop());
-            printf("\n");
             break;
         }
         case OP_POP: {

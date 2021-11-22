@@ -112,7 +112,6 @@ static const char* OpCodeStrings[] = {
     "OP_FALSE",
     "OP_NIL",
     "OP_NOP",
-    "OP_PRINT",
     "OP_RETURN",
     "OP_POP",
     "OP_CALL",
@@ -191,7 +190,11 @@ static int chunk_long_print(const Chunk* chunk, int i) {
     uint16_t num = read_long(&pc);
     i++;
     chunk_format_print(chunk, i, "%04x\t", num);
-    chunk_value_print(chunk, num);
+    if (num < chunk->constants.size) {
+        chunk_value_print(chunk, num);
+    } else {
+        printf("\n");
+    }
     return ++i;
 }
 
@@ -220,7 +223,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_EQUAL:
         case OP_LOWER:
         case OP_POP:
-        case OP_PRINT:
         case OP_GREATER:
         case OP_CLOSE:
         case OP_END: {
@@ -318,7 +320,6 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_LOWER_EQUAL: return "TokenLowerEqual";
     case TOKEN_GREATER_EQUAL: return "TokenGreaterEqual";
     case TOKEN_IDENTIFIER: return "TokenIdentifier";
-    case TOKEN_PRINT: return "TokenPrint";
     case TOKEN_SEMICOLON: return "TokenSemicolon";
     case TOKEN_COLON: return "TokenColon";
     case TOKEN_TYPE_NUMBER: return "TokenNumberType";
@@ -333,6 +334,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_WHILE: return "TokenWhile";
     case TOKEN_BREAK: return "TokenBreak";
     case TOKEN_CONTINUE: return "TokenContinue";
+    case TOKEN_IMPORT: return "TokenImport";
     default: return "Unknown";
     }
 }
@@ -369,7 +371,6 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
 
 static void print_expr(void* ctx, ExprStmt* expr);
 static void print_var(void* ctx, VarStmt* var);
-static void print_print(void* ctx, PrintStmt* var);
 static void print_block(void* ctx, BlockStmt* block);
 static void print_function(void* ctx, FunctionStmt* function);
 static void print_return(void* ctx, ReturnStmt* return_);
@@ -377,18 +378,23 @@ static void print_if(void* ctx, IfStmt* if_);
 static void print_for(void* ctx, ForStmt* for_);
 static void print_while(void* ctx, WhileStmt* while_);
 static void print_loopg(void* ctx, LoopGotoStmt* loopg);
+static void print_typealias(void* ctx, TypealiasStmt* alias);
+static void print_import(void* ctx, ImportStmt* import);
+static void print_native(void* ctx, NativeFunctionStmt* native);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
     .visit_var = print_var,
-    .visit_print = print_print,
     .visit_block = print_block,
     .visit_function = print_function,
     .visit_return = print_return,
     .visit_if = print_if,
     .visit_for = print_for,
     .visit_while = print_while,
-    .visit_loopg = print_loopg
+    .visit_loopg = print_loopg,
+    .visit_typealias = print_typealias,
+    .visit_import = print_import,
+    .visit_native = print_native,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -420,14 +426,6 @@ static void print_block(void* ctx, BlockStmt* block) {
         ACCEPT_STMT(block->stmts);
     });
     pretty_print("}\n");
-}
-
-static void print_print(void* ctx, PrintStmt* print) {
-    pretty_print("Print: [\n");
-    OFFSET({
-        ACCEPT_EXPR(print->inner);
-    });
-    pretty_print("]\n");
 }
 
 static void print_expr(void* ctx, ExprStmt* expr) {
@@ -637,6 +635,42 @@ static void print_loopg(void* ctx, LoopGotoStmt* loopg) {
         token_print(loopg->token);
         pretty_print("Kind: ");
         printf("%s\n", (loopg->kind == LOOP_BREAK) ? "BREAK" : "CONTINUE");
+    });
+    pretty_print("]\n");
+}
+
+static void print_typealias(void* ctx, TypealiasStmt* alias) {
+    pretty_print("Type Alias: [\n");
+    OFFSET({
+        pretty_print("Identifier: ");
+        token_print(alias->identifier);
+    });
+    pretty_print("]\n");
+}
+
+static void print_import(void* ctx, ImportStmt* import) {
+    pretty_print("Import: [\n");
+    OFFSET({
+        pretty_print("File: ");
+        token_print(import->filename);
+        pretty_print("AST: [\n");
+        OFFSET({
+            if (import->ast == NULL) {
+                pretty_print("<Already imported>\n");
+            } else {
+                ACCEPT_STMT(import->ast);
+            }
+        });
+        pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
+static void print_native(void* ctx, NativeFunctionStmt* native) {
+    pretty_print("Native Function: [\n");
+    OFFSET({
+        pretty_print("Name: ");
+        printf("'%.*s'\n", native->length, native->name);
     });
     pretty_print("]\n");
 }

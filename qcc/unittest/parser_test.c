@@ -89,7 +89,6 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         break;
     }
     case STMT_TYPEALIAS: {
-        // TODO if the type should be part of the node, check it too!
         assert_true(
             t_token_equals(
                 &first->typealias.identifier,

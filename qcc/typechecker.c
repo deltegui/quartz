@@ -281,8 +281,6 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
 
     Symbol* symbol = lookup_str(checker, identifier->name.start, identifier->name.length);
     assert(symbol != NULL);
-    // TODO this check in theory is not needed because you cant use a variable that is not defined,
-    // so, using a variable in it's declaration cant happend anyway.
     if (checker->is_defining_variable && symbol == checker->defining_variable) {
         error(
             checker,
@@ -467,7 +465,6 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
 }
 
 static void typecheck_native(void* ctx, NativeFunctionStmt* native) {
-    // TODO Probably check that type params arent null
 }
 
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {
@@ -523,10 +520,7 @@ static void typecheck_if(void* ctx, IfStmt* if_) {
             "in if condition. The condition must evaluate to Bool.");
     }
     ACCEPT_STMT(ctx, if_->then);
-    // TODO this null check shouldnt be neccesary
-    if (if_->else_ != NULL) {
-        ACCEPT_STMT(ctx, if_->else_);
-    }
+    ACCEPT_STMT(ctx, if_->else_);
 }
 
 static void typecheck_for(void* ctx, ForStmt* for_) {

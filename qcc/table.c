@@ -169,7 +169,6 @@ ObjString* table_find_string(Table* const table, const char* chars, int length, 
 
 void mark_table(Table* const table) {
     for (int i = 0; i < table->capacity; i++) {
-        // TODO in crafting interpreters there is no if. Check that
         if (IS_ENTRY_EMPTY(table, i) || IS_TOMBSTONE(table, i)) {
             continue;
         }
@@ -181,12 +180,10 @@ void mark_table(Table* const table) {
 
 void table_delete_white(Table* const table) {
     for (int i = 0; i < table->capacity; i++) {
-        // TODO in crafting interpreters there is no if. Check that
         if (IS_ENTRY_EMPTY(table, i) || IS_TOMBSTONE(table, i)) {
             continue;
         }
         Entry* current = &table->entries[i];
-        // TODO if current->value is an object? Its released by GC or not?
         Obj* key = (Obj*) current->key;
         if (! key->is_marked) {
             table_delete(table, current->key);

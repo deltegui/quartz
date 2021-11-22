@@ -384,7 +384,6 @@ static Stmt* statement(Parser* const parser) {
 }
 
 static Stmt* block_stmt(Parser* const parser) {
-    // TODO maybe all these advance() should be like this
     consume(parser, TOKEN_LEFT_BRACE, "Expected block to start with '{'");
     BlockStmt block;
     create_scope(parser);
@@ -396,7 +395,7 @@ static Stmt* block_stmt(Parser* const parser) {
 }
 
 static Stmt* parse_variable(Parser* const parser) {
-    advance(parser); // consume var
+    consume(parser, TOKEN_VAR, "Expected variable declaration to start with 'var'");
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         error(parser, "Expected identifier to be var name");
     }
@@ -437,7 +436,7 @@ static Stmt* variable_decl(Parser* const parser) {
 }
 
 static Stmt* typealias_decl(Parser* const parser) {
-    advance(parser); // consume typedef
+    consume(parser, TOKEN_TYPEDEF, "Expected type alias to start with 'typedef'");
 
     TypealiasStmt stmt = (TypealiasStmt) {
         .identifier = parser->current,
@@ -464,7 +463,7 @@ static Stmt* typealias_decl(Parser* const parser) {
 }
 
 static Stmt* import_decl(Parser* const parser) {
-    advance(parser); // consume import
+    consume(parser, TOKEN_IMPORT, "Expected import to start with 'import'");
     ImportStmt import_stmt = (ImportStmt) {
         .filename = parser->current,
         .ast = NULL,
@@ -529,7 +528,7 @@ static Stmt* file_import(Parser* const parser, FileImport import) {
 }
 
 static Stmt* function_decl(Parser* const parser) {
-    advance(parser); // consume fn
+    consume(parser, TOKEN_FUNCTION, "Expected function declaration to start with 'fn'");
 
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         error(parser, "Expected identifier to be function name");
@@ -685,7 +684,7 @@ static Stmt* return_stmt(Parser* const parser) {
     if (parser->function_deep_count == 0) {
         error(parser, "Cannot use return outside a function!");
     }
-    advance(parser); // consume return
+    consume(parser, TOKEN_RETURN, "Expected return statement to start with 'return'");
     ReturnStmt return_stmt;
     if (parser->current.kind == TOKEN_SEMICOLON) {
         advance(parser); // consume semicolon
@@ -699,7 +698,7 @@ static Stmt* return_stmt(Parser* const parser) {
 
 static Stmt* if_stmt(Parser* const parser) {
     Token token = parser->current;
-    advance(parser); // consume if
+    consume(parser, TOKEN_IF, "Expected if statement to start with 'if'");
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren in if condition");
     Expr* condition = expression(parser);
     consume(parser, TOKEN_RIGHT_PAREN, "expected right paren in if condition");
@@ -721,7 +720,7 @@ static Stmt* if_stmt(Parser* const parser) {
 static Stmt* while_stmt(Parser* const parser) {
     WhileStmt while_stmt;
     while_stmt.token = parser->current;
-    advance(parser); // consume while
+    consume(parser, TOKEN_WHILE, "Expected while statement to start with 'while'");
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren before while condition");
     while_stmt.condition = expression(parser);
     consume(parser, TOKEN_RIGHT_PAREN, "expected right paren after while condition");
@@ -755,7 +754,7 @@ static Stmt* for_stmt(Parser* const parser) {
     // to the for body.
     create_scope(parser);
 
-    advance(parser); // consume for
+    consume(parser, TOKEN_FOR, "Expected for statement to start with 'for'");
     consume(parser, TOKEN_LEFT_PAREN, "expected left paren in for condition");
 
     parse_for_init(parser, &for_stmt);
@@ -783,7 +782,6 @@ static void parse_for_init(Parser* const parser, ForStmt* for_stmt) {
         return;
     }
 
-    // TODO this block of code is similar than (parse_for_mod)
     ListStmt* vars = create_stmt_list();
     for (;;) {
         Stmt* var = parse_variable(parser);

@@ -233,6 +233,9 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "ontinue", 1, 8)) {
             return create_token(lexer, TOKEN_CONTINUE);
         }
+        if (match_token(lexer, "lass", 1, 5)) {
+            return create_token(lexer, TOKEN_CLASS);
+        }
         break;
     }
     case 'i': {

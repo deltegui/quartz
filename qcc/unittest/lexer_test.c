@@ -448,6 +448,17 @@ static void should_import_correctly() {
     );
 }
 
+static void should_tokenize_class_correctly() {
+    assert_types(
+        " class Human {}  ",
+        4,
+        TOKEN_CLASS,
+        TOKEN_IDENTIFIER,
+        TOKEN_LEFT_BRACE,
+        TOKEN_RIGHT_BRACE
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -473,7 +484,8 @@ int main(void) {
         cmocka_unit_test(should_tokenize_break_correctly),
         cmocka_unit_test(should_tokenize_continue_correctly),
         cmocka_unit_test(should_tokenize_typedef_correctly),
-        cmocka_unit_test(should_import_correctly)
+        cmocka_unit_test(should_import_correctly),
+        cmocka_unit_test(should_tokenize_class_correctly)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

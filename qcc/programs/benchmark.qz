@@ -1,0 +1,107 @@
+import 'stdio';
+import 'stdtime';
+import 'stdconv';
+
+typedef Callback = (Number): Number;
+
+fn benchmark(n: Number, str: String, callback: Callback) {
+    var init_time = time();
+    var result = callback(n);
+    var spend = time() - init_time;
+    println(
+        "El resultado de " +
+        str +
+        "(" +
+        ntos(n) +
+        ") es " +
+        ntos(result) +
+        " y he tardado " + ntos(spend));
+}
+
+fn benchmark_factorial_recursive() {
+    fn factorial(n: Number): Number {
+        if (n <= 1) {
+            return 1;
+        }
+        return factorial(n - 1) * n;
+    }
+
+    fn bench(n: Number) {
+        benchmark(n, "factorial_recursive", factorial);
+    }
+
+    bench(7);
+    bench(10);
+    bench(55);
+}
+
+fn benchmark_factorial_imperative() {
+    fn factorial(n: Number): Number {
+        var result = 1;
+        while (n>1) {
+            result = result * n;
+            n = n - 1;
+        }
+        return result;
+    }
+
+    fn bench(n: Number) {
+        benchmark(n, "factorial imperative", factorial);
+    }
+
+    bench(7);
+    bench(10);
+    bench(55);
+}
+
+fn benchmark_fibonacci_imperative() {
+    fn fibonacci(n: Number): Number {
+        var a: Number = 1;
+        var b: Number = 1;
+        var sum: Number = a;
+
+        for (var i = 2; i < n; i = i + 1) {
+            sum = a + b;
+            a = b;
+            b = sum;
+        }
+
+        return sum;
+    }
+
+    fn bench(n: Number) {
+        benchmark(n, "fibonacci_imperative", fibonacci);
+    }
+
+    bench(21);
+    bench(34);
+    bench(3);
+}
+
+fn benchmark_fibonacci_recursive() {
+    fn fibonacci(n: Number): Number {
+        if (n == 0) {
+            return 0;
+        }
+        if (n == 1) {
+            return 1;
+        }
+        return fibonacci(n-1) + fibonacci(n-2);
+    }
+
+    fn bench(n: Number) {
+        benchmark(n, "fibonacci_recursive", fibonacci);
+    }
+
+    bench(21);
+    bench(34);
+    bench(3);
+}
+
+benchmark_factorial_recursive();
+println('');
+benchmark_factorial_imperative();
+println('');
+benchmark_fibonacci_imperative();
+println('');
+benchmark_fibonacci_recursive();

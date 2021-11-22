@@ -62,6 +62,15 @@ ObjClosed* new_closed(Value value) {
     return closed;
 }
 
+ObjNative* new_native(const char* name, int length, native_fn_t function, Type* type) {
+    ObjNative* native = ALLOC_OBJ(ObjNative, OBJ_NATIVE, type);
+    native->name = name;
+    native->length = length;
+    native->arity = type->function->param_types.size;
+    native->function = function;
+    return native;
+}
+
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
     ObjString* obj_str = ALLOC_STR(length + 1);
     obj_str->length = length;
@@ -119,6 +128,16 @@ void print_object(Obj* const obj) {
         printf("<Closed [");
         value_print(closed->value);
         printf("]>");
+        break;
+    }
+    case OBJ_NATIVE: {
+        ObjNative* native = OBJ_AS_NATIVE(obj);
+        printf(
+            "<Native '%.*s' ",
+            native->length,
+            native->name);
+        TYPE_PRINT(obj->type);
+        printf(">");
         break;
     }
     }

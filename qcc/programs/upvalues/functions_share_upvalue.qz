@@ -1,3 +1,6 @@
+import 'stdio';
+import 'stdconv';
+
 var inc: (): Void;
 var get: (): Number;
 var inc_elements: (Number): Void;
@@ -23,11 +26,11 @@ var inc_elements: (Number): Void;
 }
 
 inc();
-print get();
+println(ntos(get()));
 inc();
-print get();
-print get();
+println(ntos(get()));
+println(ntos(get()));
 inc();
-print get();
+println(ntos(get()));
 inc_elements(5);
-print get();
+println(ntos(get()));

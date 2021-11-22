@@ -1,3 +1,6 @@
+import 'stdio';
+import 'stdconv';
+
 fn fibonacci(n: Number): Number {
     if (n == 0) {
         return 0;
@@ -8,6 +11,10 @@ fn fibonacci(n: Number): Number {
     return fibonacci(n-1) + fibonacci(n-2);
 }
 
-print fibonacci(21);
-print fibonacci(34);
-print fibonacci(3);
+fn println_number(n: Number) {
+    println(ntos(n));
+}
+
+println_number(fibonacci(21));
+println_number(fibonacci(34));
+println_number(fibonacci(3));

@@ -1,10 +1,12 @@
+import 'stdio';
+
 fn tell_me_if_five(n: Number) {
     if (n > 5) {
-        print "Is greater than five";
+        println("Is greater than five");
     } else if (n < 5) {
-        print "Is lower than five";
+        println("Is lower than five");
     } else {
-        print "Is five";
+        println("Is five");
     }
 }
 
@@ -14,7 +16,7 @@ tell_me_if_five(6);
 
 var a = "hola";
 if (a == "adios") {
-    print "esto es imposible que salga";
+    println("esto es imposible que salga");
 }
-print a;
+println(a);
 

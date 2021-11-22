@@ -37,7 +37,6 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     CASE_STMT(STMT_EXPR, expr, ExprStmt);
     CASE_STMT(STMT_VAR, var, VarStmt);
     CASE_STMT(STMT_FUNCTION, function, FunctionStmt);
-    CASE_STMT(STMT_PRINT, print, PrintStmt);
     CASE_STMT(STMT_BLOCK, block, BlockStmt);
     CASE_STMT(STMT_RETURN, return_, ReturnStmt);
     CASE_STMT(STMT_IF, if_, IfStmt);
@@ -46,6 +45,7 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     CASE_STMT(STMT_LOOPG, loopg, LoopGotoStmt);
     CASE_STMT(STMT_TYPEALIAS, typealias, TypealiasStmt);
     CASE_STMT(STMT_IMPORT, import, ImportStmt);
+    CASE_STMT(STMT_NATIVE, native, NativeFunctionStmt);
     case STMT_LIST:
         stmt->kind = STMT_LIST;
         stmt->list = (ListStmt*)stmt_node;
@@ -81,9 +81,6 @@ void free_stmt(Stmt* const stmt) {
         free_list_stmt(stmt->list);
         free(stmt->list);
         break;
-    case STMT_PRINT:
-        free_expr(stmt->print.inner);
-        break;
     case STMT_BLOCK:
         free_stmt(stmt->block.stmts);
         break;
@@ -108,6 +105,7 @@ void free_stmt(Stmt* const stmt) {
     case STMT_IMPORT:
         free_stmt(stmt->import.ast);
         break;
+    case STMT_NATIVE:
     case STMT_TYPEALIAS:
     case STMT_LOOPG:
         break;
@@ -130,7 +128,6 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_EXPR: DISPATCH(visit_expr, expr); break;
     case STMT_VAR: DISPATCH(visit_var, var); break;
     case STMT_LIST: visit_list_stmt(visitor, ctx, stmt->list); break;
-    case STMT_PRINT: DISPATCH(visit_print, print); break;
     case STMT_BLOCK: DISPATCH(visit_block, block); break;
     case STMT_FUNCTION: DISPATCH(visit_function, function); break;
     case STMT_RETURN: DISPATCH(visit_return, return_); break;
@@ -140,6 +137,7 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_LOOPG: DISPATCH(visit_loopg, loopg); break;
     case STMT_TYPEALIAS: DISPATCH(visit_typealias, typealias); break;
     case STMT_IMPORT: DISPATCH(visit_import, import); break;
+    case STMT_NATIVE: DISPATCH(visit_native, native); break;
     default: assert(false);
     }
 #undef DISPATCH

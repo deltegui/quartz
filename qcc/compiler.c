@@ -125,7 +125,6 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
 
 static void compile_expr(void* ctx, ExprStmt* expr);
 static void compile_var(void* ctx, VarStmt* var);
-static void compile_print(void* ctx, PrintStmt* print);
 static void compile_block(void* ctx, BlockStmt* block);
 static void compile_function(void* ctx, FunctionStmt* function);
 static void compile_return(void* ctx, ReturnStmt* return_);
@@ -135,11 +134,11 @@ static void compile_while(void* ctx, WhileStmt* while_);
 static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 static void compile_typealias(void* ctx, TypealiasStmt* alias);
 static void compile_import(void* ctx, ImportStmt* import);
+static void compile_native(void* ctx, NativeFunctionStmt* native);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
     .visit_var = compile_var,
-    .visit_print = compile_print,
     .visit_block = compile_block,
     .visit_function = compile_function,
     .visit_return = compile_return,
@@ -149,6 +148,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_loopg = compile_loopg,
     .visit_typealias = compile_typealias,
     .visit_import = compile_import,
+    .visit_native = compile_native,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -365,12 +365,6 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
     return make_constant(compiler, value);
 }
 
-static void compile_print(void* ctx, PrintStmt* print) {
-    Compiler* compiler = (Compiler*)ctx;
-    ACCEPT_EXPR(compiler, print->inner);
-    emit(compiler, OP_PRINT);
-}
-
 static void compile_block(void* ctx, BlockStmt* block) {
     Compiler* compiler = (Compiler*)ctx;
 
@@ -463,6 +457,33 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_variable_declaration(compiler, fn_index);
 
     emit_bind_upvalues(compiler, symbol, function->identifier);
+}
+
+static void compile_native(void* ctx, NativeFunctionStmt* native) {
+    Compiler* compiler = (Compiler*) ctx;
+
+    Symbol* symbol = lookup_str(compiler, native->name, native->length);
+    assert(symbol != NULL);
+
+    Token identifier;
+    identifier.kind = TOKEN_IDENTIFIER;
+    identifier.start = native->name;
+    identifier.length = native->length;
+    identifier.line = symbol->declaration_line;
+    identifier.column = 0;
+
+    uint16_t native_index = get_variable_index(compiler, &identifier);
+    update_symbol_variable_info(compiler, symbol, native_index);
+
+    ObjNative* obj = new_native(
+        native->name,
+        native->length,
+        native->function,
+        symbol->type);
+
+    uint16_t default_value = make_constant(compiler, OBJ_VALUE(obj, symbol->type));
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
+    emit_variable_declaration(compiler, native_index);
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {

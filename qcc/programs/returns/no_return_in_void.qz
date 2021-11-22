@@ -1,5 +1,7 @@
+import 'stdio';
+
 fn hello(): Void {
    // This is OK
-   print "ok";
+   println("ok");
 }
 hello();

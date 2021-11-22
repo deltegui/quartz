@@ -1,3 +1,4 @@
-[Line 1] Type error: The Type '(Number): Void' does not match with type '(String, Number): Void' in function return
-1 | fn hola(): (Number): Void {
-  | ~~~~~~^
+[Line 3] Type error: The Type '(Number): Void' does not match with type '(String, Number): Void' in function return
+2 | 
+3 | fn hola(): (Number): Void {
+  | ~~~~~~~^

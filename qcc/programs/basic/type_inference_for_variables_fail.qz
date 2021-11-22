@@ -1,5 +1,7 @@
+import 'stdio';
+
 fn do_something(): Void {
-    print "aaa";
+    println("aaa");
 }
 
 var a = do_something();

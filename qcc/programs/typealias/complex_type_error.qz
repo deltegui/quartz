@@ -1,9 +1,11 @@
+import 'stdio';
+import 'stdconv';
+
 typedef Name = (String, Number): Void;
 
 fn first(index: Number): Name {
     fn a(s: String, n: Number) {
-        print s;
-        print n;
+        println(s + ntos(n));
     }
     return a;
 }

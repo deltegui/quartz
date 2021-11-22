@@ -28,6 +28,7 @@ static void sweep();
 void* qvm_realloc(void* ptr, size_t old_size, size_t size) {
     qvm.bytes_allocated += size - old_size;
 #ifdef STRESS_GC
+    printf("Oldsize %d, size %d\n", old_size, size);
     if (size > old_size && GC_CAN_RUN()) {
         collect_garbage();
     }
@@ -59,6 +60,10 @@ static void free_object(Obj* obj) {
         FREE(ObjClosed, obj);
         break;
     }
+    case OBJ_NATIVE: {
+        FREE(ObjNative, obj);
+        break;
+    }
     }
 }
 
@@ -77,9 +82,9 @@ static void collect_garbage() {
     printf("-- gc begins\n");
     size_t before = qvm.bytes_allocated;
 #endif
+    qvm.next_gc_trigger = qvm.bytes_allocated * GC_HEAP_GROW_FACTOR;
     mark();
     sweep();
-    qvm.next_gc_trigger = qvm.bytes_allocated * GC_HEAP_GROW_FACTOR;
 #ifdef GC_DEBUG
     printf("-- gc ends\n");
     printf(
@@ -172,6 +177,7 @@ static void trace_objects() {
 
 static void blacken_object(Obj* obj) {
     switch (obj->kind) {
+    case OBJ_NATIVE:
     case OBJ_STRING:
         break;
     case OBJ_FUNCTION: {

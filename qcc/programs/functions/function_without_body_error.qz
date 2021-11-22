@@ -1,0 +1,5 @@
+import 'stdio';
+
+fn salut(name: String): Void println("Hola " + name + "!");
+
+salut('Javier');

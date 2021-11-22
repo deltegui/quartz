@@ -2,6 +2,7 @@
 #define QUARTZ_STMT_H_
 
 #include "expr.h"
+#include "native.h"
 
 typedef enum {
     STMT_TYPEALIAS,
@@ -9,7 +10,6 @@ typedef enum {
     STMT_VAR,
     STMT_FUNCTION,
     STMT_LIST,
-    STMT_PRINT,
     STMT_BLOCK,
     STMT_RETURN,
     STMT_IF,
@@ -17,6 +17,7 @@ typedef enum {
     STMT_WHILE,
     STMT_LOOPG,
     STMT_IMPORT,
+    STMT_NATIVE,
 } StmtKind;
 
 struct s_stmt;
@@ -40,8 +41,10 @@ typedef struct {
 } FunctionStmt;
 
 typedef struct {
-    Expr* inner;
-} PrintStmt;
+    const char* name;
+    int length;
+    native_fn_t function;
+} NativeFunctionStmt;
 
 typedef struct {
     int capacity;
@@ -103,7 +106,6 @@ typedef struct s_stmt {
         VarStmt var;
         FunctionStmt function;
         ListStmt* list;
-        PrintStmt print;
         BlockStmt block;
         ReturnStmt return_;
         IfStmt if_;
@@ -112,6 +114,7 @@ typedef struct s_stmt {
         LoopGotoStmt loopg;
         TypealiasStmt typealias;
         ImportStmt import;
+        NativeFunctionStmt native;
     };
 } Stmt;
 
@@ -119,7 +122,6 @@ typedef struct {
     void (*visit_expr)(void* ctx, ExprStmt* expr);
     void (*visit_var)(void* ctx, VarStmt* var);
     void (*visit_function)(void* ctx, FunctionStmt* function);
-    void (*visit_print)(void* ctx, PrintStmt* print);
     void (*visit_block)(void* ctx, BlockStmt* block);
     void (*visit_return)(void* ctx, ReturnStmt* ret);
     void (*visit_if)(void* ctx, IfStmt* ifstmt);
@@ -128,13 +130,13 @@ typedef struct {
     void (*visit_loopg)(void* ctx, LoopGotoStmt* loopg);
     void (*visit_typealias)(void* ctx, TypealiasStmt* typealias);
     void (*visit_import)(void* ctx, ImportStmt* import);
+    void (*visit_native)(void* ctx, NativeFunctionStmt* native);
 } StmtVisitor;
 
 #define STMT_IS_VAR(stmt) (stmt.kind == STMT_VAR)
 #define STMT_IS_FUNCTION(stmt) (stmt.kind == STMT_FUNCTION)
 #define STMT_IS_EXPR(stmt) (stmt.kind == STMT_EXPR)
 #define STMT_IS_LIST(stmt) (stmt.kind == STMT_LIST)
-#define STMT_IS_PRINT(stmt) (stmt.kind == STMT_PRINT)
 #define STMT_IS_BLOCK(stmt) (stmt.kind == STMT_BLOCK)
 #define STMT_IS_RETURN(stmt) (stmt.kind == STMT_RETURN)
 #define STMT_IS_IF(stmt) (stmt.kind == STMT_IF)
@@ -143,6 +145,7 @@ typedef struct {
 #define STMT_IS_LOOPG(stmt) (stmt.kind == STMT_LOOPG)
 #define STMT_IS_TYPEALIAS(stmt) (stmt.kind == STMT_TYPEALIAS)
 #define STMT_IS_IMPORT(stmt) (stmt.kind == STMT_IMPORT)
+#define STMT_IS_NATIVE(stmt) (stmt.kind == STMT_NATIVE)
 
 #define CREATE_STMT_RETURN(return_) create_stmt(STMT_RETURN, &return_)
 #define CREATE_STMT_VAR(var) create_stmt(STMT_VAR, &var)
@@ -150,7 +153,6 @@ typedef struct {
 #define CREATE_STMT_EXPR(expr) create_stmt(STMT_EXPR, &expr)
 // ListStmt is always a pointer (Because is created using create_list_stmt)
 #define CREATE_STMT_LIST(list) create_stmt(STMT_LIST, list)
-#define CREATE_STMT_PRINT(print) create_stmt(STMT_PRINT, &print)
 #define CREATE_STMT_BLOCK(block) create_stmt(STMT_BLOCK, &block)
 #define CREATE_STMT_IF(if_) create_stmt(STMT_IF, &if_)
 #define CREATE_STMT_FOR(for_) create_stmt(STMT_FOR, &for_)
@@ -158,6 +160,7 @@ typedef struct {
 #define CREATE_STMT_LOOPG(loopg) create_stmt(STMT_LOOPG, &loopg)
 #define CREATE_STMT_TYPEALIAS(typealias) create_stmt(STMT_TYPEALIAS, &typealias)
 #define CREATE_STMT_IMPORT(import) create_stmt(STMT_IMPORT, &import)
+#define CREATE_STMT_NATIVE(native) create_stmt(STMT_NATIVE, &native)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* const stmt);

@@ -1,14 +1,15 @@
+import 'stdio';
 import '../programs/imports/other.qz';
 import '../programs/imports/name.qz';
 
 var first: Name = generate_name(0);
-print first;
+println(first);
 
 var infer = generate_name(1);
-print infer;
+println(infer);
 
 var str: String = generate_name(2);
-print str;
+println(str);
 
 var other: Name = generate_name(3);
-print other;
+println(other);

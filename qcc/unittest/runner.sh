@@ -24,6 +24,8 @@ if [ $KERNEL = "Linux" ]; then
 fi
 
 SOURCES=`find ../*.c -maxdepth 1 ! -name qcc.c | tr '\n' ' '`
+STDLIB_SOURCES=`find ../stdlib/*.c -maxdepth 1 | tr '\n' ' '`
+SOURCES="$SOURCES $STDLIB_SOURCES"
 echo $SOURCES
 
 testn() {

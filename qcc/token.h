@@ -49,7 +49,6 @@ typedef enum {
     TOKEN_FALSE,
     TOKEN_NIL,
     TOKEN_STRING,
-    TOKEN_PRINT,
     TOKEN_IDENTIFIER,
     TOKEN_BREAK,
     TOKEN_CONTINUE,

@@ -26,7 +26,6 @@ typedef enum {
     OP_FALSE,
     OP_NIL,
     OP_NOP,
-    OP_PRINT,
     OP_RETURN,
 
     // Stack operations

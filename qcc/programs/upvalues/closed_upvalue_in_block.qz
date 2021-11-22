@@ -1,8 +1,11 @@
+import 'stdio';
+import 'stdconv';
+
 var my: (Number): Void;
 {
     var a = 0;
     fn pipo(b: Number) {
-        print a;
+        println(ntos(a));
         a = a + 1;
     }
     my = pipo;

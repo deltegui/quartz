@@ -1,17 +1,17 @@
-'GLOBAL!'
-'FIRST!'
-'SECOND!'
-'a second local'
-'b second local'
-'c second local'
-'d first local'
-'e global'
-'END SECOND!'
-'a first local'
-'b first local'
-'d first local'
-'e global'
-'END FIRST!'
-'a global'
-'e global'
-'END GLOBAL!'
+GLOBAL!
+FIRST!
+SECOND!
+a second local
+b second local
+c second local
+d first local
+e global
+END SECOND!
+a first local
+b first local
+d first local
+e global
+END FIRST!
+a global
+e global
+END GLOBAL!

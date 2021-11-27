@@ -82,6 +82,7 @@ static void typecheck_for(void* ctx, ForStmt* for_);
 static void typecheck_while(void* ctx, WhileStmt* while_);
 static void typecheck_import(void* ctx, ImportStmt* import);
 static void typecheck_native(void* ctx, NativeFunctionStmt* native);
+static void typecheck_class(void* ctx, ClassStmt* klass);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -96,6 +97,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_typealias = typecheck_typealias,
     .visit_import = typecheck_import,
     .visit_native = typecheck_native,
+    .visit_class = typecheck_class,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -465,6 +467,19 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
 }
 
 static void typecheck_native(void* ctx, NativeFunctionStmt* native) {
+}
+
+static void typecheck_class(void* ctx, ClassStmt* klass) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* class_sym = lookup_str(checker, klass->identifier.start, klass->identifier.length);
+    assert(class_sym != NULL);
+    assert(class_sym->kind == SYMBOL_OBJECT);
+
+    ScopedSymbolTable* prev = checker->symbols;
+    checker->symbols = class_sym->object.symbols;
+    ACCEPT_STMT(ctx, klass->body);
+    checker->symbols = prev;
 }
 
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {

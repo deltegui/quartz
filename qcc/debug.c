@@ -335,6 +335,8 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_BREAK: return "TokenBreak";
     case TOKEN_CONTINUE: return "TokenContinue";
     case TOKEN_IMPORT: return "TokenImport";
+    case TOKEN_CLASS: return "TokenClass";
+    case TOKEN_PUBLIC: return "TokenPublic";
     default: return "Unknown";
     }
 }
@@ -381,6 +383,7 @@ static void print_loopg(void* ctx, LoopGotoStmt* loopg);
 static void print_typealias(void* ctx, TypealiasStmt* alias);
 static void print_import(void* ctx, ImportStmt* import);
 static void print_native(void* ctx, NativeFunctionStmt* native);
+static void print_class(void* ctx, ClassStmt* klass);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -395,6 +398,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_typealias = print_typealias,
     .visit_import = print_import,
     .visit_native = print_native,
+    .visit_class = print_class,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -674,3 +678,18 @@ static void print_native(void* ctx, NativeFunctionStmt* native) {
     });
     pretty_print("]\n");
 }
+
+static void print_class(void* ctx, ClassStmt* klass) {
+    pretty_print("Class: [\n");
+    OFFSET({
+        pretty_print("Identifier: ");
+        token_print(klass->identifier);
+        pretty_print("Body: [\n");
+        OFFSET({
+            ACCEPT_STMT(klass->body);
+        });
+        pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+

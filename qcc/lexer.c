@@ -238,27 +238,9 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
-    case 'i': {
-        if (match_token(lexer, "f", 1, 2)) {
-            return create_token(lexer, TOKEN_IF);
-        }
-        if (match_token(lexer, "mport", 1, 6)) {
-            return create_token(lexer, TOKEN_IMPORT);
-        }
-        break;
-    }
     case 'e': {
         if (match_token(lexer, "lse", 1, 4)) {
             return create_token(lexer, TOKEN_ELSE);
-        }
-        break;
-    }
-    case 't': {
-        if (match_token(lexer, "rue", 1, 4)) {
-            return create_token(lexer, TOKEN_TRUE);
-        }
-        if (match_token(lexer, "ypedef", 1, 7)) {
-            return create_token(lexer, TOKEN_TYPEDEF);
         }
         break;
     }
@@ -274,21 +256,45 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
+    case 'i': {
+        if (match_token(lexer, "f", 1, 2)) {
+            return create_token(lexer, TOKEN_IF);
+        }
+        if (match_token(lexer, "mport", 1, 6)) {
+            return create_token(lexer, TOKEN_IMPORT);
+        }
+        break;
+    }
     case 'n': {
         if (match_token(lexer, "il", 1, 3)) {
             return create_token(lexer, TOKEN_NIL);
         }
         break;
     }
-    case 'v': {
-        if (match_token(lexer, "ar", 1, 3)) {
-            return create_token(lexer, TOKEN_VAR);
+    case 'p': {
+        if (match_token(lexer, "ub", 1, 3)) {
+            return create_token(lexer, TOKEN_PUBLIC);
         }
         break;
     }
     case 'r': {
         if (match_token(lexer, "eturn", 1, 6)) {
             return create_token(lexer, TOKEN_RETURN);
+        }
+        break;
+    }
+    case 't': {
+        if (match_token(lexer, "rue", 1, 4)) {
+            return create_token(lexer, TOKEN_TRUE);
+        }
+        if (match_token(lexer, "ypedef", 1, 7)) {
+            return create_token(lexer, TOKEN_TYPEDEF);
+        }
+        break;
+    }
+    case 'v': {
+        if (match_token(lexer, "ar", 1, 3)) {
+            return create_token(lexer, TOKEN_VAR);
         }
         break;
     }

@@ -112,6 +112,14 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
                 first->native.length) == 0);
         break;
     }
+    case STMT_CLASS: {
+        assert_true(
+            t_token_equals(
+                &first->klass.identifier,
+                &second->klass.identifier));
+        assert_stmt_equals(first->klass.body, second->klass.body);
+        break;
+    }
     }
 }
 
@@ -291,6 +299,13 @@ Token b_token = (Token){
     .length = 1,
     .line = 1,
     .start = "b",
+    .kind = TOKEN_IDENTIFIER
+};
+
+Token hello_token = (Token){
+    .length = 5,
+    .line = 1,
+    .start = "Hello",
     .kind = TOKEN_IDENTIFIER
 };
 
@@ -846,10 +861,45 @@ static void should_fail_typealias() {
     assert_has_errors("typedef Hola = Number");
 }
 
+static void should_parse_classes() {
+    ClassStmt klass;
+    klass.identifier = hello_token;
+
+    ListStmt* list = create_stmt_list();
+
+    VarStmt a_var;
+    a_var.identifier = a_token;
+    a_var.definition = CREATE_LITERAL_EXPR(five);
+    stmt_list_add(list, CREATE_STMT_VAR(a_var));
+
+    VarStmt b_var;
+    b_var.identifier = b_token;
+    b_var.definition = CREATE_LITERAL_EXPR(five);
+    stmt_list_add(list, CREATE_STMT_VAR(b_var));
+
+    klass.body = CREATE_STMT_LIST(list);
+
+    assert_stmt_ast(" class Hello { pub var a = 5; var b = 5; } ", CREATE_STMT_CLASS(klass));
+}
+
+static void should_fail_parsing_classes() {
+    assert_has_errors(" class Hello { pub }");
+    assert_has_errors(" class Hello { for (;;) {} }");
+}
+
+static void should_parse_empty_class() {
+    ClassStmt klass;
+    klass.identifier = hello_token;
+
+    ListStmt* list = create_stmt_list();
+    klass.body = CREATE_STMT_LIST(list);
+
+    assert_stmt_ast(" class Hello { } ", CREATE_STMT_CLASS(klass));
+}
+
 static int test_setup(void** args) {
     init_type_pool();
-    return 0;
-}
+    return 0; }
 
 static int test_teardown(void** args) {
     free_type_pool();
@@ -890,7 +940,10 @@ int main(void) {
         cmocka_unit_test(should_parse_break),
         cmocka_unit_test(should_parse_continue),
         cmocka_unit_test(should_parse_typealias),
-        cmocka_unit_test(should_fail_typealias)
+        cmocka_unit_test(should_fail_typealias),
+        cmocka_unit_test(should_parse_classes),
+        cmocka_unit_test(should_fail_parsing_classes),
+        cmocka_unit_test(should_parse_empty_class)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

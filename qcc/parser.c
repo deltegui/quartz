@@ -65,6 +65,7 @@ static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
 static Stmt* class_decl(Parser* const parser);
 static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_table);
+static SymbolVisibility parse_property_visibility(Parser* const parser);
 static Stmt* native_import(Parser* const parser, NativeImport import, int line);
 static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
@@ -555,7 +556,7 @@ static Stmt* class_decl(Parser* const parser) {
     klass.body = parse_class_body(parser, symbol.object.symbols);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' before class body");
 
-    CREATE_STMT_CLASS(klass);
+    return CREATE_STMT_CLASS(klass);
 }
 
 static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_table) {
@@ -567,18 +568,39 @@ static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_ta
         if (parser->current.kind == TOKEN_RIGHT_BRACE) {
             break;
         }
-        // parse visibility
+        SymbolVisibility visibility = parse_property_visibility(parser);
+        Stmt* stmt = NULL;
+        Token identifier;
+
         switch (parser->current.kind) {
         case TOKEN_VAR:
+            stmt = variable_decl(parser);
+            identifier = stmt->var.identifier;
+            break;
         case TOKEN_FUNCTION:
+            stmt = function_decl(parser);
+            identifier = stmt->function.identifier;
+            break;
         default:
-            // error
-            ;
+            error(parser, "Unexpected token inside class body");
+            return CREATE_STMT_LIST(list);
         }
+
+        Symbol* sym = lookup_str(parser, identifier.start, identifier.length);
+        sym->visibility = visibility;
+        stmt_list_add(list, stmt);
     }
 
     parser->symbols = parser_table;
     return CREATE_STMT_LIST(list);
+}
+
+static SymbolVisibility parse_property_visibility(Parser* const parser) {
+    if (parser->current.kind == TOKEN_PUBLIC) {
+        advance(parser); // consume pub token
+        return SYMBOL_VISIBILITY_PUBLIC;
+    }
+    return SYMBOL_VISIBILITY_PRIVATE;
 }
 
 static Stmt* function_decl(Parser* const parser) {

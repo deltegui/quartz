@@ -29,6 +29,13 @@
     free_type_pool();\
 } while (false)
 
+#define SET(...) do {\
+    SymbolSet* set = create_symbol_set();\
+    init_type_pool();\
+    __VA_ARGS__\
+    free_type_pool();\
+} while (false)
+
 typedef struct {
     const char* str;
     int length;
@@ -217,18 +224,18 @@ static void should_return_null_if_symbol_does_not_exist() {
 }
 
 static void scoped_symbol_should_insert_and_lookup() {
-    SymbolName a = create_symbol_name("a", 1);
-    SymbolName b = create_symbol_name("b", 1);
-    SymbolName c = create_symbol_name("c", 1);
-    SymbolName d = create_symbol_name("d", 1);
-    SymbolName e = create_symbol_name("e", 1);
-    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
-    Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
-    Symbol sym_c = create_symbol(c, 3, CREATE_TYPE_NUMBER());
-    Symbol sym_d = create_symbol(d, 4, CREATE_TYPE_NUMBER());
-    Symbol sym_e = create_symbol(e, 5, CREATE_TYPE_NUMBER());
-
     SCOPED_TABLE({
+        SymbolName a = create_symbol_name("a", 1);
+        SymbolName b = create_symbol_name("b", 1);
+        SymbolName c = create_symbol_name("c", 1);
+        SymbolName d = create_symbol_name("d", 1);
+        SymbolName e = create_symbol_name("e", 1);
+        Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+        Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
+        Symbol sym_c = create_symbol(c, 3, CREATE_TYPE_NUMBER());
+        Symbol sym_d = create_symbol(d, 4, CREATE_TYPE_NUMBER());
+        Symbol sym_e = create_symbol(e, 5, CREATE_TYPE_NUMBER());
+
         /*
         {
             a, b
@@ -296,16 +303,16 @@ static void scoped_symbol_should_insert_and_lookup() {
 }
 
 static void scoped_symbol_should_do_lookups_with_limited_levels() {
-    SymbolName a = create_symbol_name("a", 1);
-    SymbolName c = create_symbol_name("c", 1);
-    SymbolName d = create_symbol_name("d", 1);
-    SymbolName e = create_symbol_name("e", 1);
-    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
-    Symbol sym_c = create_symbol(c, 3, CREATE_TYPE_NUMBER());
-    Symbol sym_d = create_symbol(d, 4, CREATE_TYPE_NUMBER());
-    Symbol sym_e = create_symbol(e, 5, CREATE_TYPE_NUMBER());
+    SCOPED_TABLE({
+        SymbolName a = create_symbol_name("a", 1);
+        SymbolName c = create_symbol_name("c", 1);
+        SymbolName d = create_symbol_name("d", 1);
+        SymbolName e = create_symbol_name("e", 1);
+        Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+        Symbol sym_c = create_symbol(c, 3, CREATE_TYPE_NUMBER());
+        Symbol sym_d = create_symbol(d, 4, CREATE_TYPE_NUMBER());
+        Symbol sym_e = create_symbol(e, 5, CREATE_TYPE_NUMBER());
 
-     SCOPED_TABLE({
         /*
         {
             a
@@ -363,11 +370,12 @@ static void scoped_symbol_should_do_lookups_with_limited_levels() {
 }
 
 static void scoped_symbol_should_insert_globals() {
-    SymbolName a = create_symbol_name("a", 1);
-    SymbolName b = create_symbol_name("b", 1);
-    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
-    Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
     SCOPED_TABLE({
+        SymbolName a = create_symbol_name("a", 1);
+        SymbolName b = create_symbol_name("b", 1);
+        Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+        Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
+
         scoped_symbol_insert(&table, sym_a);
         scoped_symbol_insert(&table, sym_b);
         Symbol* result_a = scoped_symbol_lookup(&table, &a);
@@ -378,12 +386,12 @@ static void scoped_symbol_should_insert_globals() {
 }
 
 static void scoped_symbol_should_insert_locals() {
-    SymbolName a = create_symbol_name("a", 1);
-    SymbolName b = create_symbol_name("b", 1);
-    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
-    Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
-
     SCOPED_TABLE({
+        SymbolName a = create_symbol_name("a", 1);
+        SymbolName b = create_symbol_name("b", 1);
+        Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+        Symbol sym_b = create_symbol(b, 2, CREATE_TYPE_NUMBER());
+
         scoped_symbol_insert(&table, sym_a);
         symbol_create_scope(&table);
         scoped_symbol_insert(&table, sym_b);
@@ -457,59 +465,67 @@ static void upvalue_iterator_should_iterate_over_upvalues() {
 }
 
 void symbol_set_should_not_repeat_elements() {
-    SymbolName a = create_symbol_name("a", 1);
-    SymbolName a_clone = create_symbol_name("a", 1);
-    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
-    Symbol sym_a_clone = create_symbol(a_clone, 1, CREATE_TYPE_NUMBER());
+    SET({
+        SymbolName a = create_symbol_name("a", 1);
+        SymbolName a_clone = create_symbol_name("a", 1);
+        Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+        Symbol sym_a_clone = create_symbol(a_clone, 1, CREATE_TYPE_NUMBER());
 
-    SymbolSet* set = create_symbol_set();
-    symbol_set_add(set, &sym_a);
-    symbol_set_add(set, &sym_a_clone);
+        symbol_set_add(set, &sym_a);
+        symbol_set_add(set, &sym_a_clone);
 
-    Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
-    int size = SYMBOL_SET_SIZE(set);
-    assert_true(size == 1);
-    assert_key(&elements[0]->name, &a);
-    free_symbol_set(set);
+        Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
+        int size = SYMBOL_SET_SIZE(set);
+        assert_true(size == 1);
+        assert_key(&elements[0]->name, &a);
+        free_symbol_set(set);
 
-    free_symbol(&sym_a);
-    free_symbol(&sym_a_clone);
+        free_symbol(&sym_a);
+        free_symbol(&sym_a_clone);
+    });
 }
 
 void symbol_set_should_insert_more_than_one() {
-    SymbolName a = create_symbol_name("a", 1);
-    SymbolName bebe = create_symbol_name("bebe", 1);
-    Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
-    Symbol sym_bebe = create_symbol(bebe, 1, CREATE_TYPE_NUMBER());
+    SET({
+        SymbolName a = create_symbol_name("a", 1);
+        SymbolName bebe = create_symbol_name("bebe", 1);
+        Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
+        Symbol sym_bebe = create_symbol(bebe, 1, CREATE_TYPE_NUMBER());
 
-    SymbolSet* set = create_symbol_set();
-    symbol_set_add(set, &sym_a);
-    symbol_set_add(set, &sym_bebe);
+        symbol_set_add(set, &sym_a);
+        symbol_set_add(set, &sym_bebe);
 
-    Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
-    int size = SYMBOL_SET_SIZE(set);
-    assert_true(size == 2);
-    assert_key(&elements[0]->name, &a);
-    assert_key(&elements[1]->name, &bebe);
-    free_symbol_set(set);
+        Symbol** elements = SYMBOL_SET_GET_ELEMENTS(set);
+        int size = SYMBOL_SET_SIZE(set);
+        assert_true(size == 2);
+        assert_key(&elements[0]->name, &a);
+        assert_key(&elements[1]->name, &bebe);
+        free_symbol_set(set);
 
-    free_symbol(&sym_a);
-    free_symbol(&sym_bebe);
+        free_symbol(&sym_a);
+        free_symbol(&sym_bebe);
+    });
 }
 
 void symbol_set_should_not_iterate_over_empty_set() {
-    SymbolSet* set = create_symbol_set();
+    SET({
+        int size = SYMBOL_SET_SIZE(set);
+        assert_true(size == 0);
 
-    int size = SYMBOL_SET_SIZE(set);
-    assert_true(size == 0);
+        int counter = 0;
+        SYMBOL_SET_FOREACH(set, {
+            counter = i;
+        });
+        assert_true(counter == 0);
 
-    int counter = 0;
-    SYMBOL_SET_FOREACH(set, {
-        counter = i;
+        free_symbol_set(set);
     });
-    assert_true(counter == 0);
+}
 
-    free_symbol_set(set);
+void object_symbols_can_be_added() {
+    TABLE({
+        :wq
+    });
 }
 
 int main(void) {

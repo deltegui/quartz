@@ -18,6 +18,7 @@ typedef enum {
     STMT_LOOPG,
     STMT_IMPORT,
     STMT_NATIVE,
+    STMT_CLASS,
 } StmtKind;
 
 struct s_stmt;
@@ -96,6 +97,11 @@ typedef struct {
     struct s_stmt* ast;
 } ImportStmt;
 
+typedef struct {
+    Token identifier;
+    struct s_stmt* body;
+} ClassStmt;
+
 ListStmt* create_stmt_list();
 void stmt_list_add(ListStmt* const list, struct s_stmt* stmt);
 
@@ -115,6 +121,7 @@ typedef struct s_stmt {
         TypealiasStmt typealias;
         ImportStmt import;
         NativeFunctionStmt native;
+        ClassStmt klass;
     };
 } Stmt;
 
@@ -131,6 +138,7 @@ typedef struct {
     void (*visit_typealias)(void* ctx, TypealiasStmt* typealias);
     void (*visit_import)(void* ctx, ImportStmt* import);
     void (*visit_native)(void* ctx, NativeFunctionStmt* native);
+    void (*visit_class)(void* ctx, ClassStmt* klass);
 } StmtVisitor;
 
 #define STMT_IS_VAR(stmt) (stmt.kind == STMT_VAR)
@@ -146,6 +154,7 @@ typedef struct {
 #define STMT_IS_TYPEALIAS(stmt) (stmt.kind == STMT_TYPEALIAS)
 #define STMT_IS_IMPORT(stmt) (stmt.kind == STMT_IMPORT)
 #define STMT_IS_NATIVE(stmt) (stmt.kind == STMT_NATIVE)
+#define STMT_IS_CLASS(stmt) (stmt.kind == STMT_CLASS)
 
 #define CREATE_STMT_RETURN(return_) create_stmt(STMT_RETURN, &return_)
 #define CREATE_STMT_VAR(var) create_stmt(STMT_VAR, &var)
@@ -161,6 +170,7 @@ typedef struct {
 #define CREATE_STMT_TYPEALIAS(typealias) create_stmt(STMT_TYPEALIAS, &typealias)
 #define CREATE_STMT_IMPORT(import) create_stmt(STMT_IMPORT, &import)
 #define CREATE_STMT_NATIVE(native) create_stmt(STMT_NATIVE, &native)
+#define CREATE_STMT_CLASS(klass) create_stmt(STMT_CLASS, &klass)
 
 Stmt* create_stmt(StmtKind kind, void* stmt_node);
 void free_stmt(Stmt* const stmt);

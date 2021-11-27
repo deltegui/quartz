@@ -64,6 +64,22 @@ static void two_typealias_should_be_equal() {
     });
 }
 
+static void two_objects_should_be_equals() {
+    TYPE_POOL({
+        Type* a = create_type_object("Human", 5);
+        Type* b = create_type_object("Human", 5);
+        assert_true(type_equals(a, b));
+    });
+}
+
+static void two_objects_are_different() {
+    TYPE_POOL({
+        Type* a = create_type_object("Human", 5);
+        Type* b = create_type_object("Animal", 6);
+        assert_false(type_equals(a, b));
+    });
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(complex_types_should_be_equal),
@@ -71,7 +87,9 @@ int main(void) {
         cmocka_unit_test(simple_type_should_be_equal),
         cmocka_unit_test(creating_other_types_should_use_pool),
         cmocka_unit_test(simple_types_share_same_pointer),
-        cmocka_unit_test(two_typealias_should_be_equal)
+        cmocka_unit_test(two_typealias_should_be_equal),
+        cmocka_unit_test(two_objects_should_be_equals),
+        cmocka_unit_test(two_objects_are_different)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

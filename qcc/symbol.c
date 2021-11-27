@@ -8,6 +8,7 @@ typedef bool (*ExitCondition) (Symbol*);
 static bool symbol_name_equals(SymbolName* first, SymbolName* second);
 static SymbolKind kind_from_type(Type* type);
 static void create_function_symbol(Symbol* const symbol);
+static void create_object_symbol(Symbol* const symbol);
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
 static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, ExitCondition test_condition);
 
@@ -33,16 +34,20 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
     Symbol symbol = (Symbol){
         .kind = kind_from_type(type),
         .name = name,
-        .declaration_line = line,
         .type = type,
+        .visibility = SYMBOL_VISIBILITY_UNDEFINED,
+        .declaration_line = line,
         .constant_index = UINT16_MAX,
-        .native = false, // normally its not native
         .global = false, // we dont know
         .assigned = true, // normally is
+        .native = false, // normally its not native
     };
     symbol.upvalue_fn_refs = create_symbol_set();
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
+    }
+    if (symbol.kind == SYMBOL_OBJECT) {
+        create_object_symbol(&symbol);
     }
     return symbol;
 }
@@ -50,6 +55,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
 static SymbolKind kind_from_type(Type* type) {
     switch (type->kind) {
     case TYPE_FUNCTION: return SYMBOL_FUNCTION;
+    case TYPE_OBJECT: return SYMBOL_OBJECT;
     default: return SYMBOL_VAR;
     }
 }
@@ -60,12 +66,23 @@ static void create_function_symbol(Symbol* const symbol) {
     fn_sym->upvalues = create_symbol_set();
 }
 
+static void create_object_symbol(Symbol* const symbol) {
+    ObjectSymbol* obj_sym = &symbol->object;
+    obj_sym->symbols = (SymbolTable*) malloc(sizeof(SymbolTable));
+    init_symbol_table(obj_sym->symbols);
+}
+
 void free_symbol(Symbol* const symbol) {
     // Notice we dont own Type* (symbol->type). Please DO NOT FREE Type*.
     switch (symbol->kind) {
     case SYMBOL_FUNCTION: {
         free_vector(&symbol->function.param_names);
         free_symbol_set(symbol->function.upvalues);
+        break;
+    }
+    case SYMBOL_OBJECT: {
+        free_symbol_table(symbol->object.symbols);
+        free(symbol->object.symbols);
         break;
     }
     case SYMBOL_TYPEALIAS:

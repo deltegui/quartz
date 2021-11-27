@@ -63,6 +63,8 @@ static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
+static Stmt* class_decl(Parser* const parser);
+static Stmt* parse_class_body(Parser* const parser);
 static Stmt* native_import(Parser* const parser, NativeImport import, int line);
 static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
@@ -358,6 +360,8 @@ static Stmt* declaration(Parser* const parser) {
         return typealias_decl(parser);
     case TOKEN_IMPORT:
         return import_decl(parser);
+    case TOKEN_CLASS:
+        return class_decl(parser);
     default:
         return statement(parser);
     }
@@ -525,6 +529,43 @@ static Stmt* file_import(Parser* const parser, FileImport import) {
         parser->has_error = true;
     }
     return subast;
+}
+
+static Stmt* class_decl(Parser* const parser) {
+    consume(parser, TOKEN_CLASS, "Expected class declaration to start with 'class'");
+
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        error(parser, "Expected identifier to be class name");
+    }
+    ClassStmt klass;
+    klass.identifier = parser->current;
+
+    // TODO change type
+    Symbol symbol = create_symbol_calc_global(parser, &klass.identifier, CREATE_TYPE_UNKNOWN());
+
+    advance(parser); // Consume identifier
+
+    consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after class name in class declaration");
+    parse_class_body(parser);
+    consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' before class body");
+}
+
+static Stmt* parse_class_body(Parser* const parser) {
+    ListStmt* list = create_stmt_list();
+    for (;;) {
+        if (parser->current.kind == TOKEN_RIGHT_BRACE) {
+            break;
+        }
+        // parse visibility
+        switch (parser->current.kind) {
+        case TOKEN_VAR:
+        case TOKEN_FUNCTION:
+        default:
+            // error
+            ;
+        }
+    }
+    return CREATE_STMT_LIST(list);
 }
 
 static Stmt* function_decl(Parser* const parser) {

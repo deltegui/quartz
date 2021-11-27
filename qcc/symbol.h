@@ -18,10 +18,23 @@ SymbolName create_symbol_name(const char* start, int length);
 typedef enum {
     SYMBOL_TYPEALIAS,
     SYMBOL_FUNCTION,
-    SYMBOL_VAR
+    SYMBOL_VAR,
+    SYMBOL_OBJECT,
 } SymbolKind;
 
+typedef enum {
+    SYMBOL_VISIBILITY_UNDEFINED,
+    SYMBOL_VISIBILITY_PUBLIC,
+    SYMBOL_VISIBILITY_PRIVATE,
+} SymbolVisibility;
+
+// TODO symbol set change
 struct _SymbolSet;
+struct s_symbol_table;
+
+typedef struct {
+    struct s_symbol_table* symbols;
+} ObjectSymbol;
 
 typedef struct {
     Vector param_names; // Vector<Token>
@@ -39,6 +52,8 @@ typedef struct {
 
     Type* type;
 
+    SymbolVisibility visibility;
+
     uint32_t declaration_line;
     uint16_t constant_index;
 
@@ -54,6 +69,7 @@ typedef struct {
 
     union {
         FunctionSymbol function;
+        ObjectSymbol object;
     };
 } Symbol;
 
@@ -62,7 +78,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* const symbol);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
-typedef struct {
+typedef struct s_symbol_table {
     CTable table; // CTable<Symbol>
 } SymbolTable;
 

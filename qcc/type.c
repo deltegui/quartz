@@ -43,8 +43,11 @@ static void free_type(Type* const type);
 static Type* type_pool_add(Type type);
 static PoolNode* alloc_node();
 static void type_alias_print(FILE* out, const Type* const type);
-static void function_type_print(FILE* out, const Type* const type);
+static void type_function_print(FILE* out, const Type* const type);
+static void type_object_print(FILE* out, const Type* const type);
 static bool fn_params_equals(FunctionType* first, FunctionType* second);
+static bool type_function_equals(Type* first, Type* second);
+static bool type_object_equals(Type* first, Type* second);
 
 inline static uint32_t next_capacity() {
     last_capacity = ((last_capacity < 8) ? 8 : last_capacity * 2);
@@ -81,6 +84,10 @@ static void free_pool_node(PoolNode* const node) {
 
 static void free_type(Type* const type) {
     switch (type->kind) {
+    case TYPE_OBJECT: {
+        free(type->object);
+        break;
+    }
     case TYPE_FUNCTION: {
         free_vector(&type->function->param_types);
         free(type->function);
@@ -161,6 +168,18 @@ Type* create_type_alias(const char* identifier, int length, Type* original) {
     return type_pool_add(type);
 }
 
+Type* create_type_object(const char* identifier, int length) {
+    ObjectType* objt = (ObjectType*) malloc(sizeof(ObjectType) + (sizeof(char) * length + 1));
+    memcpy(objt->identifier, identifier, length);
+    objt->identifier[length] = '\0';
+    objt->length = length;
+    Type type = (Type) {
+        .kind = TYPE_OBJECT,
+        .object = objt,
+    };
+    return type_pool_add(type);
+}
+
 Type* simple_type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return CREATE_TYPE_NUMBER();
@@ -179,7 +198,8 @@ void type_fprint(FILE* out, const Type* const type) {
     case TYPE_BOOL: fprintf(out, "Bool"); break;
     case TYPE_NIL: fprintf(out, "Nil"); break;
     case TYPE_STRING: fprintf(out, "String"); break;
-    case TYPE_FUNCTION: function_type_print(out, type); break;
+    case TYPE_FUNCTION: type_function_print(out, type); break;
+    case TYPE_OBJECT: type_object_print(out, type); break;
     case TYPE_VOID: fprintf(out, "Void"); break;
     case TYPE_UNKNOWN: fprintf(out, "Unknown"); break;
     }
@@ -194,7 +214,7 @@ static void type_alias_print(FILE* out, const Type* const type) {
     type_fprint(out, type->alias->def);
 }
 
-static void function_type_print(FILE* out, const Type* const type) {
+static void type_function_print(FILE* out, const Type* const type) {
     assert(type->kind == TYPE_FUNCTION);
     Type** params = VECTOR_AS_TYPES(&type->function->param_types);
     uint32_t size = type->function->param_types.size;
@@ -209,6 +229,11 @@ static void function_type_print(FILE* out, const Type* const type) {
     type_fprint(out, type->function->return_type);
 }
 
+static void type_object_print(FILE* out, const Type* const type) {
+    assert(type->kind == TYPE_OBJECT);
+    fprintf(out, "Object<%.*s>", type->object->length, type->object->identifier);
+}
+
 bool type_equals(Type* first, Type* second) {
     assert(first != NULL && second != NULL);
     if (first == second) {
@@ -220,13 +245,20 @@ bool type_equals(Type* first, Type* second) {
         return false;
     }
     if (first->kind == TYPE_FUNCTION) {
-        assert(first->function != NULL && second->function != NULL);
-        if (! fn_params_equals(first->function, second->function)) {
-            return false;
-        }
-        return first->function->return_type == second->function->return_type;
+        return type_function_equals(first, second);
+    }
+    if (first->kind == TYPE_OBJECT) {
+        return type_object_equals(first, second);
     }
     return true;
+}
+
+static bool type_function_equals(Type* first, Type* second) {
+    assert(first->function != NULL && second->function != NULL);
+    if (! fn_params_equals(first->function, second->function)) {
+        return false;
+    }
+    return first->function->return_type == second->function->return_type;
 }
 
 static bool fn_params_equals(FunctionType* first, FunctionType* second) {
@@ -243,4 +275,15 @@ static bool fn_params_equals(FunctionType* first, FunctionType* second) {
         }
     }
     return true;
+}
+
+static bool type_object_equals(Type* first, Type* second) {
+    assert(first->object != NULL && second->object != NULL);
+    if (first->object->length != second->object->length) {
+        return false;
+    }
+    return memcmp(
+        first->object->identifier,
+        second->object->identifier,
+        first->object->length) == 0;
 }

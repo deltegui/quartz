@@ -532,12 +532,12 @@ void object_symbols_can_be_added() {
         SymbolName a = create_symbol_name("a", 1);
         Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
         sym_a.visibility = SYMBOL_VISIBILITY_PRIVATE;
-        symbol_insert(obj_sym.object.symbols, sym_a);
+        scoped_symbol_insert(obj_sym.object.symbols, sym_a);
         symbol_insert(&table, obj_sym);
 
         Symbol* recover = symbol_lookup_str(&table, "Human", 5);
         assert_non_null(recover);
-        Symbol* property = symbol_lookup_str(recover->object.symbols, "a", 1);
+        Symbol* property = scoped_symbol_lookup_str(recover->object.symbols, "a", 1);
         assert_non_null(property);
         assert_true(property->visibility == SYMBOL_VISIBILITY_PRIVATE);
     });

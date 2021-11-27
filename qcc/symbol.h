@@ -30,10 +30,10 @@ typedef enum {
 
 // TODO symbol set change
 struct _SymbolSet;
-struct s_symbol_table;
+struct s_scoped_symbol_table;
 
 typedef struct {
-    struct s_symbol_table* symbols;
+    struct s_scoped_symbol_table* symbols;
 } ObjectSymbol;
 
 typedef struct {
@@ -78,7 +78,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* const symbol);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
-typedef struct s_symbol_table {
+typedef struct {
     CTable table; // CTable<Symbol>
 } SymbolTable;
 
@@ -90,6 +90,7 @@ void symbol_insert(SymbolTable* const table, Symbol entry);
 
 #define SYMBOL_TABLE_FOREACH(symbols, block) CTABLE_FOREACH(&(symbols)->table, Symbol, block)
 
+// TODO tmb cambia el alias este
 typedef struct _SymbolNode {
     SymbolTable symbols;
     struct _SymbolNode* father;
@@ -105,7 +106,7 @@ void free_symbol_node(SymbolNode* const node);
 void symbol_node_reset(SymbolNode* const node);
 SymbolNode* symbol_node_add_child(SymbolNode* const node, SymbolNode* const child);
 
-typedef struct {
+typedef struct s_scoped_symbol_table {
     SymbolNode global;
     SymbolNode* current;
 } ScopedSymbolTable;

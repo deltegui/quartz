@@ -68,8 +68,8 @@ static void create_function_symbol(Symbol* const symbol) {
 
 static void create_object_symbol(Symbol* const symbol) {
     ObjectSymbol* obj_sym = &symbol->object;
-    obj_sym->symbols = (SymbolTable*) malloc(sizeof(SymbolTable));
-    init_symbol_table(obj_sym->symbols);
+    obj_sym->symbols = (ScopedSymbolTable*) malloc(sizeof(ScopedSymbolTable));
+    init_scoped_symbol_table(obj_sym->symbols);
 }
 
 void free_symbol(Symbol* const symbol) {
@@ -81,7 +81,7 @@ void free_symbol(Symbol* const symbol) {
         break;
     }
     case SYMBOL_OBJECT: {
-        free_symbol_table(symbol->object.symbols);
+        free_scoped_symbol_table(symbol->object.symbols);
         free(symbol->object.symbols);
         break;
     }

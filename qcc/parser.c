@@ -64,7 +64,7 @@ static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
 static Stmt* class_decl(Parser* const parser);
-static Stmt* parse_class_body(Parser* const parser);
+static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_table);
 static Stmt* native_import(Parser* const parser, NativeImport import, int line);
 static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
@@ -540,18 +540,29 @@ static Stmt* class_decl(Parser* const parser) {
     ClassStmt klass;
     klass.identifier = parser->current;
 
-    // TODO change type
-    Symbol symbol = create_symbol_calc_global(parser, &klass.identifier, CREATE_TYPE_UNKNOWN());
-
+    Symbol symbol = create_symbol_calc_global(
+        parser,
+        &klass.identifier,
+        create_type_object(klass.identifier.start, klass.identifier.length));
+    // TODO this block of code appears too many times
+    if (! register_symbol(parser, symbol)) {
+        free_symbol(&symbol);
+        error(parser, "Class already defined");
+    }
     advance(parser); // Consume identifier
 
     consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after class name in class declaration");
-    parse_class_body(parser);
+    klass.body = parse_class_body(parser, symbol.object.symbols);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' before class body");
+
+    CREATE_STMT_CLASS(klass);
 }
 
-static Stmt* parse_class_body(Parser* const parser) {
+static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_table) {
     ListStmt* list = create_stmt_list();
+    ScopedSymbolTable* parser_table = parser->symbols;
+    parser->symbols = object_table;
+
     for (;;) {
         if (parser->current.kind == TOKEN_RIGHT_BRACE) {
             break;
@@ -565,6 +576,8 @@ static Stmt* parse_class_body(Parser* const parser) {
             ;
         }
     }
+
+    parser->symbols = parser_table;
     return CREATE_STMT_LIST(list);
 }
 

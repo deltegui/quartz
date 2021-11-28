@@ -42,6 +42,8 @@ static void error_prev(Parser* const parser, const char* message, ...);
 static void error_at(Parser* const parser, Token* token, const char* message, va_list params);
 static void syncronize(Parser* const parser);
 
+#define ERROR_AT(parser, token, msg) (error_at(parser, token, msg, NULL))
+
 static void create_scope(Parser* const parser);
 static void end_scope(Parser* const parser);
 static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
@@ -217,10 +219,13 @@ static void error_at(Parser* const parser, Token* token, const char* format, va_
         fprintf(stderr, " at end");
         break;
     default:
-        fprintf(stderr, " at '%.*s'", token->length, token->start);
+        fprintf(stderr, " at '%.*s': ", token->length, token->start);
     }
-    fprintf(stderr, ": ");
-    vfprintf(stderr, format, params);
+    if (params != NULL) {
+        vfprintf(stderr, format, params);
+    } else {
+        fprintf(stderr, "%s", format);
+    }
     fprintf(stderr, "\n");
     print_error_context(parser->lexer.source, token);
     parser->has_error = true;
@@ -584,7 +589,10 @@ static Stmt* parse_class_body(Parser* const parser) {
         case TOKEN_VAR:
             stmt = variable_decl(parser);
             if (stmt->var.definition != NULL) {
-                error(parser, "Class variable properties cannot be initialized!");
+                ERROR_AT(
+                    parser,
+                    &stmt->var.identifier,
+                    "Class variable properties cannot be initialized!");
             }
             identifier = stmt->var.identifier;
             break;

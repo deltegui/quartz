@@ -6,3 +6,5 @@ class Hombre {
         var a = 1 +1 ;
     }
 }
+
+Hombre.hola = 1;

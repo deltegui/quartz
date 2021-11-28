@@ -216,7 +216,7 @@ static void error_at(Parser* const parser, Token* token, const char* format, va_
     switch(token->kind) {
     case TOKEN_ERROR: break;
     case TOKEN_END:
-        fprintf(stderr, " at end");
+        fprintf(stderr, " at end: ");
         break;
     default:
         fprintf(stderr, " at '%.*s': ", token->length, token->start);

@@ -1,0 +1,8 @@
+class Human {
+    var name: String; // These properties are private
+    var age: Number;
+
+    pub fn init(name: String, age: Number) {
+        var a = 1 + 1;
+    }
+}

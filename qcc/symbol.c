@@ -8,7 +8,6 @@ typedef bool (*ExitCondition) (Symbol*);
 static bool symbol_name_equals(SymbolName* first, SymbolName* second);
 static SymbolKind kind_from_type(Type* type);
 static void create_function_symbol(Symbol* const symbol);
-static void create_object_symbol(Symbol* const symbol);
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
 static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, ExitCondition test_condition);
 
@@ -41,13 +40,14 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .global = false, // we dont know
         .assigned = true, // normally is
         .native = false, // normally its not native
+        .static_ = false, // normally its not static
     };
     symbol.upvalue_fn_refs = create_symbol_set();
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
     }
     if (symbol.kind == SYMBOL_OBJECT) {
-        create_object_symbol(&symbol);
+        symbol.object.body = NULL;
     }
     return symbol;
 }
@@ -66,12 +66,6 @@ static void create_function_symbol(Symbol* const symbol) {
     fn_sym->upvalues = create_symbol_set();
 }
 
-static void create_object_symbol(Symbol* const symbol) {
-    ObjectSymbol* obj_sym = &symbol->object;
-    obj_sym->symbols = (ScopedSymbolTable*) malloc(sizeof(ScopedSymbolTable));
-    init_scoped_symbol_table(obj_sym->symbols);
-}
-
 void free_symbol(Symbol* const symbol) {
     // Notice we dont own Type* (symbol->type). Please DO NOT FREE Type*.
     switch (symbol->kind) {
@@ -80,11 +74,7 @@ void free_symbol(Symbol* const symbol) {
         free_symbol_set(symbol->function.upvalues);
         break;
     }
-    case SYMBOL_OBJECT: {
-        free_scoped_symbol_table(symbol->object.symbols);
-        free(symbol->object.symbols);
-        break;
-    }
+    case SYMBOL_OBJECT:
     case SYMBOL_TYPEALIAS:
     case SYMBOL_VAR:
         break;
@@ -261,6 +251,10 @@ void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* v
     assert(var_upvalue != NULL);
     symbol_set_add(fn->function.upvalues, var_upvalue);
     symbol_set_add(var_upvalue->upvalue_fn_refs, fn);
+}
+
+void scoped_symbol_update_object_body(ScopedSymbolTable* const table, Symbol* obj) {
+    obj->object.body = &table->current->symbols;
 }
 
 SymbolSet* create_symbol_set() {

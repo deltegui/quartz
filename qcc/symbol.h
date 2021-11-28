@@ -28,12 +28,13 @@ typedef enum {
     SYMBOL_VISIBILITY_PRIVATE,
 } SymbolVisibility;
 
-// TODO symbol set change
-struct _SymbolSet;
-struct s_scoped_symbol_table;
+struct s_symbol_set;
+struct s_symbol_table;
 
 typedef struct {
-    struct s_scoped_symbol_table* symbols;
+    // This must not be NULL, but it cannot
+    // be setted until the body node is created
+    struct s_symbol_table* body;
 } ObjectSymbol;
 
 typedef struct {
@@ -43,7 +44,7 @@ typedef struct {
     // This is used for out upvalue references. That is, other variables that
     // this function is closed over. Is mainly used to bind open upvalues to
     // those variables.
-    struct _SymbolSet* upvalues;
+    struct s_symbol_set* upvalues;
 } FunctionSymbol;
 
 typedef struct {
@@ -60,12 +61,13 @@ typedef struct {
     bool global;
     bool assigned;
     bool native;
+    bool static_;
 
     // This is used for in upvalue refereces. That is, other functions that
     // this variable requested to closed over them. Is mainly used to close
     // open upvalues in that functions when this variable is going to be out
     // of scope.
-    struct _SymbolSet* upvalue_fn_refs;
+    struct s_symbol_set* upvalue_fn_refs;
 
     union {
         FunctionSymbol function;
@@ -78,7 +80,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type);
 void free_symbol(Symbol* const symbol);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
-typedef struct {
+typedef struct s_symbol_table {
     CTable table; // CTable<Symbol>
 } SymbolTable;
 
@@ -90,10 +92,9 @@ void symbol_insert(SymbolTable* const table, Symbol entry);
 
 #define SYMBOL_TABLE_FOREACH(symbols, block) CTABLE_FOREACH(&(symbols)->table, Symbol, block)
 
-// TODO tmb cambia el alias este
-typedef struct _SymbolNode {
+typedef struct s_symbol_node {
     SymbolTable symbols;
-    struct _SymbolNode* father;
+    struct s_symbol_node* father;
     Vector childs; // Vector<SymbolNode>
     uint32_t next_node_to_visit;
 } SymbolNode;
@@ -106,7 +107,7 @@ void free_symbol_node(SymbolNode* const node);
 void symbol_node_reset(SymbolNode* const node);
 SymbolNode* symbol_node_add_child(SymbolNode* const node, SymbolNode* const child);
 
-typedef struct s_scoped_symbol_table {
+typedef struct {
     SymbolNode global;
     SymbolNode* current;
 } ScopedSymbolTable;
@@ -127,8 +128,9 @@ Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName
 Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);
+void scoped_symbol_update_object_body(ScopedSymbolTable* const table, Symbol* obj);
 
-typedef struct _SymbolSet {
+typedef struct s_symbol_set {
     CTable table; // CTable<Symbol*>
 } SymbolSet;
 

@@ -49,6 +49,7 @@ static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static bool register_symbol(Parser* const parser, Symbol symbol);
 static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type);
+static void symbol_update_object_body(Parser* const parser, Symbol* obj);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
@@ -64,7 +65,7 @@ static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
 static Stmt* class_decl(Parser* const parser);
-static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_table);
+static Stmt* parse_class_body(Parser* const parser);
 static SymbolVisibility parse_property_visibility(Parser* const parser);
 static Stmt* native_import(Parser* const parser, NativeImport import, int line);
 static Stmt* file_import(Parser* const parser, FileImport import);
@@ -283,6 +284,10 @@ static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type
     Symbol symbol = create_symbol_from_token(token, type);
     symbol.global = parser->scope_depth == 0;
     return symbol;
+}
+
+static void symbol_update_object_body(Parser* const parser, Symbol* obj) {
+    scoped_symbol_update_object_body(parser->symbols, obj);
 }
 
 static void advance(Parser* const parser) {
@@ -552,18 +557,21 @@ static Stmt* class_decl(Parser* const parser) {
     }
     advance(parser); // Consume identifier
 
+    Symbol* inserted = lookup_str(parser, klass.identifier.start, klass.identifier.length);
+    assert(inserted != NULL);
+
     consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after class name in class declaration");
-    klass.body = parse_class_body(parser, symbol.object.symbols);
+    create_scope(parser);
+    symbol_update_object_body(parser, inserted);
+    klass.body = parse_class_body(parser);
+    end_scope(parser);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' before class body");
 
     return CREATE_STMT_CLASS(klass);
 }
 
-static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_table) {
+static Stmt* parse_class_body(Parser* const parser) {
     ListStmt* list = create_stmt_list();
-    ScopedSymbolTable* parser_table = parser->symbols;
-    parser->symbols = object_table;
-
     for (;;) {
         if (parser->current.kind == TOKEN_RIGHT_BRACE) {
             break;
@@ -590,8 +598,6 @@ static Stmt* parse_class_body(Parser* const parser, ScopedSymbolTable* object_ta
         sym->visibility = visibility;
         stmt_list_add(list, stmt);
     }
-
-    parser->symbols = parser_table;
     return CREATE_STMT_LIST(list);
 }
 

@@ -523,7 +523,7 @@ void symbol_set_should_not_iterate_over_empty_set() {
 }
 
 void object_symbols_can_be_added() {
-    TABLE({
+    SCOPED_TABLE({
         SymbolName name = create_symbol_name("Human", 5);
         Type* type = create_type_object("Human", 5);
         Symbol obj_sym = create_symbol(name, 1, type);
@@ -531,15 +531,37 @@ void object_symbols_can_be_added() {
 
         SymbolName a = create_symbol_name("a", 1);
         Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
-        sym_a.visibility = SYMBOL_VISIBILITY_PRIVATE;
-        scoped_symbol_insert(obj_sym.object.symbols, sym_a);
-        symbol_insert(&table, obj_sym);
+        sym_a.visibility = SYMBOL_VISIBILITY_PUBLIC;
 
-        Symbol* recover = symbol_lookup_str(&table, "Human", 5);
+        // Create the symbol table to match this code:
+        /*
+        { <GLOBAL>
+            obj
+            { <OBJ BODY> <- HERE YOU MUST UPDATE OBJ BODY
+                pub var a = 5;
+            }
+        }
+        */
+
+        scoped_symbol_insert(&table, obj_sym);
+        Symbol* obj = scoped_symbol_lookup(&table, &name);
+        assert_non_null(obj);
+        symbol_create_scope(&table);
+            // THE OBJ MUST POINT TO ITS BODY TABLE
+            scoped_symbol_update_object_body(&table, obj);
+            scoped_symbol_insert(&table, sym_a);
+        symbol_end_scope(&table);
+
+        symbol_reset_scopes(&table);
+
+        Symbol* recover = scoped_symbol_lookup_str(&table, "Human", 5);
         assert_non_null(recover);
-        Symbol* property = scoped_symbol_lookup_str(recover->object.symbols, "a", 1);
-        assert_non_null(property);
-        assert_true(property->visibility == SYMBOL_VISIBILITY_PRIVATE);
+        assert_non_null(recover->object.body);
+        symbol_start_scope(&table);
+            Symbol* property = scoped_symbol_lookup_str(&table, "a", 1);
+            assert_non_null(property);
+            assert_true(property->visibility == SYMBOL_VISIBILITY_PUBLIC);
+        symbol_end_scope(&table);
     });
 }
 

@@ -471,15 +471,9 @@ static void typecheck_native(void* ctx, NativeFunctionStmt* native) {
 
 static void typecheck_class(void* ctx, ClassStmt* klass) {
     Typechecker* checker = (Typechecker*) ctx;
-
-    Symbol* class_sym = lookup_str(checker, klass->identifier.start, klass->identifier.length);
-    assert(class_sym != NULL);
-    assert(class_sym->kind == SYMBOL_OBJECT);
-
-    ScopedSymbolTable* prev = checker->symbols;
-    checker->symbols = class_sym->object.symbols;
+    start_scope(checker);
     ACCEPT_STMT(ctx, klass->body);
-    checker->symbols = prev;
+    end_scope(checker);
 }
 
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {

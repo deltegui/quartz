@@ -71,6 +71,20 @@ ObjNative* new_native(const char* name, int length, native_fn_t function, Type* 
     return native;
 }
 
+ObjClass* new_class(const char* name, int length, Type* type) {
+    ObjClass* klass = ALLOC_OBJ(ObjClass, OBJ_CLASS, type);
+    klass->name = copy_string(name, length);
+    init_valuearray(&klass->instance);
+    return klass;
+}
+
+ObjInstance* new_instance(ObjClass* origin, Type* type) {
+    ObjInstance* instance = ALLOC_OBJ(ObjInstance, OBJ_INSTANCE, type);
+    instance->klass = origin;
+    valuearray_deep_copy(&origin->instance, &instance->props);
+    return instance;
+}
+
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
     ObjString* obj_str = ALLOC_STR(length + 1);
     obj_str->length = length;
@@ -138,6 +152,16 @@ void print_object(Obj* const obj) {
             native->name);
         TYPE_PRINT(obj->type);
         printf(">");
+        break;
+    }
+    case OBJ_CLASS: {
+        ObjClass* klass = OBJ_AS_CLASS(obj);
+        printf("<Class '%s'>", OBJ_AS_CSTRING(klass->name));
+        break;
+    }
+    case OBJ_INSTANCE: {
+        ObjInstance* instance = OBJ_AS_INSTANCE(obj);
+        printf("<Instance of class '%s'", OBJ_AS_CSTRING(instance->klass->name));
         break;
     }
     }

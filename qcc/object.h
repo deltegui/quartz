@@ -51,6 +51,19 @@ typedef struct {
     int arity;
 } ObjNative;
 
+typedef struct {
+    Obj obj;
+    ObjString* name;
+    // TODO this should have the static part
+    ValueArray instance;
+} ObjClass;
+
+typedef struct {
+    Obj obj;
+    ObjClass* klass;
+    ValueArray props;
+} ObjInstance;
+
 void print_object(Obj* const obj);
 bool object_is_kind(Obj* const obj, ObjKind kind);
 void mark_object(Obj* const obj);
@@ -80,5 +93,15 @@ ObjClosed* new_closed(Value value);
 #define OBJ_AS_NATIVE(obj) ((ObjNative*) obj)
 
 ObjNative* new_native(const char* name, int length, native_fn_t function, Type* type);
+
+#define OBJ_IS_CLASS(obj) (object_is_kind(obj, OBJ_CLASS))
+#define OBJ_AS_CLASS(obj) ((ObjClass*) obj)
+
+ObjClass* new_class(const char* name, int length, Type* type);
+
+#define OBJ_IS_INSTANCE(obj) (object_is_kind(obj, OBJ_INSTANCE))
+#define OBJ_AS_INSTANCE(obj) ((ObjInstance*) obj)
+
+ObjInstance* new_instance(ObjClass* origin, Type* type);
 
 #endif

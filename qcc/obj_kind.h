@@ -6,6 +6,8 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_CLOSED,
     OBJ_NATIVE,
+    OBJ_CLASS,
+    OBJ_INSTANCE,
 } ObjKind;
 
 #endif

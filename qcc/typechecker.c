@@ -762,4 +762,3 @@ static void check_return_return(void* ctx, ReturnStmt* function) {
     ReturnChecker* checker = (ReturnChecker*) ctx;
     checker->have_return = true;
 }
-

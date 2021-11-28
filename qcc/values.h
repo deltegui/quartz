@@ -53,5 +53,6 @@ void init_valuearray(ValueArray* const values);
 void free_valuearray(ValueArray* const values);
 int valuearray_write(ValueArray* const values, Value value);
 void mark_valuearray(ValueArray* const array);
+void valuearray_deep_copy(ValueArray* const origin, ValueArray* destiny);
 
 #endif

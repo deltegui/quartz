@@ -106,6 +106,8 @@ static void identifier_use_symbol(Compiler* const compiler, Symbol* sym, const s
 static void identifier_use(Compiler* const compiler, Token identifier, const struct IdentifierOps* ops);
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym);
 static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var);
+static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index);
+static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -135,6 +137,7 @@ static void compile_loopg(void* ctx, LoopGotoStmt* loopg);
 static void compile_typealias(void* ctx, TypealiasStmt* alias);
 static void compile_import(void* ctx, ImportStmt* import);
 static void compile_native(void* ctx, NativeFunctionStmt* native);
+static void compile_class(void* ctx, ClassStmt* klass);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -149,6 +152,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_typealias = compile_typealias,
     .visit_import = compile_import,
     .visit_native = compile_native,
+    .visit_class = compile_class,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -436,7 +440,21 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 
     Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
-    update_symbol_variable_info(compiler, symbol, fn_index);
+
+    Value fn_value = do_compile_function(compiler, function, fn_index);
+    uint16_t default_value = make_constant(compiler, fn_value);
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
+
+    emit_variable_declaration(compiler, fn_index);
+
+    emit_bind_upvalues(compiler, symbol, function->identifier);
+}
+
+// TODO i dont know how can i name this function
+static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index) {
+    Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
+    assert(symbol != NULL);
+    update_symbol_variable_info(compiler, symbol, index);
 
     Compiler inner;
     init_inner_compiler(&inner, compiler, &function->identifier, symbol);
@@ -450,13 +468,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
         compiler->has_error = true;
     }
 
-    Value fn_value = OBJ_VALUE(inner.func, symbol->type);
-    uint16_t default_value = make_constant(compiler, fn_value);
-    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
-
-    emit_variable_declaration(compiler, fn_index);
-
-    emit_bind_upvalues(compiler, symbol, function->identifier);
+    return OBJ_VALUE(inner.func, symbol->type);
 }
 
 static void compile_native(void* ctx, NativeFunctionStmt* native) {
@@ -484,6 +496,58 @@ static void compile_native(void* ctx, NativeFunctionStmt* native) {
     uint16_t default_value = make_constant(compiler, OBJ_VALUE(obj, symbol->type));
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
     emit_variable_declaration(compiler, native_index);
+}
+
+static void compile_class(void* ctx, ClassStmt* klass) {
+    Compiler* compiler = (Compiler*) ctx;
+
+    Symbol* symbol = lookup_str(compiler, klass->identifier.start, klass->identifier.length);
+    assert(symbol != NULL);
+    assert(symbol->kind == SYMBOL_OBJECT);
+    uint16_t klass_index = get_variable_index(compiler, &klass->identifier);
+    update_symbol_variable_info(compiler, symbol, klass_index);
+
+    ObjClass* obj = new_class(klass->identifier.start, klass->identifier.length, symbol->type);
+    start_scope(compiler);
+
+    assert(STMT_IS_LIST(*klass->body));
+    ListStmt* body = klass->body->list;
+    for (int i = 0; i < body->size ; i++) {
+        Stmt* prop = body->stmts[i];
+        Value value;
+
+        switch (prop->kind) {
+        case STMT_FUNCTION: {
+            value = do_compile_function(compiler, &prop->function, i);
+            break;
+        }
+        case STMT_VAR: {
+            value = compile_class_var_prop(compiler, &prop->var, i);
+            break;
+        }
+        default: {
+            assert(false); // You must not reach this
+            error(compiler, "Unexpected node inside class body. Expected to be function or variable");
+            return;
+        }
+        }
+
+        valuearray_write(&obj->instance, value);
+    }
+
+    end_scope(compiler);
+
+    uint16_t default_value = make_constant(compiler, OBJ_VALUE(obj, symbol->type));
+    emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
+    emit_variable_declaration(compiler, klass_index);
+}
+
+static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index) {
+    Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
+    assert(symbol != NULL);
+    update_symbol_variable_info(compiler, symbol, index);
+    assert(var->definition == NULL);
+    return value_default(symbol->type);
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {

@@ -1,3 +1,7 @@
-import 'stdconv';
+class Hombre {
+    var name: String;
+    var age: Number;
 
-__t_sum(4, 5, true);
+    pub fn init(name: String, age: Number) {
+    }
+}

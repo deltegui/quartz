@@ -583,6 +583,9 @@ static Stmt* parse_class_body(Parser* const parser) {
         switch (parser->current.kind) {
         case TOKEN_VAR:
             stmt = variable_decl(parser);
+            if (stmt->var.definition != NULL) {
+                error(parser, "Class variable properties cannot be initialized!");
+            }
             identifier = stmt->var.identifier;
             break;
         case TOKEN_FUNCTION:

@@ -155,6 +155,7 @@ static int chunk_opcode_print(const Chunk* chunk, int i);
 static int chunk_short_print(const Chunk* chunk, int i);
 static int chunk_long_print(const Chunk* chunk, int i);
 static void standalone_chunk_print(const Chunk* chunk);
+static void chunk_print_value(Value value);
 
 static void chunk_format_print(const Chunk* chunk, int i, const char* format, ...) {
     printf("[%02d;%02d]\t", i, chunk->lines[i]);
@@ -273,13 +274,24 @@ static void chunk_print_with_name(const Chunk* chunk, const char* name) {
     valuearray_print(&chunk->constants);
     standalone_chunk_print(chunk);
     for (int i = 0; i < chunk->constants.size; i++) {
-        if (VALUE_IS_OBJ(chunk->constants.values[i])) {
-            Obj* obj = VALUE_AS_OBJ(chunk->constants.values[i]);
-            if (OBJ_IS_FUNCTION(obj)) {
-                ObjFunction* fn = OBJ_AS_FUNCTION(obj);
-                char* name = OBJ_AS_CSTRING(fn->name);
-                chunk_print_with_name(&fn->chunk, name);
-            }
+        chunk_print_value(chunk->constants.values[i]);
+    }
+}
+
+static void chunk_print_value(Value value) {
+    if (! VALUE_IS_OBJ(value)) {
+        return;
+    }
+    Obj* obj = VALUE_AS_OBJ(value);
+    if (OBJ_IS_FUNCTION(obj)) {
+        ObjFunction* fn = OBJ_AS_FUNCTION(obj);
+        char* name = OBJ_AS_CSTRING(fn->name);
+        chunk_print_with_name(&fn->chunk, name);
+    }
+    if (OBJ_IS_CLASS(obj)) {
+        ObjClass* klass = OBJ_AS_CLASS(obj);
+        for (int i = 0; i < klass->instance.size ; i++) {
+            chunk_print_value(klass->instance.values[i]);
         }
     }
 }

@@ -3,5 +3,6 @@ class Hombre {
     var age: Number;
 
     pub fn init(name: String, age: Number) {
+        var a = 1 +1 ;
     }
 }

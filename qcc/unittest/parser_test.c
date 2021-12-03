@@ -14,6 +14,7 @@ static void assert_ast(const char* source, Stmt* expected_ast);
 static void assert_stmt_ast(const char* source, Stmt* expected);
 static void assert_expr_ast(const char* source, Expr* expected);
 static void should_parse_global_variables();
+static void assert_params_equal(Vector* first, Vector* second);
 
 static inline void assert_has_errors(const char* source) {
     Parser parser;
@@ -164,14 +165,23 @@ static void assert_expr_equals(Expr* first, Expr* second) {
     }
     case EXPR_CALL: {
         assert_true(t_token_equals(&first->call.identifier, &second->call.identifier));
-        assert_int_equal(first->call.params.size, second->call.params.size);
-        Expr** first_expr = VECTOR_AS_EXPRS(&first->call.params);
-        Expr** second_expr = VECTOR_AS_EXPRS(&second->call.params);
-        for (int i = 0; i < first->call.params.size; i++) {
-            assert_expr_equals(first_expr[i], second_expr[i]);
-        }
+        assert_params_equal(&first->call.params, &second->call.params);
         break;
     }
+    case EXPR_NEW: {
+        assert_true(t_token_equals(&first->new_.klass, &second->new_.klass));
+        assert_params_equal(&first->new_.params, &second->new_.params);
+        break;
+    }
+    }
+}
+
+static void assert_params_equal(Vector* first, Vector* second) {
+    assert_int_equal(first->size, second->size);
+    Expr** first_expr = VECTOR_AS_EXPRS(first);
+    Expr** second_expr = VECTOR_AS_EXPRS(second);
+    for (int i = 0; i < first->size; i++) {
+        assert_expr_equals(first_expr[i], second_expr[i]);
     }
 }
 
@@ -901,6 +911,31 @@ static void should_parse_empty_class() {
     assert_stmt_ast(" class Hello { } ", CREATE_STMT_CLASS(klass));
 }
 
+static void should_parse_new_expr() {
+    ListStmt* main = create_stmt_list();
+
+    ClassStmt klass;
+    klass.identifier = hello_token;
+    ListStmt* body = create_stmt_list();
+    klass.body = CREATE_STMT_LIST(body);
+    stmt_list_add(main, CREATE_STMT_CLASS(klass));
+
+    NewExpr new_;
+    new_.klass = hello_token;
+    init_vector(&new_.params, sizeof(Expr*));
+    ExprStmt expr;
+    expr.inner = CREATE_NEW_EXPR(new_);
+    stmt_list_add(main, CREATE_STMT_EXPR(expr));
+
+    assert_ast(" class Hello {} new Hello();   ", CREATE_STMT_LIST(main));
+}
+
+static void should_fail_parsing_new() {
+    assert_has_errors(" new Hello();");
+    assert_has_errors(" class Hello {} new Hello);");
+    assert_has_errors(" class Hello {} new Hello(;");
+}
+
 static int test_setup(void** args) {
     init_type_pool();
     return 0; }
@@ -947,7 +982,9 @@ int main(void) {
         cmocka_unit_test(should_fail_typealias),
         cmocka_unit_test(should_parse_classes),
         cmocka_unit_test(should_fail_parsing_classes),
-        cmocka_unit_test(should_parse_empty_class)
+        cmocka_unit_test(should_parse_empty_class),
+        cmocka_unit_test(should_parse_new_expr),
+        cmocka_unit_test(should_fail_parsing_new)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

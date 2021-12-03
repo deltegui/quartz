@@ -31,6 +31,7 @@ typedef enum {
     TOKEN_ELSE,
     TOKEN_FOR,
     TOKEN_WHILE,
+    TOKEN_NEW,
 
     // Two character tokens
     TOKEN_AND,

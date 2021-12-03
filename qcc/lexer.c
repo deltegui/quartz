@@ -269,6 +269,9 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "il", 1, 3)) {
             return create_token(lexer, TOKEN_NIL);
         }
+        if (match_token(lexer, "ew", 1, 3)) {
+            return create_token(lexer, TOKEN_NEW);
+        }
         break;
     }
     case 'p': {

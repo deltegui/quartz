@@ -349,6 +349,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_IMPORT: return "TokenImport";
     case TOKEN_CLASS: return "TokenClass";
     case TOKEN_PUBLIC: return "TokenPublic";
+    case TOKEN_NEW: return "TokenNew";
     default: return "Unknown";
     }
 }
@@ -373,6 +374,7 @@ static void print_literal(void* ctx, LiteralExpr* literal);
 static void print_identifier(void* ctx, IdentifierExpr* identifier);
 static void print_assignment(void* ctx, AssignmentExpr* assignment);
 static void print_call(void* ctx, CallExpr* call);
+static void print_new(void* ctx, NewExpr* new_);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
@@ -381,6 +383,7 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_identifier = print_identifier,
     .visit_assignment = print_assignment,
     .visit_call = print_call,
+    .visit_new = print_new,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
@@ -549,6 +552,23 @@ static void print_unary(void* ctx, UnaryExpr* unary) {
         OFFSET({
             ACCEPT_EXPR(unary->expr);
         });
+    });
+    pretty_print("]\n");
+}
+
+static void print_new(void* ctx, NewExpr* new_) {
+    Expr** exprs = VECTOR_AS_EXPRS(&new_->params);
+    pretty_print("New: [\n");
+    OFFSET({
+        pretty_print("Class: ");
+        token_print(new_->klass);
+        pretty_print("Params: [\n");
+        OFFSET({
+            for (uint32_t i = 0; i < new_->params.size; i++) {
+                ACCEPT_EXPR(exprs[i]);
+            }
+        });
+        pretty_print("]\n");
     });
     pretty_print("]\n");
 }

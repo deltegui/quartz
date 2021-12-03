@@ -7,4 +7,3 @@ class Hombre {
     }
 }
 
-Hombre.hola = 1;

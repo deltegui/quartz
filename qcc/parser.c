@@ -95,8 +95,11 @@ static Expr* grouping(Parser* const parser, bool can_assign);
 static Expr* primary(Parser* const parser, bool can_assign);
 static Expr* identifier(Parser* const parser, bool can_assign);
 static Expr* unary(Parser* const parser, bool can_assign);
+static Expr* new_(Parser* const parser, bool can_assign);
 static Expr* binary(Parser* const parser, bool can_assign, Expr* left);
 static Expr* call(Parser* const parser, bool can_assign, Expr* left);
+
+static void parse_call_params(Parser* const parser, Vector* params);
 
 ParseRule rules[] = {
     [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
@@ -122,6 +125,8 @@ ParseRule rules[] = {
     [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
     [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
     [TOKEN_FOR]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_WHILE]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_NEW]           = {new_,        NULL,   PREC_CALL},
 
     [TOKEN_AND]           = {NULL,        binary, PREC_AND},
     [TOKEN_OR]            = {NULL,        binary, PREC_OR},
@@ -139,6 +144,11 @@ ParseRule rules[] = {
     [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_IDENTIFIER]    = {identifier,  NULL,   PREC_NONE},
+    [TOKEN_CONTINUE]      = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_TYPEDEF]       = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_IMPORT]        = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_CLASS]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_PUBLIC]        = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_STRING]   = {NULL,        NULL,   PREC_NONE},
@@ -986,11 +996,16 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
         .identifier = fn_name.name,
     };
     init_vector(&call.params, sizeof(Expr*));
+    parse_call_params(parser, &call.params);
+    free_expr(left); // We only need left identifier. We must free it.
+    return CREATE_CALL_EXPR(call);
+}
 
+static void parse_call_params(Parser* const parser, Vector* params) {
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
         for (;;) {
             Expr* param = expression(parser);
-            VECTOR_ADD_EXPR(&call.params, param);
+            VECTOR_ADD_EXPR(params, param);
             if (parser->current.kind != TOKEN_COMMA) {
                 break;
             }
@@ -1001,9 +1016,6 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
         parser,
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in function call");
-
-    free_expr(left); // We only need left identifier. We must free it.
-    return CREATE_CALL_EXPR(call);
 }
 
 static Expr* grouping(Parser* const parser, bool can_assign) {
@@ -1061,6 +1073,38 @@ static Expr* unary(Parser* const parser, bool can_assign) {
     printf("[PARSER DEBUG]: end UNARY Expression\n");
 #endif
     return expr;
+}
+
+static Expr* new_(Parser* const parser, bool can_assign) {
+#ifdef PARSER_DEBUG
+    printf("[PARSER_DEBUG]: NEW Expression\n");
+#endif
+
+    Token klass = parser->current;
+
+    NewExpr new_expr;
+    new_expr.klass = klass;
+    init_vector(&new_expr.params, sizeof(Expr*));
+
+    Symbol* klass_sym = lookup_str(parser, klass.start, klass.length);
+    if (klass_sym == NULL) {
+        error(parser, "Undeclared class");
+        return CREATE_NEW_EXPR(new_expr);
+    }
+    if (klass_sym->kind != SYMBOL_OBJECT) {
+        error(parser, "Cannot use 'new' with something that is not a class");
+    }
+    advance(parser); // consume klass name
+    consume(parser, TOKEN_LEFT_PAREN, "Expected a '(' after class name in new statement");
+
+    parse_call_params(parser, &new_expr.params);
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: NEW class: ");
+    token_print(klass);
+    printf("[PARSER DEBUG]: end NEW Expression\n");
+#endif
+    return CREATE_NEW_EXPR(new_expr);
 }
 
 static Expr* identifier(Parser* const parser, bool can_assign) {

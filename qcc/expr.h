@@ -11,6 +11,7 @@ typedef enum {
     EXPR_IDENTIFIER,
     EXPR_ASSIGNMENT,
     EXPR_CALL,
+    EXPR_NEW,
 } ExprKind;
 
 struct _Expr;
@@ -44,6 +45,11 @@ typedef struct {
     Token identifier;
 } CallExpr;
 
+typedef struct {
+    Vector params;
+    Token klass;
+} NewExpr;
+
 typedef struct _Expr {
     ExprKind kind;
     union {
@@ -53,6 +59,7 @@ typedef struct _Expr {
         UnaryExpr unary;
         IdentifierExpr identifier;
         AssignmentExpr assignment;
+        NewExpr new_;
     };
 } Expr;
 
@@ -63,6 +70,7 @@ typedef struct {
     void (*visit_identifier)(void* ctx, IdentifierExpr* identifier);
     void (*visit_assignment)(void* ctx, AssignmentExpr* identifier);
     void (*visit_call)(void* ctx, CallExpr* call);
+    void (*visit_new)(void* ctx, NewExpr* new_);
 } ExprVisitor;
 
 #define EXPR_IS_BINARY(expr) ((expr).kind == EXPR_BINARY)
@@ -71,6 +79,7 @@ typedef struct {
 #define EXPR_IS_IDENTIFIER(expr) ((expr).kind == EXPR_IDENTIFIER)
 #define EXPR_IS_ASSIGNMENT(expr) ((expr).kind == EXPR_ASSIGNMENT)
 #define EXPR_IS_CALL(expr) ((expr).kind == EXPR_CALL)
+#define EXPR_IS_NEW(expr) ((expr).kind == EXPR_NEW)
 
 #define CREATE_BINARY_EXPR(binary) create_expr(EXPR_BINARY, &binary)
 #define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)
@@ -78,6 +87,7 @@ typedef struct {
 #define CREATE_INDENTIFIER_EXPR(identifier) create_expr(EXPR_IDENTIFIER, &identifier)
 #define CREATE_ASSIGNMENT_EXPR(assignment) create_expr(EXPR_ASSIGNMENT, &assignment)
 #define CREATE_CALL_EXPR(call) create_expr(EXPR_CALL, &call);
+#define CREATE_NEW_EXPR(new_) create_expr(EXPR_NEW, &new_);
 
 Expr* create_expr(ExprKind type, const void* const expr_node);
 void free_expr(Expr* const expr);

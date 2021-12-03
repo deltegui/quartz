@@ -467,6 +467,14 @@ static void should_tokenize_public() {
     );
 }
 
+static void should_tokenize_new() {
+    assert_types(
+        " new ",
+        1,
+        TOKEN_NEW
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -494,7 +502,8 @@ int main(void) {
         cmocka_unit_test(should_tokenize_typedef_correctly),
         cmocka_unit_test(should_import_correctly),
         cmocka_unit_test(should_tokenize_class_correctly),
-        cmocka_unit_test(should_tokenize_public)
+        cmocka_unit_test(should_tokenize_public),
+        cmocka_unit_test(should_tokenize_new)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

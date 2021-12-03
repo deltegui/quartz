@@ -39,7 +39,7 @@ static Expr* parse_precendence(Parser* const parser, Precedence precedence);
 
 static void error(Parser* const parser, const char* message, ...);
 static void error_prev(Parser* const parser, const char* message, ...);
-static void error_at(Parser* const parser, Token* token, const char* message, va_list params);
+static void error_at(Parser* const parser, Token* token, const char* message, va_list* params);
 static void syncronize(Parser* const parser);
 
 #define ERROR_AT(parser, token, msg) (error_at(parser, token, msg, NULL))
@@ -196,18 +196,18 @@ void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* sy
 static void error(Parser* const parser, const char* message, ...) {
     va_list params;
     va_start(params, message);
-    error_at(parser, &parser->current, message, params);
+    error_at(parser, &parser->current, message, &params);
     va_end(params);
 }
 
 static void error_prev(Parser* const parser, const char* message, ...) {
     va_list params;
     va_start(params, message);
-    error_at(parser, &parser->prev, message, params);
+    error_at(parser, &parser->prev, message, &params);
     va_end(params);
 }
 
-static void error_at(Parser* const parser, Token* token, const char* format, va_list params) {
+static void error_at(Parser* const parser, Token* token, const char* format, va_list* params) {
     if (parser->panic_mode) {
         return;
     }
@@ -222,7 +222,7 @@ static void error_at(Parser* const parser, Token* token, const char* format, va_
         fprintf(stderr, " at '%.*s': ", token->length, token->start);
     }
     if (params != NULL) {
-        vfprintf(stderr, format, params);
+        vfprintf(stderr, format, *params);
     } else {
         fprintf(stderr, "%s", format);
     }

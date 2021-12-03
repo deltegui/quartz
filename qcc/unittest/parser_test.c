@@ -37,7 +37,11 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_true(t_token_equals(
             &first->var.identifier,
             &second->var.identifier));
-        assert_expr_equals(first->var.definition, second->var.definition);
+        if (! first->var.definition) {
+            assert_true(first->var.definition == second->var.definition);
+        } else {
+            assert_expr_equals(first->var.definition, second->var.definition);
+        }
         break;
     }
     case STMT_LIST: {
@@ -869,17 +873,17 @@ static void should_parse_classes() {
 
     VarStmt a_var;
     a_var.identifier = a_token;
-    a_var.definition = CREATE_LITERAL_EXPR(five);
+    a_var.definition = NULL;
     stmt_list_add(list, CREATE_STMT_VAR(a_var));
 
     VarStmt b_var;
     b_var.identifier = b_token;
-    b_var.definition = CREATE_LITERAL_EXPR(five);
+    b_var.definition = NULL;
     stmt_list_add(list, CREATE_STMT_VAR(b_var));
 
     klass.body = CREATE_STMT_LIST(list);
 
-    assert_stmt_ast(" class Hello { pub var a = 5; var b = 5; } ", CREATE_STMT_CLASS(klass));
+    assert_stmt_ast(" class Hello { pub var a; var b; } ", CREATE_STMT_CLASS(klass));
 }
 
 static void should_fail_parsing_classes() {

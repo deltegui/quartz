@@ -10,4 +10,7 @@ typedef enum {
     OBJ_INSTANCE,
 } ObjKind;
 
+#define CLASS_CONSTRUCTOR_NAME "init"
+#define CLASS_CONSTRUCTOR_LENGTH 4
+
 #endif

@@ -240,6 +240,20 @@ Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const ch
     return scoped_symbol_lookup_levels(table, &symbol_name, levels);
 }
 
+Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name) {
+    assert(obj_sym != NULL);
+    assert(obj_sym->kind == SYMBOL_OBJECT);
+    assert(obj_sym->body != NULL);
+    SymbolTable* klass_body = obj_sym->object.body;
+    Symbol* prop = symbol_lookup(klass_body, name);
+    return prop;
+}
+
+Symbol* scoped_symbol_lookup_object_prop_str(Symbol* const obj_sym, const char* name, int length) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return scoped_symbol_lookup_object_prop(obj_sym, &symbol_name);
+}
+
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
     assert(table->current != NULL);
     symbol_insert(&table->current->symbols, entry);

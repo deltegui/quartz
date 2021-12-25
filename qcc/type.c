@@ -6,12 +6,12 @@
 // of these types. Simple types only stores it's kind,
 // so let repeating these inside the type pool
 // eats resources and is useless.
-Type number_type;
-Type bool_type;
-Type nil_type;
-Type string_type;
-Type void_type;
-Type unknown_type;
+static Type number_type;
+static Type bool_type;
+static Type nil_type;
+static Type string_type;
+static Type void_type;
+static Type unknown_type;
 
 // A type pool it's a place where types by value are
 // stored. The rest of the interpreter just have

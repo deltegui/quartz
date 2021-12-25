@@ -48,6 +48,7 @@ static void end_scope(Typechecker* const checker);
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
 static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
+static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type);
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var);
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var);
 
@@ -60,6 +61,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary);
 static void typecheck_unary(void* ctx, UnaryExpr* unary);
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment);
 static void typecheck_call(void* ctx, CallExpr* call);
+static void typecheck_new(void* ctx, NewExpr* new_);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -68,6 +70,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_identifier = typecheck_identifier,
     .visit_assignment = typecheck_assignment,
     .visit_call = typecheck_call,
+    .visit_new = typecheck_new,
 };
 
 static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
@@ -356,27 +359,62 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         return;
     }
 
-    Expr** exprs = VECTOR_AS_EXPRS(&call->params);
-    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(type));
-    assert(call->params.size == TYPE_FN_PARAMS(type).size);
+    check_call_params(checker, &call->identifier, &call->params, type);
+    check_and_mark_upvalue(checker, symbol);
+    checker->last_type = TYPE_FN_RETURN(type);
+}
 
-    for (uint32_t i = 0; i < call->params.size; i++) {
+static void typecheck_new(void* ctx, NewExpr* new_) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* symbol = lookup_str(checker, new_->klass.start, new_->klass.length);
+    assert(symbol != NULL);
+    if (symbol->kind != OBJ_CLASS) {
+        error(
+            checker,
+            &new_->klass,
+            "Cannot use new with something that is not a class\n");
+        return;
+    }
+    assert(symbol->object.body != NULL);
+
+    Symbol* init_prop = scoped_symbol_lookup_object_prop_str(
+        symbol,
+        CLASS_CONSTRUCTOR_NAME,
+        CLASS_CONSTRUCTOR_LENGTH);
+    if (init_prop == NULL) {
+        if (new_->params.size != 0) {
+            error(
+                checker,
+                &new_->klass,
+                "Calling constructor that takes no paremeters\n");
+        }
+        return;
+    }
+    assert(init_prop->kind == OBJ_FUNCTION); // TODO is this correct?
+    Type* type = RESOLVE_IF_TYPEALIAS(init_prop->type);
+    check_call_params(checker, &new_->klass, &new_->params, type);
+}
+
+static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type) {
+    assert(TYPE_IS_FUNCTION(type));
+    Expr** exprs = VECTOR_AS_EXPRS(params);
+    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(type));
+    assert(params->size == TYPE_FN_PARAMS(type).size);
+
+    for (uint32_t i = 0; i < params->size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
         if (! type_equals(last, def_type)) {
             error_param_number(
                 checker,
-                &call->identifier,
+                identifier,
                 last,
                 def_type,
                 i);
         }
     }
-
-    check_and_mark_upvalue(checker, symbol);
-
-    checker->last_type = TYPE_FN_RETURN(type);
 }
 
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {

@@ -1,9 +1,13 @@
+import 'stdio';
+
 class Hombre {
     var name: String;
     var age: Number;
 
     pub fn init(name: String, age: Number) {
-        var a = 1 +1 ;
+        println("Hello from here putos");
     }
 }
+
+var diego = new Hombre('diego', 22);
 

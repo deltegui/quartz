@@ -133,6 +133,8 @@ static const char* OpCodeStrings[] = {
     "OP_BIND_CLOSED",
     "OP_JUMP",
     "OP_JUMP_IF_FALSE",
+    "OP_NEW",
+    "OP_GET_PROP",
 };
 
 void opcode_print(uint8_t op) {
@@ -226,6 +228,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_POP:
         case OP_GREATER:
         case OP_CLOSE:
+        case OP_NEW:
         case OP_END: {
             i = chunk_opcode_print(chunk, i);
             break;
@@ -238,6 +241,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_GET_UPVALUE:
         case OP_SET_UPVALUE:
         case OP_CONSTANT:
+        case OP_GET_PROP:
         case OP_CALL: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);

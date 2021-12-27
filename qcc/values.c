@@ -97,12 +97,12 @@ void mark_valuearray(ValueArray* const array) {
 }
 
 void valuearray_deep_copy(ValueArray* const origin, ValueArray* destiny) {
-    destiny->size = origin->size;
     destiny->capacity = origin->capacity;
-    GROW_ARRAY(
+    destiny->values = GROW_ARRAY(
         Value,
         destiny->values,
         0,
         destiny->capacity);
     memcpy(destiny->values, origin->values, sizeof(Value) * origin->capacity);
+    destiny->size = origin->size;
 }

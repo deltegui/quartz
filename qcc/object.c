@@ -78,11 +78,20 @@ ObjClass* new_class(const char* name, int length, Type* type) {
     return klass;
 }
 
-ObjInstance* new_instance(ObjClass* origin, Type* type) {
-    ObjInstance* instance = ALLOC_OBJ(ObjInstance, OBJ_INSTANCE, type);
+ObjInstance* new_instance(ObjClass* origin) {
+    ObjInstance* instance = ALLOC_OBJ(ObjInstance, OBJ_INSTANCE, origin->obj.type);
     instance->klass = origin;
+    init_valuearray(&instance->props);
+    stack_push(OBJ_VALUE(instance, instance->obj.type));
     valuearray_deep_copy(&origin->instance, &instance->props);
+    stack_pop();
     return instance;
+}
+
+// TODO change the value array to be directly in obj?
+Value object_get_property(ObjInstance* obj, uint8_t index) {
+    assert(index < obj->props.size);
+    return obj->props.values[index];
 }
 
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
@@ -161,7 +170,7 @@ void print_object(Obj* const obj) {
     }
     case OBJ_INSTANCE: {
         ObjInstance* instance = OBJ_AS_INSTANCE(obj);
-        printf("<Instance of class '%s'", OBJ_AS_CSTRING(instance->klass->name));
+        printf("<Instance of class '%s'>", OBJ_AS_CSTRING(instance->klass->name));
         break;
     }
     }

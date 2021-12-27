@@ -33,9 +33,9 @@ typedef struct s_pool_node {
     Type types[];
 } PoolNode;
 
-uint32_t last_capacity = 0;
-PoolNode* type_pool = NULL;
-PoolNode* current_node = NULL;
+static uint32_t last_capacity = 0;
+static PoolNode* type_pool = NULL;
+static PoolNode* current_node = NULL;
 
 inline static uint32_t next_capacity();
 static void free_pool_node(PoolNode* const node);
@@ -44,10 +44,10 @@ static Type* type_pool_add(Type type);
 static PoolNode* alloc_node();
 static void type_alias_print(FILE* out, const Type* const type);
 static void type_function_print(FILE* out, const Type* const type);
-static void type_object_print(FILE* out, const Type* const type);
+static void type_class_print(FILE* out, const Type* const type);
 static bool fn_params_equals(FunctionType* first, FunctionType* second);
 static bool type_function_equals(Type* first, Type* second);
-static bool type_object_equals(Type* first, Type* second);
+static bool type_class_equals(Type* first, Type* second);
 
 inline static uint32_t next_capacity() {
     last_capacity = ((last_capacity < 8) ? 8 : last_capacity * 2);
@@ -84,8 +84,8 @@ static void free_pool_node(PoolNode* const node) {
 
 static void free_type(Type* const type) {
     switch (type->kind) {
-    case TYPE_OBJECT: {
-        free(type->object);
+    case TYPE_CLASS: {
+        free(type->klass);
         break;
     }
     case TYPE_FUNCTION: {
@@ -168,14 +168,14 @@ Type* create_type_alias(const char* identifier, int length, Type* original) {
     return type_pool_add(type);
 }
 
-Type* create_type_object(const char* identifier, int length) {
-    ObjectType* objt = (ObjectType*) malloc(sizeof(ObjectType) + (sizeof(char) * length + 1));
-    memcpy(objt->identifier, identifier, length);
-    objt->identifier[length] = '\0';
-    objt->length = length;
+Type* create_type_class(const char* identifier, int length) {
+    ClassType* klass_type = (ClassType*) malloc(sizeof(ClassType) + (sizeof(char) * length + 1));
+    memcpy(klass_type->identifier, identifier, length);
+    klass_type->identifier[length] = '\0';
+    klass_type->length = length;
     Type type = (Type) {
-        .kind = TYPE_OBJECT,
-        .object = objt,
+        .kind = TYPE_CLASS,
+        .klass = klass_type,
     };
     return type_pool_add(type);
 }
@@ -199,7 +199,7 @@ void type_fprint(FILE* out, const Type* const type) {
     case TYPE_NIL: fprintf(out, "Nil"); break;
     case TYPE_STRING: fprintf(out, "String"); break;
     case TYPE_FUNCTION: type_function_print(out, type); break;
-    case TYPE_OBJECT: type_object_print(out, type); break;
+    case TYPE_CLASS: type_class_print(out, type); break;
     case TYPE_VOID: fprintf(out, "Void"); break;
     case TYPE_UNKNOWN: fprintf(out, "Unknown"); break;
     }
@@ -229,9 +229,9 @@ static void type_function_print(FILE* out, const Type* const type) {
     type_fprint(out, type->function->return_type);
 }
 
-static void type_object_print(FILE* out, const Type* const type) {
-    assert(type->kind == TYPE_OBJECT);
-    fprintf(out, "Object<%.*s>", type->object->length, type->object->identifier);
+static void type_class_print(FILE* out, const Type* const type) {
+    assert(type->kind == TYPE_CLASS);
+    fprintf(out, "Class<%.*s>", type->klass->length, type->klass->identifier);
 }
 
 bool type_equals(Type* first, Type* second) {
@@ -247,8 +247,8 @@ bool type_equals(Type* first, Type* second) {
     if (first->kind == TYPE_FUNCTION) {
         return type_function_equals(first, second);
     }
-    if (first->kind == TYPE_OBJECT) {
-        return type_object_equals(first, second);
+    if (first->kind == TYPE_CLASS) {
+        return type_class_equals(first, second);
     }
     return true;
 }
@@ -277,13 +277,13 @@ static bool fn_params_equals(FunctionType* first, FunctionType* second) {
     return true;
 }
 
-static bool type_object_equals(Type* first, Type* second) {
-    assert(first->object != NULL && second->object != NULL);
-    if (first->object->length != second->object->length) {
+static bool type_class_equals(Type* first, Type* second) {
+    assert(first->klass != NULL && second->klass != NULL);
+    if (first->klass->length != second->klass->length) {
         return false;
     }
     return memcmp(
-        first->object->identifier,
-        second->object->identifier,
-        first->object->length) == 0;
+        first->klass->identifier,
+        second->klass->identifier,
+        first->klass->length) == 0;
 }

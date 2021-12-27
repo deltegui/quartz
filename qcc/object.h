@@ -102,6 +102,7 @@ ObjClass* new_class(const char* name, int length, Type* type);
 #define OBJ_IS_INSTANCE(obj) (object_is_kind(obj, OBJ_INSTANCE))
 #define OBJ_AS_INSTANCE(obj) ((ObjInstance*) obj)
 
-ObjInstance* new_instance(ObjClass* origin, Type* type);
+ObjInstance* new_instance(ObjClass* origin);
+Value object_get_property(ObjInstance* obj, uint8_t index);
 
 #endif

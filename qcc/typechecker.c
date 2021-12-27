@@ -346,19 +346,6 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         return;
     }
 
-    uint32_t fn_param_type_size = TYPE_FN_PARAMS(type).size;
-    if (fn_param_type_size != call->params.size) {
-        error(
-            checker,
-            &call->identifier,
-            "Function '%.*s' expects %d params, but was called with %d params\n",
-            call->identifier.length,
-            call->identifier.start,
-            fn_param_type_size,
-            call->params.size);
-        return;
-    }
-
     check_call_params(checker, &call->identifier, &call->params, type);
     check_and_mark_upvalue(checker, symbol);
     checker->last_type = TYPE_FN_RETURN(type);
@@ -369,19 +356,16 @@ static void typecheck_new(void* ctx, NewExpr* new_) {
 
     Symbol* symbol = lookup_str(checker, new_->klass.start, new_->klass.length);
     assert(symbol != NULL);
-    if (symbol->kind != OBJ_CLASS) {
+    if (symbol->kind != SYMBOL_CLASS) {
         error(
             checker,
             &new_->klass,
-            "Cannot use new with something that is not a class\n");
+            "Cannot use 'new' with something that is not a class\n");
         return;
     }
     assert(symbol->object.body != NULL);
 
-    Symbol* init_prop = scoped_symbol_lookup_object_prop_str(
-        symbol,
-        CLASS_CONSTRUCTOR_NAME,
-        CLASS_CONSTRUCTOR_LENGTH);
+    Symbol* init_prop = SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(symbol);
     if (init_prop == NULL) {
         if (new_->params.size != 0) {
             error(
@@ -391,15 +375,51 @@ static void typecheck_new(void* ctx, NewExpr* new_) {
         }
         return;
     }
-    assert(init_prop->kind == OBJ_FUNCTION); // TODO is this correct?
-    Type* type = RESOLVE_IF_TYPEALIAS(init_prop->type);
-    check_call_params(checker, &new_->klass, &new_->params, type);
+    if (init_prop->kind != OBJ_FUNCTION) {
+        error(
+            checker,
+            &new_->klass,
+            "'init' property of class '%.*s' must be a function\n",
+            new_->klass.length,
+            new_->klass.start);
+        return;
+    }
+    if (init_prop->visibility != SYMBOL_VISIBILITY_PUBLIC) {
+        error(
+            checker,
+            &new_->klass,
+            "'init' property of class '%.*s' must be public\n",
+            new_->klass.length,
+            new_->klass.start);
+    }
+    if (! TYPE_IS_VOID(TYPE_FN_RETURN(init_prop->type))) {
+        error(
+            checker,
+            &new_->klass,
+            "'init' property of class '%.*s' must return Void\n",
+            new_->klass.length,
+            new_->klass.start);
+    }
+    check_call_params(checker, &new_->klass, &new_->params, init_prop->type);
 }
 
 static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type) {
     assert(TYPE_IS_FUNCTION(type));
     Expr** exprs = VECTOR_AS_EXPRS(params);
     Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(type));
+
+    uint32_t fn_param_type_size = TYPE_FN_PARAMS(type).size;
+    if (fn_param_type_size != params->size) {
+        error(
+            checker,
+            identifier,
+            "Function '%.*s' expects %d params, but was called with %d params\n",
+            identifier->length,
+            identifier->start,
+            fn_param_type_size,
+            params->size);
+        return;
+    }
     assert(params->size == TYPE_FN_PARAMS(type).size);
 
     for (uint32_t i = 0; i < params->size; i++) {

@@ -19,7 +19,7 @@ typedef enum {
     SYMBOL_TYPEALIAS,
     SYMBOL_FUNCTION,
     SYMBOL_VAR,
-    SYMBOL_OBJECT,
+    SYMBOL_CLASS,
 } SymbolKind;
 
 typedef enum {
@@ -131,6 +131,8 @@ Symbol* scoped_symbol_lookup_object_prop_str(Symbol* const obj_sym, const char* 
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);
 void scoped_symbol_update_object_body(ScopedSymbolTable* const table, Symbol* obj);
+
+#define SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(sym) (scoped_symbol_lookup_object_prop_str(sym, CLASS_CONSTRUCTOR_NAME, CLASS_CONSTRUCTOR_LENGTH))
 
 typedef struct s_symbol_set {
     CTable table; // CTable<Symbol*>

@@ -46,7 +46,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
     }
-    if (symbol.kind == SYMBOL_OBJECT) {
+    if (symbol.kind == SYMBOL_CLASS) {
         symbol.object.body = NULL;
     }
     return symbol;
@@ -55,7 +55,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
 static SymbolKind kind_from_type(Type* type) {
     switch (type->kind) {
     case TYPE_FUNCTION: return SYMBOL_FUNCTION;
-    case TYPE_OBJECT: return SYMBOL_OBJECT;
+    case TYPE_CLASS: return SYMBOL_CLASS;
     default: return SYMBOL_VAR;
     }
 }
@@ -74,7 +74,7 @@ void free_symbol(Symbol* const symbol) {
         free_symbol_set(symbol->function.upvalues);
         break;
     }
-    case SYMBOL_OBJECT:
+    case SYMBOL_CLASS:
     case SYMBOL_TYPEALIAS:
     case SYMBOL_VAR:
         break;
@@ -242,8 +242,8 @@ Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const ch
 
 Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name) {
     assert(obj_sym != NULL);
-    assert(obj_sym->kind == SYMBOL_OBJECT);
-    assert(obj_sym->body != NULL);
+    assert(obj_sym->kind == SYMBOL_CLASS);
+    assert(obj_sym->object.body != NULL);
     SymbolTable* klass_body = obj_sym->object.body;
     Symbol* prop = symbol_lookup(klass_body, name);
     return prop;

@@ -6,7 +6,7 @@
 #include "vector.h"
 
 typedef enum {
-    TYPE_OBJECT,
+    TYPE_CLASS,
     TYPE_ALIAS,
     TYPE_NUMBER,
     TYPE_BOOL,
@@ -19,14 +19,14 @@ typedef enum {
 
 struct s_func_type;
 struct s_alias_type;
-struct s_object_type;
+struct s_class_type;
 
 typedef struct s_type {
     TypeKind kind;
     union {
         struct s_func_type* function;
         struct s_alias_type* alias;
-        struct s_object_type* object;
+        struct s_class_type* klass;
     };
 } Type;
 
@@ -40,10 +40,10 @@ typedef struct s_alias_type {
     char identifier[];
 } AliasType;
 
-typedef struct s_object_type {
+typedef struct s_class_type {
     int length;
     char identifier[];
-} ObjectType;
+} ClassType;
 
 #define TYPE_ALIAS_RESOLVE(type_alias) (type_alias->alias->def)
 #define RESOLVE_IF_TYPEALIAS(type) (type->kind == TYPE_ALIAS) ? TYPE_ALIAS_RESOLVE(type) : type
@@ -51,7 +51,7 @@ typedef struct s_object_type {
 #define TYPE_FN_RETURN(type_fn) (type_fn->function->return_type)
 #define TYPE_FN_PARAMS(type_fn) (type_fn->function->param_types)
 
-#define TYPE_IS_OBJECT(type) (type->kind == TYPE_OBJECT)
+#define TYPE_IS_CLASS(type) (type->kind == TYPE_CLASS)
 #define TYPE_IS_ALIAS(type) (type->kind == TYPE_ALIAS)
 #define TYPE_IS_NUMBER(type) (type->kind == TYPE_NUMBER)
 #define TYPE_IS_BOOL(type) (type->kind == TYPE_BOOL)
@@ -67,7 +67,7 @@ void free_type_pool();
 Type* create_type_simple(TypeKind kind);
 Type* create_type_function();
 Type* create_type_alias(const char* identifier, int length, Type* original);
-Type* create_type_object(const char* identifier, int length);
+Type* create_type_class(const char* identifier, int length);
 
 #define CREATE_TYPE_NUMBER() create_type_simple(TYPE_NUMBER)
 #define CREATE_TYPE_BOOL() create_type_simple(TYPE_BOOL)

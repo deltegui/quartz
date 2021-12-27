@@ -55,6 +55,10 @@ typedef enum {
     // Jumps
     OP_JUMP,
     OP_JUMP_IF_FALSE,
+
+    // Objects
+    OP_NEW,
+    OP_GET_PROP,
 } OpCode;
 
 typedef struct {

@@ -565,7 +565,7 @@ static Stmt* class_decl(Parser* const parser) {
     Symbol symbol = create_symbol_calc_global(
         parser,
         &klass.identifier,
-        create_type_object(klass.identifier.start, klass.identifier.length));
+        create_type_class(klass.identifier.start, klass.identifier.length));
     // TODO this block of code appears too many times
     if (! register_symbol(parser, symbol)) {
         free_symbol(&symbol);
@@ -589,6 +589,7 @@ static Stmt* class_decl(Parser* const parser) {
 static Stmt* parse_class_body(Parser* const parser) {
     ListStmt* list = create_stmt_list();
     for (;;) {
+        // TODO check if this condition can be in for
         if (parser->current.kind == TOKEN_RIGHT_BRACE) {
             break;
         }
@@ -1092,7 +1093,7 @@ static Expr* new_(Parser* const parser, bool can_assign) {
         error(parser, "Undeclared class");
         return CREATE_NEW_EXPR(new_expr);
     }
-    if (klass_sym->kind != SYMBOL_OBJECT) {
+    if (klass_sym->kind != SYMBOL_CLASS) {
         error(parser, "Cannot use 'new' with something that is not a class");
     }
     advance(parser); // consume klass name

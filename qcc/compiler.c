@@ -108,6 +108,7 @@ static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_s
 static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var);
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index);
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index);
+static void call_with_params(Compiler* const compiler, Vector* params);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -115,6 +116,7 @@ static void compile_literal(void* ctx, LiteralExpr* literal);
 static void compile_binary(void* ctx, BinaryExpr* binary);
 static void compile_unary(void* ctx, UnaryExpr* unary);
 static void compile_call(void* ctx, CallExpr* call);
+static void compile_new(void* ctx, NewExpr* new_);
 
 ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
@@ -123,6 +125,7 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_identifier = compile_identifier,
     .visit_assignment = compile_assignment,
     .visit_call = compile_call,
+    .visit_new = compile_new,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -503,7 +506,7 @@ static void compile_class(void* ctx, ClassStmt* klass) {
 
     Symbol* symbol = lookup_str(compiler, klass->identifier.start, klass->identifier.length);
     assert(symbol != NULL);
-    assert(symbol->kind == SYMBOL_OBJECT);
+    assert(symbol->kind == SYMBOL_CLASS);
     uint16_t klass_index = get_variable_index(compiler, &klass->identifier);
     update_symbol_variable_info(compiler, symbol, klass_index);
 
@@ -512,7 +515,7 @@ static void compile_class(void* ctx, ClassStmt* klass) {
 
     assert(STMT_IS_LIST(*klass->body));
     ListStmt* body = klass->body->list;
-    for (int i = 0; i < body->size ; i++) {
+    for (int i = 0; i < body->size; i++) {
         Stmt* prop = body->stmts[i];
         Value value;
 
@@ -532,10 +535,15 @@ static void compile_class(void* ctx, ClassStmt* klass) {
         }
         }
 
+        // TODO Create a fixed size array for this part
         valuearray_write(&obj->instance, value);
     }
 
     end_scope(compiler);
+
+    if (body->size >= UINT8_MAX) {
+        error(compiler, "Too much properties for a single class");
+    }
 
     uint16_t default_value = make_constant(compiler, OBJ_VALUE(obj, symbol->type));
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
@@ -906,9 +914,34 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
     identifier_use(compiler, call->identifier, &ops_get_identifier);
-    Expr** exprs = VECTOR_AS_EXPRS(&call->params);
+    call_with_params(compiler, &call->params);
+}
+
+static void compile_new(void* ctx, NewExpr* new_) {
+    Compiler* compiler = (Compiler*) ctx;
+
+    identifier_use(compiler, new_->klass, &ops_get_identifier);
+    emit(compiler, OP_NEW);
+
+    Symbol* klass_sym = lookup_str(compiler, new_->klass.start, new_->klass.length);
+    assert(klass_sym != NULL);
+    assert(klass_sym->kind == SYMBOL_CLASS);
+    assert(klass_sym->object.body != NULL);
+
+    Symbol* init_prop = SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(klass_sym);
+    if (init_prop == NULL) {
+        return;
+    }
+    emit_short(compiler, OP_GET_PROP, init_prop->constant_index);
+
+    call_with_params(compiler, &new_->params);
+    emit(compiler, OP_POP); // The result of calling init is always nil.
+}
+
+static void call_with_params(Compiler* const compiler, Vector* params) {
+    Expr** exprs = VECTOR_AS_EXPRS(params);
     uint32_t i = 0;
-    for (; i < call->params.size; i++) {
+    for (; i < params->size; i++) {
         ACCEPT_EXPR(compiler, exprs[i]);
     }
     if (i > UINT8_MAX) {
@@ -916,3 +949,4 @@ static void compile_call(void* ctx, CallExpr* call) {
     }
     emit_short(compiler, OP_CALL, i);
 }
+

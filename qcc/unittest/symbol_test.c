@@ -525,9 +525,9 @@ void symbol_set_should_not_iterate_over_empty_set() {
 void object_symbols_can_be_added() {
     SCOPED_TABLE({
         SymbolName name = create_symbol_name("Human", 5);
-        Type* type = create_type_object("Human", 5);
-        Symbol obj_sym = create_symbol(name, 1, type);
-        assert_true(obj_sym.kind == SYMBOL_OBJECT);
+        Type* type = create_type_class("Human", 5);
+        Symbol cls_sym = create_symbol(name, 1, type);
+        assert_true(cls_sym.kind == SYMBOL_CLASS);
 
         SymbolName a = create_symbol_name("a", 1);
         Symbol sym_a = create_symbol(a, 1, CREATE_TYPE_NUMBER());
@@ -536,18 +536,18 @@ void object_symbols_can_be_added() {
         // Create the symbol table to match this code:
         /*
         { <GLOBAL>
-            obj
-            { <OBJ BODY> <- HERE YOU MUST UPDATE OBJ BODY
+            class
+            { <CLS BODY> <- HERE YOU MUST UPDATE CLS BODY
                 pub var a = 5;
             }
         }
         */
 
-        scoped_symbol_insert(&table, obj_sym);
+        scoped_symbol_insert(&table, cls_sym);
         Symbol* obj = scoped_symbol_lookup(&table, &name);
         assert_non_null(obj);
         symbol_create_scope(&table);
-            // THE OBJ MUST POINT TO ITS BODY TABLE
+            // THE CLS MUST POINT TO ITS BODY TABLE
             scoped_symbol_update_object_body(&table, obj);
             scoped_symbol_insert(&table, sym_a);
         symbol_end_scope(&table);

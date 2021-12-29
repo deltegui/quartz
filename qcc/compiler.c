@@ -913,7 +913,7 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 
 static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
-    identifier_use(compiler, call->identifier, &ops_get_identifier);
+    ACCEPT_EXPR(compiler, call->callee);
     call_with_params(compiler, &call->params);
 }
 

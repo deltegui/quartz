@@ -7,6 +7,7 @@
 
 typedef enum {
     TYPE_CLASS,
+    TYPE_OBJECT,
     TYPE_ALIAS,
     TYPE_NUMBER,
     TYPE_BOOL,
@@ -20,6 +21,7 @@ typedef enum {
 struct s_func_type;
 struct s_alias_type;
 struct s_class_type;
+struct s_object_type;
 
 typedef struct s_type {
     TypeKind kind;
@@ -27,6 +29,7 @@ typedef struct s_type {
         struct s_func_type* function;
         struct s_alias_type* alias;
         struct s_class_type* klass;
+        struct s_object_type* object;
     };
 } Type;
 
@@ -44,6 +47,10 @@ typedef struct s_class_type {
     int length;
     char identifier[];
 } ClassType;
+
+typedef struct s_object_type {
+    Type* klass;
+} ObjectType;
 
 #define TYPE_ALIAS_RESOLVE(type_alias) (type_alias->alias->def)
 #define RESOLVE_IF_TYPEALIAS(type) (type->kind == TYPE_ALIAS) ? TYPE_ALIAS_RESOLVE(type) : type
@@ -68,6 +75,7 @@ Type* create_type_simple(TypeKind kind);
 Type* create_type_function();
 Type* create_type_alias(const char* identifier, int length, Type* original);
 Type* create_type_class(const char* identifier, int length);
+Type* create_type_object(Type* klass);
 
 #define CREATE_TYPE_NUMBER() create_type_simple(TYPE_NUMBER)
 #define CREATE_TYPE_BOOL() create_type_simple(TYPE_BOOL)

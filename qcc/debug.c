@@ -534,9 +534,11 @@ static void print_call(void* ctx, CallExpr* call) {
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
     pretty_print("Call Expr: [\n");
     OFFSET({
-        pretty_print("Function name: ");
-        token_print(call->identifier);
-        pretty_print("Params: [\n");
+        pretty_print("Callee: [");
+        OFFSET({
+            ACCEPT_EXPR(call->callee);
+        });
+        pretty_print("]\nParams: [\n");
         OFFSET({
             for (uint32_t i = 0; i < call->params.size; i++) {
                 ACCEPT_EXPR(exprs[i]);

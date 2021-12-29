@@ -14,12 +14,12 @@ typedef enum {
     EXPR_NEW,
 } ExprKind;
 
-struct _Expr;
+struct s_expr;
 
 typedef struct {
-    struct _Expr* left;
+    struct s_expr* left;
     Token op;
-    struct _Expr* right;
+    struct s_expr* right;
 } BinaryExpr;
 
 typedef struct {
@@ -32,17 +32,18 @@ typedef struct {
 
 typedef struct {
     Token name;
-    struct _Expr* value;
+    struct s_expr* value;
 } AssignmentExpr;
 
 typedef struct {
     Token op;
-    struct _Expr* expr;
+    struct s_expr* expr;
 } UnaryExpr;
 
 typedef struct {
     Vector params;
-    Token identifier;
+    // Token identifier;
+    struct s_expr* callee;
 } CallExpr;
 
 typedef struct {
@@ -50,7 +51,7 @@ typedef struct {
     Token klass;
 } NewExpr;
 
-typedef struct _Expr {
+typedef struct s_expr {
     ExprKind kind;
     union {
         CallExpr call;

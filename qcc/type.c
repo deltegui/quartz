@@ -45,6 +45,7 @@ static PoolNode* alloc_node();
 static void type_alias_print(FILE* out, const Type* const type);
 static void type_function_print(FILE* out, const Type* const type);
 static void type_class_print(FILE* out, const Type* const type);
+static void type_object_print(FILE* out, const Type* const type);
 static bool fn_params_equals(FunctionType* first, FunctionType* second);
 static bool type_function_equals(Type* first, Type* second);
 static bool type_class_equals(Type* first, Type* second);
@@ -58,6 +59,7 @@ void init_type_pool() {
     last_capacity = 0;
     type_pool = NULL;
     current_node = NULL;
+
     number_type.kind = TYPE_NUMBER;
     bool_type.kind = TYPE_BOOL;
     nil_type.kind = TYPE_NIL;
@@ -180,6 +182,17 @@ Type* create_type_class(const char* identifier, int length) {
     return type_pool_add(type);
 }
 
+Type* create_type_object(Type* klass) {
+    assert(klass->kind == TYPE_CLASS);
+    ObjectType* obj_type = (ObjectType*) malloc(sizeof(ObjectType));
+    obj_type->klass = klass;
+    Type type = (Type) {
+        .kind = TYPE_OBJECT,
+        .object = obj_type,
+    };
+    return type_pool_add(type);
+}
+
 Type* simple_type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return CREATE_TYPE_NUMBER();
@@ -193,6 +206,7 @@ Type* simple_type_from_token_kind(TokenKind kind) {
 
 void type_fprint(FILE* out, const Type* const type) {
     switch (type->kind) {
+    case TYPE_OBJECT: type_object_print(out, type); break;
     case TYPE_ALIAS: type_alias_print(out, type); break;
     case TYPE_NUMBER: fprintf(out, "Number"); break;
     case TYPE_BOOL: fprintf(out, "Bool"); break;
@@ -232,6 +246,12 @@ static void type_function_print(FILE* out, const Type* const type) {
 static void type_class_print(FILE* out, const Type* const type) {
     assert(type->kind == TYPE_CLASS);
     fprintf(out, "Class<%.*s>", type->klass->length, type->klass->identifier);
+}
+
+static void type_object_print(FILE* out, const Type* const type) {
+    assert(type->kind == TYPE_OBJECT);
+    fprintf(out, "Instance of ");
+    type_class_print(out, type->object->klass);
 }
 
 bool type_equals(Type* first, Type* second) {

@@ -18,6 +18,7 @@ typedef struct {
 typedef struct {
     ScopedSymbolTable* symbols;
     Type* last_type;
+    Token last_token;
     bool has_error;
 
     Vector function_stack; // Vector<FuncMeta>
@@ -260,6 +261,8 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     ACCEPT_EXPR(ctx, var->definition);
     end_variable_definition(checker);
 
+    checker->last_token = var->identifier;
+
     if (TYPE_IS_VOID(checker->last_type)) {
         error(
             checker,
@@ -296,6 +299,7 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
     check_and_mark_upvalue(checker, symbol);
 
     checker->last_type = symbol->type;
+    checker->last_token = identifier->name;
 }
 
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
@@ -325,12 +329,17 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
     check_and_mark_upvalue(checker, symbol);
 
     checker->last_type = symbol->type;
+    checker->last_token = assignment->name;
 }
 
 static void typecheck_call(void* ctx, CallExpr* call) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* symbol = lookup_str(checker, call->identifier.start, call->identifier.length);
+    ACCEPT_EXPR(checker, call->callee);
+
+    Token identifier = checker->last_token;
+
+    Symbol* symbol = lookup_str(checker, identifier.start, identifier.length);
     assert(symbol != NULL);
     assert(symbol->type != NULL);
 
@@ -339,14 +348,14 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     if (! TYPE_IS_FUNCTION(type)) {
         error(
             checker,
-            &call->identifier,
+            &identifier,
             "Calling '%.*s' which is not a function\n",
-            call->identifier.length,
-            call->identifier.start);
+            identifier.length,
+            identifier.start);
         return;
     }
 
-    check_call_params(checker, &call->identifier, &call->params, type);
+    check_call_params(checker, &checker->last_token, &call->params, type);
     check_and_mark_upvalue(checker, symbol);
     checker->last_type = TYPE_FN_RETURN(type);
 }
@@ -401,6 +410,9 @@ static void typecheck_new(void* ctx, NewExpr* new_) {
             new_->klass.start);
     }
     check_call_params(checker, &new_->klass, &new_->params, init_prop->type);
+
+    checker->last_type = create_type_object(symbol->type);
+    checker->last_token = new_->klass;
 }
 
 static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type) {
@@ -511,6 +523,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_pop(checker);
 
     checker->last_type = TYPE_FN_RETURN(symbol->type);
+    checker->last_token = function->identifier;
 
 #define FN_RETURNS_SOMETHING() !(TYPE_IS_NIL(checker->last_type) || TYPE_IS_VOID(checker->last_type))
     if (FN_RETURNS_SOMETHING()) {
@@ -629,6 +642,7 @@ static void typecheck_import(void* ctx, ImportStmt* import) {
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     Typechecker* checker = (Typechecker*) ctx;
+    checker->last_token = literal->literal;
 
     switch (literal->literal.kind) {
     case TOKEN_NUMBER: {
@@ -676,7 +690,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
             checker->last_type = CREATE_TYPE_STRING();
             return;
         }
-        // just continue to TYPE_NUMBER
+        // just continue
     }
     case TOKEN_MINUS:
     case TOKEN_STAR:

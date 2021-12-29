@@ -164,7 +164,7 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         break;
     }
     case EXPR_CALL: {
-        assert_true(t_token_equals(&first->call.identifier, &second->call.identifier));
+        assert_expr_equals(first->call.callee, second->call.callee);
         assert_params_equal(&first->call.params, &second->call.params);
         break;
     }

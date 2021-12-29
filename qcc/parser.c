@@ -992,11 +992,8 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
     if (! EXPR_IS_IDENTIFIER(*left)) {
         error(parser, "You can only call functions");
     }
-    IdentifierExpr fn_name = left->identifier;
-
-    CallExpr call = (CallExpr){
-        .identifier = fn_name.name,
-    };
+    CallExpr call;
+    call.callee = left;
     init_vector(&call.params, sizeof(Expr*));
     parse_call_params(parser, &call.params);
     free_expr(left); // We only need left identifier. We must free it.

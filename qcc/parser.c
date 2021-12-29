@@ -996,7 +996,6 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
     call.callee = left;
     init_vector(&call.params, sizeof(Expr*));
     parse_call_params(parser, &call.params);
-    free_expr(left); // We only need left identifier. We must free it.
     return CREATE_CALL_EXPR(call);
 }
 

@@ -407,6 +407,7 @@ static void run(ObjFunction* func) {
             stack_push(OBJ_VALUE(instance, klass->obj.type));
             uint8_t init_pos = READ_BYTE();
             stack_push(object_get_property(instance, init_pos));
+            // At this time, this thing is prepared to call init function.
             break;
         }
         case OP_GET_PROP: {

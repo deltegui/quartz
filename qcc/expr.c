@@ -57,6 +57,9 @@ void free_expr(Expr* const expr) {
     case EXPR_NEW:
         free_params(&expr->new_.params);
         break;
+    case EXPR_PROP_ASSIGMENT:
+        free_expr(expr->prop_assigment.value);
+        break;
     }
     free(expr);
 }
@@ -91,6 +94,7 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     case EXPR_CALL: DISPATCH(visit_call, call); break;
     case EXPR_NEW: DISPATCH(visit_new, new_); break;
     case EXPR_PROP: DISPATCH(visit_prop, prop); break;
+    case EXPR_PROP_ASSIGMENT: DISPATCH(visit_prop_assigment, prop_assigment); break;
     }
 #undef DISPATCH
 }

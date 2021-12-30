@@ -397,9 +397,10 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
         return;
     }
 
-    char* class_name = obj_type->object->klass->klass->identifier;
-    int class_name_length = obj_type->object->klass->klass->length;
-    Symbol* class_symbol = lookup_str(checker, class_name, class_name_length);
+    Symbol* class_symbol = lookup_str(
+        checker,
+        TYPE_OBJECT_CLASS_NAME(obj_type),
+        TYPE_OBJECT_CLASS_LENGTH(obj_type));
     assert(class_symbol != NULL);
     assert(class_symbol->kind == SYMBOL_CLASS);
     Symbol* prop_symbol = scoped_symbol_lookup_object_prop_str(
@@ -424,7 +425,7 @@ static void typecheck_new(void* ctx, NewExpr* new_) {
             "Cannot use 'new' with something that is not a class\n");
         return;
     }
-    assert(symbol->object.body != NULL);
+    assert(symbol->klass.body != NULL);
 
     Symbol* init_prop = SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(symbol);
     if (init_prop == NULL) {

@@ -35,7 +35,7 @@ typedef struct {
     // This must not be NULL, but it cannot
     // be setted until the body node is created
     struct s_symbol_table* body;
-} ObjectSymbol;
+} ClassSymbol;
 
 typedef struct {
     Vector param_names; // Vector<Token>
@@ -71,7 +71,7 @@ typedef struct {
 
     union {
         FunctionSymbol function;
-        ObjectSymbol object;
+        ClassSymbol klass;
     };
 } Symbol;
 
@@ -130,7 +130,7 @@ Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name
 Symbol* scoped_symbol_lookup_object_prop_str(Symbol* const obj_sym, const char* name, int legnth);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);
-void scoped_symbol_update_object_body(ScopedSymbolTable* const table, Symbol* obj);
+void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj);
 
 #define SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(sym) (scoped_symbol_lookup_object_prop_str(sym, CLASS_CONSTRUCTOR_NAME, CLASS_CONSTRUCTOR_LENGTH))
 

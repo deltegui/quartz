@@ -928,15 +928,18 @@ static void compile_prop(void* ctx, PropExpr* prop) {
     assert(object_symbol != NULL);
     assert(object_symbol->type != NULL);
 
-    // TODO fix this shit
-    char* class_name = object_symbol->type->object->klass->klass->identifier;
-    int class_name_length = object_symbol->type->object->klass->klass->length;
-    Symbol* klass_sym = lookup_str(compiler, class_name, class_name_length);
+    Symbol* klass_sym = lookup_str(
+        compiler,
+        TYPE_OBJECT_CLASS_NAME(object_symbol->type),
+        TYPE_OBJECT_CLASS_LENGTH(object_symbol->type));
     assert(klass_sym != NULL);
     assert(klass_sym->kind == SYMBOL_CLASS);
-    assert(klass_sym->object.body != NULL);
+    assert(klass_sym->klass.body != NULL);
 
-    Symbol* prop_symbol = scoped_symbol_lookup_object_prop_str(klass_sym, prop->prop.start, prop->prop.length);
+    Symbol* prop_symbol = scoped_symbol_lookup_object_prop_str(
+        klass_sym,
+        prop->prop.start,
+        prop->prop.length);
     assert(prop_symbol != NULL);
     emit_short(compiler, OP_GET_PROP, prop_symbol->constant_index);
 }
@@ -947,7 +950,7 @@ static void compile_new(void* ctx, NewExpr* new_) {
     Symbol* klass_sym = lookup_str(compiler, new_->klass.start, new_->klass.length);
     assert(klass_sym != NULL);
     assert(klass_sym->kind == SYMBOL_CLASS);
-    assert(klass_sym->object.body != NULL);
+    assert(klass_sym->klass.body != NULL);
 
     Symbol* init_prop = SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(klass_sym);
     if (init_prop == NULL) {

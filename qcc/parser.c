@@ -51,7 +51,7 @@ static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static bool register_symbol(Parser* const parser, Symbol symbol);
 static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type);
-static void symbol_update_object_body(Parser* const parser, Symbol* obj);
+static void symbol_update_class_body(Parser* const parser, Symbol* obj);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
@@ -67,7 +67,7 @@ static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
 static Stmt* class_decl(Parser* const parser);
-static Stmt* parse_class_body(Parser* const parser);
+static Stmt* parse_class_body(Parser* const parser, Symbol* klass_sym);
 static SymbolVisibility parse_property_visibility(Parser* const parser);
 static Stmt* native_import(Parser* const parser, NativeImport import, int line);
 static Stmt* file_import(Parser* const parser, FileImport import);
@@ -303,8 +303,8 @@ static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type
     return symbol;
 }
 
-static void symbol_update_object_body(Parser* const parser, Symbol* obj) {
-    scoped_symbol_update_object_body(parser->symbols, obj);
+static void symbol_update_class_body(Parser* const parser, Symbol* obj) {
+    scoped_symbol_update_class_body(parser->symbols, obj);
 }
 
 static void advance(Parser* const parser) {
@@ -579,15 +579,15 @@ static Stmt* class_decl(Parser* const parser) {
 
     consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after class name in class declaration");
     create_scope(parser);
-    symbol_update_object_body(parser, inserted);
-    klass.body = parse_class_body(parser);
+    symbol_update_class_body(parser, inserted);
+    klass.body = parse_class_body(parser, inserted);
     end_scope(parser);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' before class body");
 
     return CREATE_STMT_CLASS(klass);
 }
 
-static Stmt* parse_class_body(Parser* const parser) {
+static Stmt* parse_class_body(Parser* const parser, Symbol* klass_sym) {
     ListStmt* list = create_stmt_list();
     for (;;) {
         // TODO check if this condition can be in for

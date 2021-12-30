@@ -52,22 +52,25 @@ typedef struct s_object_type {
     Type* klass;
 } ObjectType;
 
-#define TYPE_ALIAS_RESOLVE(type_alias) (type_alias->alias->def)
-#define RESOLVE_IF_TYPEALIAS(type) (type->kind == TYPE_ALIAS) ? TYPE_ALIAS_RESOLVE(type) : type
+#define TYPE_ALIAS_RESOLVE(type_alias) ((type_alias)->alias->def)
+#define RESOLVE_IF_TYPEALIAS(type) ((type)->kind == TYPE_ALIAS) ? TYPE_ALIAS_RESOLVE(type) : type
 
-#define TYPE_FN_RETURN(type_fn) (type_fn->function->return_type)
-#define TYPE_FN_PARAMS(type_fn) (type_fn->function->param_types)
+#define TYPE_FN_RETURN(type_fn) ((type_fn)->function->return_type)
+#define TYPE_FN_PARAMS(type_fn) ((type_fn)->function->param_types)
 
-#define TYPE_IS_OBJECT(type) (type->kind == TYPE_OBJECT)
-#define TYPE_IS_CLASS(type) (type->kind == TYPE_CLASS)
-#define TYPE_IS_ALIAS(type) (type->kind == TYPE_ALIAS)
-#define TYPE_IS_NUMBER(type) (type->kind == TYPE_NUMBER)
-#define TYPE_IS_BOOL(type) (type->kind == TYPE_BOOL)
-#define TYPE_IS_NIL(type) (type->kind == TYPE_NIL)
-#define TYPE_IS_STRING(type) (type->kind == TYPE_STRING)
-#define TYPE_IS_FUNCTION(type) (type->kind == TYPE_FUNCTION)
-#define TYPE_IS_VOID(type) (type->kind == TYPE_VOID)
-#define TYPE_IS_UNKNOWN(type) (type->kind == TYPE_UNKNOWN)
+#define TYPE_OBJECT_CLASS_NAME(type_obj) ((type_obj)->object->klass->klass->identifier)
+#define TYPE_OBJECT_CLASS_LENGTH(type_obj) ((type_obj)->object->klass->klass->length)
+
+#define TYPE_IS_OBJECT(type) ((type)->kind == TYPE_OBJECT)
+#define TYPE_IS_CLASS(type) ((type)->kind == TYPE_CLASS)
+#define TYPE_IS_ALIAS(type) ((type)->kind == TYPE_ALIAS)
+#define TYPE_IS_NUMBER(type) ((type)->kind == TYPE_NUMBER)
+#define TYPE_IS_BOOL(type) ((type)->kind == TYPE_BOOL)
+#define TYPE_IS_NIL(type) ((type)->kind == TYPE_NIL)
+#define TYPE_IS_STRING(type) ((type)->kind == TYPE_STRING)
+#define TYPE_IS_FUNCTION(type) ((type)->kind == TYPE_FUNCTION)
+#define TYPE_IS_VOID(type) ((type)->kind == TYPE_VOID)
+#define TYPE_IS_UNKNOWN(type) ((type)->kind == TYPE_UNKNOWN)
 
 void init_type_pool();
 void free_type_pool();

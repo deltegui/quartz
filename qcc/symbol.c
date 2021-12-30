@@ -47,7 +47,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         create_function_symbol(&symbol);
     }
     if (symbol.kind == SYMBOL_CLASS) {
-        symbol.object.body = NULL;
+        symbol.klass.body = NULL;
     }
     return symbol;
 }
@@ -243,8 +243,8 @@ Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const ch
 Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name) {
     assert(obj_sym != NULL);
     assert(obj_sym->kind == SYMBOL_CLASS);
-    assert(obj_sym->object.body != NULL);
-    SymbolTable* klass_body = obj_sym->object.body;
+    assert(obj_sym->klass.body != NULL);
+    SymbolTable* klass_body = obj_sym->klass.body;
     Symbol* prop = symbol_lookup(klass_body, name);
     return prop;
 }
@@ -267,8 +267,8 @@ void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* v
     symbol_set_add(var_upvalue->upvalue_fn_refs, fn);
 }
 
-void scoped_symbol_update_object_body(ScopedSymbolTable* const table, Symbol* obj) {
-    obj->object.body = &table->current->symbols;
+void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj) {
+    obj->klass.body = &table->current->symbols;
 }
 
 SymbolSet* create_symbol_set() {

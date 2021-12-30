@@ -1,7 +1,7 @@
 import 'stdio';
 import 'stdconv';
 
-class Hombre {
+class Macha {
     var name: String;
     var age: Number;
 
@@ -14,6 +14,6 @@ class Hombre {
     }
 }
 
-var diego = new Hombre('diego', 22);
+var diego = new Macha('diego', 22);
 diego.hello();
 println(ntos(diego.age));

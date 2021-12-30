@@ -19,6 +19,7 @@ typedef struct {
     ScopedSymbolTable* symbols;
     Type* last_type;
     Token last_token;
+    Symbol* prop_symbol;
     bool has_error;
 
     Vector function_stack; // Vector<FuncMeta>
@@ -63,6 +64,7 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary);
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment);
 static void typecheck_call(void* ctx, CallExpr* call);
 static void typecheck_new(void* ctx, NewExpr* new_);
+static void typecheck_prop(void* ctx, PropExpr* prop);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -72,6 +74,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_assignment = typecheck_assignment,
     .visit_call = typecheck_call,
     .visit_new = typecheck_new,
+    .visit_prop = typecheck_prop,
 };
 
 static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
@@ -206,6 +209,7 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     checker.has_error = false;
     checker.is_defining_variable = false;
     checker.defining_variable = NULL;
+    checker.prop_symbol = NULL;
     checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
@@ -345,6 +349,20 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
     Type* type = RESOLVE_IF_TYPEALIAS(symbol->type);
 
+    if (TYPE_IS_OBJECT(type)) {
+        assert(checker->prop_symbol != NULL);
+        symbol = checker->prop_symbol;
+        type = symbol->type;
+        // TODO fix identifier
+        identifier = (Token){
+            .kind = TOKEN_IDENTIFIER,
+            .column = 0,
+            .line = symbol->declaration_line,
+            .start = symbol->name.key.start,
+            .length = symbol->name.key.length,
+        };
+    }
+
     if (! TYPE_IS_FUNCTION(type)) {
         error(
             checker,
@@ -355,9 +373,43 @@ static void typecheck_call(void* ctx, CallExpr* call) {
         return;
     }
 
-    check_call_params(checker, &checker->last_token, &call->params, type);
+    check_call_params(checker, &identifier, &call->params, type);
     check_and_mark_upvalue(checker, symbol);
     checker->last_type = TYPE_FN_RETURN(type);
+}
+
+static void typecheck_prop(void* ctx, PropExpr* prop) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* object_symbol = lookup_str(checker, prop->identifier.start, prop->identifier.length);
+    assert(object_symbol != NULL);
+    assert(object_symbol->type != NULL);
+
+    Type* obj_type = RESOLVE_IF_TYPEALIAS(object_symbol->type);
+
+    if (! TYPE_IS_OBJECT(obj_type)) {
+        error(
+            checker,
+            &prop->identifier,
+            "Accessing property of '%.*s' which is not an object\n",
+            prop->identifier.length,
+            prop->identifier.start);
+        return;
+    }
+
+    char* class_name = obj_type->object->klass->klass->identifier;
+    int class_name_length = obj_type->object->klass->klass->length;
+    Symbol* class_symbol = lookup_str(checker, class_name, class_name_length);
+    assert(class_symbol != NULL);
+    assert(class_symbol->kind == SYMBOL_CLASS);
+    Symbol* prop_symbol = scoped_symbol_lookup_object_prop_str(
+        class_symbol,
+        prop->prop.start,
+        prop->prop.length);
+
+    checker->last_type = prop_symbol->type;
+    checker->last_token = prop->identifier;
+    checker->prop_symbol = prop_symbol;
 }
 
 static void typecheck_new(void* ctx, NewExpr* new_) {
@@ -477,6 +529,15 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
 #endif
         return;
     }
+    // TODO this
+    /*
+    if (var->visibility != SYMBOL_VISIBILITY_UNDEFINED) {
+#ifdef TYPECHECKER_DEBUG
+        printf("No, is defined in a class\n");
+#endif
+        return;
+    }
+    */
 #ifdef TYPECHECKER_DEBUG
     printf("Yes\n");
 #endif

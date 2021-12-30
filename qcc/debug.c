@@ -228,7 +228,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_POP:
         case OP_GREATER:
         case OP_CLOSE:
-        case OP_NEW:
         case OP_END: {
             i = chunk_opcode_print(chunk, i);
             break;
@@ -242,6 +241,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_SET_UPVALUE:
         case OP_CONSTANT:
         case OP_GET_PROP:
+        case OP_NEW:
         case OP_CALL: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
@@ -379,6 +379,7 @@ static void print_identifier(void* ctx, IdentifierExpr* identifier);
 static void print_assignment(void* ctx, AssignmentExpr* assignment);
 static void print_call(void* ctx, CallExpr* call);
 static void print_new(void* ctx, NewExpr* new_);
+static void print_prop(void* ctx, PropExpr* prop);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
@@ -388,6 +389,7 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_assignment = print_assignment,
     .visit_call = print_call,
     .visit_new = print_new,
+    .visit_prop = print_prop,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
@@ -534,11 +536,12 @@ static void print_call(void* ctx, CallExpr* call) {
     Expr** exprs = VECTOR_AS_EXPRS(&call->params);
     pretty_print("Call Expr: [\n");
     OFFSET({
-        pretty_print("Callee: [");
+        pretty_print("Callee: [\n");
         OFFSET({
             ACCEPT_EXPR(call->callee);
         });
-        pretty_print("]\nParams: [\n");
+        pretty_print("]\n");
+        pretty_print("Params: [\n");
         OFFSET({
             for (uint32_t i = 0; i < call->params.size; i++) {
                 ACCEPT_EXPR(exprs[i]);
@@ -727,6 +730,17 @@ static void print_class(void* ctx, ClassStmt* klass) {
             ACCEPT_STMT(klass->body);
         });
         pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
+static void print_prop(void* ctx, PropExpr* prop) {
+    pretty_print("Property: [\n");
+    OFFSET({
+        pretty_print("Object: ");
+        token_print(prop->identifier);
+        pretty_print("Prop: ");
+        token_print(prop->prop);
     });
     pretty_print("]\n");
 }

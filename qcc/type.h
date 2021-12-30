@@ -58,6 +58,7 @@ typedef struct s_object_type {
 #define TYPE_FN_RETURN(type_fn) (type_fn->function->return_type)
 #define TYPE_FN_PARAMS(type_fn) (type_fn->function->param_types)
 
+#define TYPE_IS_OBJECT(type) (type->kind == TYPE_OBJECT)
 #define TYPE_IS_CLASS(type) (type->kind == TYPE_CLASS)
 #define TYPE_IS_ALIAS(type) (type->kind == TYPE_ALIAS)
 #define TYPE_IS_NUMBER(type) (type->kind == TYPE_NUMBER)

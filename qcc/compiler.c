@@ -117,6 +117,7 @@ static void compile_binary(void* ctx, BinaryExpr* binary);
 static void compile_unary(void* ctx, UnaryExpr* unary);
 static void compile_call(void* ctx, CallExpr* call);
 static void compile_new(void* ctx, NewExpr* new_);
+static void compile_prop(void* ctx, PropExpr* prop);
 
 ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
@@ -126,6 +127,7 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_assignment = compile_assignment,
     .visit_call = compile_call,
     .visit_new = compile_new,
+    .visit_prop = compile_prop,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -917,11 +919,30 @@ static void compile_call(void* ctx, CallExpr* call) {
     call_with_params(compiler, &call->params);
 }
 
-static void compile_new(void* ctx, NewExpr* new_) {
+static void compile_prop(void* ctx, PropExpr* prop) {
     Compiler* compiler = (Compiler*) ctx;
 
-    identifier_use(compiler, new_->klass, &ops_get_identifier);
-    emit(compiler, OP_NEW);
+    identifier_use(compiler, prop->identifier, &ops_get_identifier);
+
+    Symbol* object_symbol = lookup_str(compiler, prop->identifier.start, prop->identifier.length);
+    assert(object_symbol != NULL);
+    assert(object_symbol->type != NULL);
+
+    // TODO fix this shit
+    char* class_name = object_symbol->type->object->klass->klass->identifier;
+    int class_name_length = object_symbol->type->object->klass->klass->length;
+    Symbol* klass_sym = lookup_str(compiler, class_name, class_name_length);
+    assert(klass_sym != NULL);
+    assert(klass_sym->kind == SYMBOL_CLASS);
+    assert(klass_sym->object.body != NULL);
+
+    Symbol* prop_symbol = scoped_symbol_lookup_object_prop_str(klass_sym, prop->prop.start, prop->prop.length);
+    assert(prop_symbol != NULL);
+    emit_short(compiler, OP_GET_PROP, prop_symbol->constant_index);
+}
+
+static void compile_new(void* ctx, NewExpr* new_) {
+    Compiler* compiler = (Compiler*) ctx;
 
     Symbol* klass_sym = lookup_str(compiler, new_->klass.start, new_->klass.length);
     assert(klass_sym != NULL);
@@ -932,7 +953,8 @@ static void compile_new(void* ctx, NewExpr* new_) {
     if (init_prop == NULL) {
         return;
     }
-    emit_short(compiler, OP_GET_PROP, init_prop->constant_index);
+    identifier_use(compiler, new_->klass, &ops_get_identifier);
+    emit_short(compiler, OP_NEW, init_prop->constant_index);
 
     call_with_params(compiler, &new_->params);
     emit(compiler, OP_POP); // The result of calling init is always nil.

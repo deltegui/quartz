@@ -98,6 +98,7 @@ static Expr* unary(Parser* const parser, bool can_assign);
 static Expr* new_(Parser* const parser, bool can_assign);
 static Expr* binary(Parser* const parser, bool can_assign, Expr* left);
 static Expr* call(Parser* const parser, bool can_assign, Expr* left);
+static Expr* prop(Parser* const parser, bool can_assign, Expr* left);
 
 static void parse_call_params(Parser* const parser, Vector* params);
 
@@ -112,7 +113,7 @@ ParseRule rules[] = {
     [TOKEN_PERCENT]       = {NULL,        binary, PREC_FACTOR},
     [TOKEN_LEFT_PAREN]    = {grouping,    call,   PREC_CALL},
     [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_DOT]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_DOT]           = {NULL,        prop,   PREC_CALL},
     [TOKEN_BANG]          = {unary,       NULL,   PREC_UNARY},
     [TOKEN_EQUAL]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_LOWER]         = {NULL,        binary, PREC_COMPARISON},
@@ -989,9 +990,12 @@ static Expr* binary(Parser* const parser, bool can_assign, Expr* left) {
 }
 
 static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
+    // TODO Is this thing necessary
+    /*
     if (! EXPR_IS_IDENTIFIER(*left)) {
         error(parser, "You can only call functions");
     }
+    */
     CallExpr call;
     call.callee = left;
     init_vector(&call.params, sizeof(Expr*));
@@ -1103,6 +1107,25 @@ static Expr* new_(Parser* const parser, bool can_assign) {
     printf("[PARSER DEBUG]: end NEW Expression\n");
 #endif
     return CREATE_NEW_EXPR(new_expr);
+}
+
+static Expr* prop(Parser* const parser, bool can_assign, Expr* left) {
+    // TODO Is this thing necessary
+    /*
+    if (! EXPR_IS_IDENTIFIER(*left)) {
+        error(parser, "You can only call functions");
+    }
+    */
+
+    PropExpr prop;
+    prop.identifier = left->identifier.name;
+
+    Token prop_identifier = parser->current;
+    consume(parser, TOKEN_IDENTIFIER, "Expected ");
+    prop.prop = prop_identifier;
+
+    free_expr(left);
+    return CREATE_PROP_EXPR(prop);
 }
 
 static Expr* identifier(Parser* const parser, bool can_assign) {

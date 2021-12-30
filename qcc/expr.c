@@ -19,6 +19,7 @@ Expr* create_expr(ExprKind kind, const void* const expr_node) {
     CASE_EXPR(EXPR_ASSIGNMENT, assignment, AssignmentExpr);
     CASE_EXPR(EXPR_CALL, call, CallExpr);
     CASE_EXPR(EXPR_NEW, new_, NewExpr);
+    CASE_EXPR(EXPR_PROP, prop, PropExpr);
     }
     return expr;
 
@@ -39,6 +40,7 @@ void free_expr(Expr* const expr) {
         free_expr(expr->binary.left);
         free_expr(expr->binary.right);
         break;
+    case EXPR_PROP:
     case EXPR_IDENTIFIER:
     case EXPR_LITERAL:
         // There is nothing to free
@@ -88,6 +90,7 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     case EXPR_ASSIGNMENT: DISPATCH(visit_assignment, assignment); break;
     case EXPR_CALL: DISPATCH(visit_call, call); break;
     case EXPR_NEW: DISPATCH(visit_new, new_); break;
+    case EXPR_PROP: DISPATCH(visit_prop, prop); break;
     }
 #undef DISPATCH
 }

@@ -12,6 +12,7 @@ typedef enum {
     EXPR_ASSIGNMENT,
     EXPR_CALL,
     EXPR_NEW,
+    EXPR_PROP,
 } ExprKind;
 
 struct s_expr;
@@ -51,6 +52,11 @@ typedef struct {
     Token klass;
 } NewExpr;
 
+typedef struct {
+    Token identifier;
+    Token prop;
+} PropExpr;
+
 typedef struct s_expr {
     ExprKind kind;
     union {
@@ -61,6 +67,7 @@ typedef struct s_expr {
         IdentifierExpr identifier;
         AssignmentExpr assignment;
         NewExpr new_;
+        PropExpr prop;
     };
 } Expr;
 
@@ -72,23 +79,26 @@ typedef struct {
     void (*visit_assignment)(void* ctx, AssignmentExpr* identifier);
     void (*visit_call)(void* ctx, CallExpr* call);
     void (*visit_new)(void* ctx, NewExpr* new_);
+    void (*visit_prop)(void* ctx, PropExpr* prop);
 } ExprVisitor;
 
 #define EXPR_IS_BINARY(expr) ((expr).kind == EXPR_BINARY)
 #define EXPR_IS_LITERAL(expr) ((expr).kind == EXPR_LITERAL)
-#define EXPR_IS_UNARY(expr) ((expr).kind == EXPR_LITERAL)
+#define EXPR_IS_UNARY(expr) ((expr).kind == EXPR_UNARY)
 #define EXPR_IS_IDENTIFIER(expr) ((expr).kind == EXPR_IDENTIFIER)
 #define EXPR_IS_ASSIGNMENT(expr) ((expr).kind == EXPR_ASSIGNMENT)
 #define EXPR_IS_CALL(expr) ((expr).kind == EXPR_CALL)
 #define EXPR_IS_NEW(expr) ((expr).kind == EXPR_NEW)
+#define EXPR_IS_PROP(expr) ((expr).kind == EXPR_PROP)
 
 #define CREATE_BINARY_EXPR(binary) create_expr(EXPR_BINARY, &binary)
 #define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)
 #define CREATE_UNARY_EXPR(unary) create_expr(EXPR_UNARY, &unary)
 #define CREATE_INDENTIFIER_EXPR(identifier) create_expr(EXPR_IDENTIFIER, &identifier)
 #define CREATE_ASSIGNMENT_EXPR(assignment) create_expr(EXPR_ASSIGNMENT, &assignment)
-#define CREATE_CALL_EXPR(call) create_expr(EXPR_CALL, &call);
-#define CREATE_NEW_EXPR(new_) create_expr(EXPR_NEW, &new_);
+#define CREATE_CALL_EXPR(call) create_expr(EXPR_CALL, &call)
+#define CREATE_NEW_EXPR(new_) create_expr(EXPR_NEW, &new_)
+#define CREATE_PROP_EXPR(prop) create_expr(EXPR_PROP, &prop)
 
 Expr* create_expr(ExprKind type, const void* const expr_node);
 void free_expr(Expr* const expr);

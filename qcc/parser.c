@@ -743,6 +743,12 @@ static Type* parse_type(Parser* const parser) {
             parser->current.start);
         return CREATE_TYPE_UNKNOWN();
     }
+    if (TYPE_IS_CLASS(symbol->type)) {
+        return create_type_object(symbol->type);
+    }
+    return symbol->type;
+    // TODO check if this is neccessary!
+    /*
     switch (symbol->kind) {
     case SYMBOL_TYPEALIAS:
         return symbol->type;
@@ -754,6 +760,7 @@ static Type* parse_type(Parser* const parser) {
             parser->current.start);
         return CREATE_TYPE_UNKNOWN();
     }
+    */
 }
 
 static Type* parse_function_type(Parser* const parser) {
@@ -1109,22 +1116,23 @@ static Expr* new_(Parser* const parser, bool can_assign) {
     return CREATE_NEW_EXPR(new_expr);
 }
 
+// TODO spelling error: you are using assigment instead of assignment.
 static Expr* prop(Parser* const parser, bool can_assign, Expr* left) {
-    // TODO Is this thing necessary
-    /*
-    if (! EXPR_IS_IDENTIFIER(*left)) {
-        error(parser, "You can only call functions");
-    }
-    */
-
-    PropExpr prop;
-    prop.identifier = left->identifier.name;
-
-    Token prop_identifier = parser->current;
-    consume(parser, TOKEN_IDENTIFIER, "Expected ");
-    prop.prop = prop_identifier;
-
+    Token identifier = left->identifier.name;
+    Token property = parser->current;
     free_expr(left);
+    consume(parser, TOKEN_IDENTIFIER, "Expected ");
+    if (parser->current.kind == TOKEN_EQUAL) {
+        advance(parser); // consume =
+        PropAssigmentExpr assigment;
+        assigment.identifier = identifier;
+        assigment.prop = property;
+        assigment.value = parse_precendence(parser, PREC_ASSIGNMENT);
+        return CREATE_PROP_ASSIGMENT_EXPR(assigment);
+    }
+    PropExpr prop;
+    prop.identifier = identifier;
+    prop.prop = property;
     return CREATE_PROP_EXPR(prop);
 }
 

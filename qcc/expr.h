@@ -99,7 +99,7 @@ typedef struct {
 #define EXPR_IS_CALL(expr) ((expr).kind == EXPR_CALL)
 #define EXPR_IS_NEW(expr) ((expr).kind == EXPR_NEW)
 #define EXPR_IS_PROP(expr) ((expr).kind == EXPR_PROP)
-#define EXPR_IS_PROP(expr) ((expr).kind == EXPR_PROP_ASSIGMENT)
+#define EXPR_IS_PROP_ASSIGMENT(expr) ((expr).kind == EXPR_PROP_ASSIGMENT)
 
 #define CREATE_BINARY_EXPR(binary) create_expr(EXPR_BINARY, &binary)
 #define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)

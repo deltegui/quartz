@@ -135,6 +135,7 @@ static const char* OpCodeStrings[] = {
     "OP_JUMP_IF_FALSE",
     "OP_NEW",
     "OP_GET_PROP",
+    "OP_SET_PROP",
 };
 
 void opcode_print(uint8_t op) {
@@ -241,6 +242,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_SET_UPVALUE:
         case OP_CONSTANT:
         case OP_GET_PROP:
+        case OP_SET_PROP:
         case OP_NEW:
         case OP_CALL: {
             i = chunk_opcode_print(chunk, i);
@@ -380,6 +382,7 @@ static void print_assignment(void* ctx, AssignmentExpr* assignment);
 static void print_call(void* ctx, CallExpr* call);
 static void print_new(void* ctx, NewExpr* new_);
 static void print_prop(void* ctx, PropExpr* prop);
+static void print_prop_assigment(void* ctx, PropAssigmentExpr* prop);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
@@ -390,6 +393,7 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_call = print_call,
     .visit_new = print_new,
     .visit_prop = print_prop,
+    .visit_prop_assigment = print_prop_assigment,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
@@ -741,6 +745,21 @@ static void print_prop(void* ctx, PropExpr* prop) {
         token_print(prop->identifier);
         pretty_print("Prop: ");
         token_print(prop->prop);
+    });
+    pretty_print("]\n");
+}
+
+static void print_prop_assigment(void* ctx, PropAssigmentExpr* prop) {
+    pretty_print("Prop Assignment Expr: [\n");
+    OFFSET({
+        pretty_print("Object: ");
+        token_print(prop->identifier);
+        pretty_print("Prop: ");
+        token_print(prop->prop);
+        pretty_print("Value:\n");
+        OFFSET({
+            ACCEPT_EXPR(prop->value);
+        });
     });
     pretty_print("]\n");
 }

@@ -104,5 +104,6 @@ ObjClass* new_class(const char* name, int length, Type* type);
 
 ObjInstance* new_instance(ObjClass* origin);
 Value object_get_property(ObjInstance* obj, uint8_t index);
+void object_set_property(ObjInstance* obj, uint8_t index, Value val);
 
 #endif

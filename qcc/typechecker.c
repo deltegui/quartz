@@ -65,6 +65,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment);
 static void typecheck_call(void* ctx, CallExpr* call);
 static void typecheck_new(void* ctx, NewExpr* new_);
 static void typecheck_prop(void* ctx, PropExpr* prop);
+static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -75,6 +76,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_call = typecheck_call,
     .visit_new = typecheck_new,
     .visit_prop = typecheck_prop,
+    .visit_prop_assigment = typecheck_prop_assigment,
 };
 
 static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
@@ -397,20 +399,71 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
         return;
     }
 
-    Symbol* class_symbol = lookup_str(
-        checker,
-        TYPE_OBJECT_CLASS_NAME(obj_type),
-        TYPE_OBJECT_CLASS_LENGTH(obj_type));
-    assert(class_symbol != NULL);
-    assert(class_symbol->kind == SYMBOL_CLASS);
-    Symbol* prop_symbol = scoped_symbol_lookup_object_prop_str(
-        class_symbol,
+    Symbol* prop_symbol = scoped_symbol_get_object_prop(
+        checker->symbols,
+        object_symbol,
         prop->prop.start,
         prop->prop.length);
 
     checker->last_type = prop_symbol->type;
     checker->last_token = prop->identifier;
     checker->prop_symbol = prop_symbol;
+}
+
+static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* object_symbol = lookup_str(
+        checker,
+        prop_assignment->identifier.start,
+        prop_assignment->identifier.length);
+    assert(object_symbol != NULL);
+    assert(object_symbol->type != NULL);
+
+    // TODO this part check if the symbol is an object. This part is repeated in prop.
+    Type* obj_type = RESOLVE_IF_TYPEALIAS(object_symbol->type);
+
+    if (! TYPE_IS_OBJECT(obj_type)) {
+        error(
+            checker,
+            &prop_assignment->identifier,
+            "Accessing property of '%.*s' which is not an object\n",
+            prop_assignment->identifier.length,
+            prop_assignment->identifier.start);
+        return;
+    }
+
+    Symbol* prop_symbol = scoped_symbol_get_object_prop(
+        checker->symbols,
+        object_symbol,
+        prop_assignment->prop.start,
+        prop_assignment->prop.length);
+
+    ACCEPT_EXPR(checker, prop_assignment->value);
+
+    if (TYPE_IS_VOID(checker->last_type)) {
+        error(
+            checker,
+            &prop_assignment->prop,
+            "Cannot assign property to Void\n");
+        return;
+    }
+    if (! type_equals(prop_symbol->type, checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &prop_assignment->prop,
+            prop_symbol->type,
+            "in property assignment.");
+        return;
+    }
+
+    // TODO Do I have to do this?
+    // check_and_mark_upvalue(checker, object_symbol);
+
+    // TODO there is no need to reset checker->last_type. The same with typecheck_prop
+    checker->last_type = prop_symbol->type;
+    // TODO I dont know if I have to do this thing!
+    // checker->last_token = ;
 }
 
 static void typecheck_new(void* ctx, NewExpr* new_) {

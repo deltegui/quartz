@@ -271,6 +271,20 @@ void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj
     obj->klass.body = &table->current->symbols;
 }
 
+Symbol* scoped_symbol_get_object_prop(ScopedSymbolTable* const table, Symbol* obj, const char* prop, int length) {
+    Symbol* klass_sym = scoped_symbol_lookup_str(
+        table,
+        TYPE_OBJECT_CLASS_NAME(obj->type),
+        TYPE_OBJECT_CLASS_LENGTH(obj->type));
+    assert(klass_sym != NULL);
+    assert(klass_sym->kind == SYMBOL_CLASS);
+    assert(klass_sym->klass.body != NULL);
+    return scoped_symbol_lookup_object_prop_str(
+        klass_sym,
+        prop,
+        length);
+}
+
 SymbolSet* create_symbol_set() {
     SymbolSet* set = (SymbolSet*) malloc(sizeof(SymbolSet));
     init_ctable((CTable*)set, sizeof(Symbol*));

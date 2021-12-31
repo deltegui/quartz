@@ -94,6 +94,11 @@ Value object_get_property(ObjInstance* obj, uint8_t index) {
     return obj->props.values[index];
 }
 
+void object_set_property(ObjInstance* obj, uint8_t index, Value val) {
+    assert(index < obj->props.size);
+    obj->props.values[index] = val;
+}
+
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
     ObjString* obj_str = ALLOC_STR(length + 1);
     obj_str->length = length;

@@ -20,6 +20,7 @@ Expr* create_expr(ExprKind kind, const void* const expr_node) {
     CASE_EXPR(EXPR_CALL, call, CallExpr);
     CASE_EXPR(EXPR_NEW, new_, NewExpr);
     CASE_EXPR(EXPR_PROP, prop, PropExpr);
+    CASE_EXPR(EXPR_PROP_ASSIGMENT, prop_assigment, PropAssigmentExpr);
     }
     return expr;
 

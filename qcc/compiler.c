@@ -118,6 +118,7 @@ static void compile_unary(void* ctx, UnaryExpr* unary);
 static void compile_call(void* ctx, CallExpr* call);
 static void compile_new(void* ctx, NewExpr* new_);
 static void compile_prop(void* ctx, PropExpr* prop);
+static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
 
 ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
@@ -128,6 +129,7 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_call = compile_call,
     .visit_new = compile_new,
     .visit_prop = compile_prop,
+    .visit_prop_assigment = compile_prop_assigment,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -928,20 +930,37 @@ static void compile_prop(void* ctx, PropExpr* prop) {
     assert(object_symbol != NULL);
     assert(object_symbol->type != NULL);
 
-    Symbol* klass_sym = lookup_str(
-        compiler,
-        TYPE_OBJECT_CLASS_NAME(object_symbol->type),
-        TYPE_OBJECT_CLASS_LENGTH(object_symbol->type));
-    assert(klass_sym != NULL);
-    assert(klass_sym->kind == SYMBOL_CLASS);
-    assert(klass_sym->klass.body != NULL);
-
-    Symbol* prop_symbol = scoped_symbol_lookup_object_prop_str(
-        klass_sym,
+    Symbol* prop_symbol = scoped_symbol_get_object_prop(
+        &compiler->symbols,
+        object_symbol,
         prop->prop.start,
         prop->prop.length);
     assert(prop_symbol != NULL);
     emit_short(compiler, OP_GET_PROP, prop_symbol->constant_index);
+}
+
+static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {
+    Compiler* compiler = (Compiler*) ctx;
+
+    identifier_use(compiler, prop_assignment->identifier, &ops_get_identifier);
+
+    Symbol* object_symbol = lookup_str(
+        compiler,
+        prop_assignment->identifier.start,
+        prop_assignment->identifier.length);
+    assert(object_symbol != NULL);
+    assert(object_symbol->type != NULL);
+
+    Symbol* prop_symbol = scoped_symbol_get_object_prop(
+        &compiler->symbols,
+        object_symbol,
+        prop_assignment->prop.start,
+        prop_assignment->prop.length);
+    assert(prop_symbol != NULL);
+
+    ACCEPT_EXPR(compiler, prop_assignment->value);
+
+    emit_short(compiler, OP_SET_PROP, prop_symbol->constant_index);
 }
 
 static void compile_new(void* ctx, NewExpr* new_) {

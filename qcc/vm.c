@@ -417,6 +417,14 @@ static void run(ObjFunction* func) {
             stack_push(object_get_property(instance, pos));
             break;
         }
+        case OP_SET_PROP: {
+            Value val = stack_pop();
+            Value obj_val = stack_pop();
+            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(obj_val));
+            uint8_t pos = READ_BYTE();
+            object_set_property(instance, pos, val);
+            break;
+        }
         }
 #ifdef VM_DEBUG
         printf("\t");

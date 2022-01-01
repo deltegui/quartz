@@ -1,0 +1,10 @@
+import 'stdio';
+
+class Macha {
+    pub fn hello() {
+        println("Hello");
+    }
+}
+
+var diego = new Macha();
+diego.hello();

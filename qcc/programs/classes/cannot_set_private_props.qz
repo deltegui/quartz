@@ -2,8 +2,8 @@ import 'stdio';
 import 'stdconv';
 
 class Macha {
-    pub var name: String;
-    pub var age: Number;
+    var name: String;
+    var age: Number;
 
     pub fn init(name: String, age: Number) {
         println("Hello from here putos");
@@ -18,12 +18,8 @@ fn print_macha(m: Macha): Void {
     println("Name: " + m.name + " age: " + ntos(m.age));
 }
 
-fn sub_hello() {
-}
-
 var diego = new Macha('diego', 22);
 diego.hello();
 diego.age = 22;
 diego.name = 'diego';
-diego.hello = sub_hello;
 print_macha(diego);

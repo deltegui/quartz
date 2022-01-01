@@ -405,6 +405,11 @@ static void run(ObjFunction* func) {
             ObjInstance* instance = new_instance(klass);
             // TODO now objects carry with them their type. Change value API.
             stack_push(OBJ_VALUE(instance, klass->obj.type));
+            break;
+        }
+        case OP_INIT: {
+            Value val = stack_peek(0);
+            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
             uint8_t init_pos = READ_BYTE();
             stack_push(object_get_property(instance, init_pos));
             // At this time, this thing is prepared to call init function.

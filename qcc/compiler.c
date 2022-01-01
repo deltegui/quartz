@@ -971,13 +971,15 @@ static void compile_new(void* ctx, NewExpr* new_) {
     assert(klass_sym->kind == SYMBOL_CLASS);
     assert(klass_sym->klass.body != NULL);
 
+    identifier_use(compiler, new_->klass, &ops_get_identifier);
+    emit(compiler, OP_NEW);
+
     Symbol* init_prop = SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(klass_sym);
     if (init_prop == NULL) {
         return;
     }
-    identifier_use(compiler, new_->klass, &ops_get_identifier);
-    emit_short(compiler, OP_NEW, init_prop->constant_index);
 
+    emit_short(compiler, OP_INIT, init_prop->constant_index);
     call_with_params(compiler, &new_->params);
     emit(compiler, OP_POP); // The result of calling init is always nil.
 }

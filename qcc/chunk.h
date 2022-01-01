@@ -58,6 +58,7 @@ typedef enum {
 
     // Objects
     OP_NEW,
+    OP_INIT,
     OP_GET_PROP,
     OP_SET_PROP,
 } OpCode;

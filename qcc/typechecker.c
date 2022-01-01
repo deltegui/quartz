@@ -452,6 +452,15 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
 
     ACCEPT_EXPR(checker, prop_assignment->value);
 
+    // TODO should we let users change the implementation of a function?
+    if (TYPE_IS_FUNCTION(prop_symbol->type)) {
+        error(
+            checker,
+            &prop_assignment->prop,
+            "Cannot rewrite a function property\n");
+        return;
+    }
+
     if (TYPE_IS_VOID(checker->last_type)) {
         error(
             checker,
@@ -510,6 +519,8 @@ static void typecheck_new(void* ctx, NewExpr* new_) {
                 &new_->klass,
                 "Calling constructor that takes no paremeters\n");
         }
+        checker->last_type = create_type_object(symbol->type);
+        checker->last_token = new_->klass;
         return;
     }
     if (init_prop->kind != OBJ_FUNCTION) {

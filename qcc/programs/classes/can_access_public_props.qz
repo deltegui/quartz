@@ -18,12 +18,6 @@ fn print_macha(m: Macha): Void {
     println("Name: " + m.name + " age: " + ntos(m.age));
 }
 
-fn sub_hello() {
-}
-
 var diego = new Macha('diego', 22);
 diego.hello();
-diego.age = 22;
-diego.name = 'diego';
-diego.hello = sub_hello;
 print_macha(diego);

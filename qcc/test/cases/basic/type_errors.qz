@@ -11,7 +11,7 @@
 [Line 9] Type error: Type of param number 0 in function call (Unknown) does not match with function definition (Number)
 8 |         var a = true;
 9 |         println(ntos(a + 1));
-  | ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  | ~~~~~~~~~~~~~~~~~~~~^
 
 [Line 11] Type error: The Type 'Bool' does not match with type 'String' in variable declaration.
 10 |     }

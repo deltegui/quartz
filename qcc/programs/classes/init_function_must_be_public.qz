@@ -1,0 +1,9 @@
+import 'stdio';
+
+class Macha {
+    fn init() {
+        println("Hello from here putos");
+    }
+}
+
+new Macha();

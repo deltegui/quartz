@@ -91,6 +91,8 @@ Type* create_type_object(Type* klass);
 #define TYPE_PRINT(typ) type_fprint(stdout, typ)
 #define ERR_TYPE_PRINT(typ) type_fprint(stderr, typ)
 
+#define TYPE_IS_ASSIGNABLE(var_type, expr_type) ((TYPE_IS_NIL(expr_type) && TYPE_IS_OBJECT(var_type)) || type_equals(var_type, expr_type))
+
 Type* simple_type_from_token_kind(TokenKind kind);
 void type_fprint(FILE* out, const Type* const type);
 bool type_equals(Type* first, Type* second);

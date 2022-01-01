@@ -276,7 +276,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
             "Cannot declare Void variable\n");
         return;
     }
-    if (type_equals(symbol->type, checker->last_type)) {
+    if (TYPE_IS_ASSIGNABLE(symbol->type, checker->last_type)) {
         return;
     }
     if (TYPE_IS_UNKNOWN(symbol->type)) {
@@ -323,7 +323,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
             "Cannot assign variable to Void\n");
         return;
     }
-    if (! type_equals(symbol->type, checker->last_type)) {
+    if (! TYPE_IS_ASSIGNABLE(symbol->type, checker->last_type)) {
         error_last_type_match(
             checker,
             &assignment->name,
@@ -468,7 +468,7 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
             "Cannot assign property to Void\n");
         return;
     }
-    if (! type_equals(prop_symbol->type, checker->last_type)) {
+    if (! TYPE_IS_ASSIGNABLE(prop_symbol->type, checker->last_type)) {
         error_last_type_match(
             checker,
             &prop_assignment->prop,
@@ -577,7 +577,7 @@ static void check_call_params(Typechecker* const checker, Token* identifier, Vec
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
-        if (! type_equals(last, def_type)) {
+        if (! TYPE_IS_ASSIGNABLE(last, def_type)) {
             error_param_number(
                 checker,
                 identifier,

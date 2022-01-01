@@ -417,6 +417,10 @@ static void run(ObjFunction* func) {
         }
         case OP_GET_PROP: {
             Value val = stack_pop();
+            if (VALUE_IS_NIL(val)) {
+                runtime_error("Null pointer object!");
+                break;
+            }
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
             uint8_t pos = READ_BYTE();
             stack_push(object_get_property(instance, pos));
@@ -425,6 +429,10 @@ static void run(ObjFunction* func) {
         case OP_SET_PROP: {
             Value val = stack_pop();
             Value obj_val = stack_pop();
+            if (VALUE_IS_NIL(obj_val)) {
+                runtime_error("Null pointer object!");
+                break;
+            }
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(obj_val));
             uint8_t pos = READ_BYTE();
             object_set_property(instance, pos, val);

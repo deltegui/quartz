@@ -405,6 +405,17 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
         prop->prop.start,
         prop->prop.length);
 
+    if (prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
+        error(
+            checker,
+            &prop->prop,
+            "'%.*s' property of class '%.*s' must be public\n",
+            prop->prop.length,
+            prop->prop.start,
+            prop->identifier.length,
+            prop->identifier.start);
+    }
+
     checker->last_type = prop_symbol->type;
     checker->last_token = prop->identifier;
     checker->prop_symbol = prop_symbol;
@@ -455,6 +466,17 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
             prop_symbol->type,
             "in property assignment.");
         return;
+    }
+
+    if (prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
+        error(
+            checker,
+            &prop_assignment->prop,
+            "'%.*s' property of class '%.*s' must be public\n",
+            prop_assignment->prop.length,
+            prop_assignment->prop.start,
+            prop_assignment->identifier.length,
+            prop_assignment->identifier.start);
     }
 
     // TODO Do I have to do this?

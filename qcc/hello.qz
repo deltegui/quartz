@@ -2,10 +2,10 @@ import 'stdio';
 import 'stdconv';
 
 class Macha {
-    var name: String;
-    var age: Number;
+    pub var name: String;
+    pub var age: Number;
 
-    fn init(name: String, age: Number) {
+    pub fn init(name: String, age: Number) {
         println("Hello from here putos");
     }
 

@@ -57,6 +57,7 @@ typedef struct s_object_type {
 
 #define TYPE_FN_RETURN(type_fn) ((type_fn)->function->return_type)
 #define TYPE_FN_PARAMS(type_fn) ((type_fn)->function->param_types)
+#define TYPE_FN_ADD_PARAM(type_fn, param_type) (VECTOR_ADD_TYPE(&TYPE_FN_PARAMS(type_fn), param_type))
 
 #define TYPE_OBJECT_CLASS_NAME(type_obj) ((type_obj)->object->klass->klass->identifier)
 #define TYPE_OBJECT_CLASS_LENGTH(type_obj) ((type_obj)->object->klass->klass->length)

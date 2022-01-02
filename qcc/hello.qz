@@ -1,29 +1,16 @@
 import 'stdio';
 import 'stdconv';
 
-class Macha {
-    pub var name: String;
-    pub var age: Number;
-
-    pub fn init(name: String, age: Number) {
-        println("Hello from here putos");
+for (;;) {
+    print("Dime el salario anual: ");
+    var in = readstr();
+    println("He leido esto: " + in);
+    var num = ston(in);
+    if (num == 0) {
+        println("No era un numero");
+        continue;
     }
-
-    pub fn hello() {
-        println("Hello");
-    }
+    println("El salario por mes es: " + ntos(num/12));
+    break;
 }
 
-fn print_macha(m: Macha): Void {
-    println("Name: " + m.name + " age: " + ntos(m.age));
-}
-
-fn sub_hello() {
-}
-
-var diego = new Macha('diego', 22);
-diego.hello();
-diego.age = 22;
-diego.name = 'diego';
-diego.hello = sub_hello;
-print_macha(diego);

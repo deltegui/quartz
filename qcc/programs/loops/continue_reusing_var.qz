@@ -1,0 +1,13 @@
+import 'stdio';
+import 'stdconv';
+
+var i = 0;
+for (;;) {
+    i = i + 1;
+    var current = i;
+    println(ntos(current));
+    if (current <= 10) {
+        continue;
+    }
+    println("DONE");
+}

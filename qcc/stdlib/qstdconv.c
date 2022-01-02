@@ -1,5 +1,6 @@
 #include "qstdconv.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "../values.h"
 #include "../common.h"
 #include "../object.h"
@@ -8,6 +9,7 @@
 static Value stdconv_ntos(int argc, Value* argv);
 static Value stdconv_btos(int argc, Value* argv);
 static Value stdconv_sum(int argc, Value* argv);
+static Value stdconv_ston(int argc, Value* argv);
 
 #define DEFINE_TYPE(name, param_type)\
     Type* name = create_type_function();\
@@ -43,11 +45,22 @@ void register_stdconv(CTable* table) {
         .type = sum_type,
     };
 
-#define FN_LENGTH 3
+    Type* ston_type = create_type_function();
+    VECTOR_ADD_TYPE(&ston_type->function->param_types, CREATE_TYPE_STRING());
+    TYPE_FN_RETURN(ston_type) = CREATE_TYPE_NUMBER();
+    NativeFunction ston = (NativeFunction) {
+        .name = "ston",
+        .length = 4,
+        .function = stdconv_ston,
+        .type = ston_type,
+    };
+
+#define FN_LENGTH 4
     static NativeFunction functions[FN_LENGTH];
     functions[0] = ntos;
     functions[1] = btos;
     functions[2] = sum;
+    functions[3] = ston;
 
     NativeImport stdconv_import = (NativeImport) {
         .name = "stdconv",
@@ -91,4 +104,11 @@ static Value stdconv_sum(int argc, Value* argv) {
     bool c = VALUE_AS_BOOL(argv[2]);
     printf("SUM(%f, %f, %d) -> %f\n", a, b , c, a + b);
     return NIL_VALUE();
+}
+
+static Value stdconv_ston(int argc, Value* argv) {
+    assert(argc == 1);
+    char* str = OBJ_AS_CSTRING(VALUE_AS_OBJ(argv[0]));
+    double result = strtod(str, NULL);
+    return NUMBER_VALUE(result);
 }

@@ -75,6 +75,7 @@ static Chunk* current_chunk(Compiler* const compiler);
 
 static void start_scope(Compiler* const compiler);
 static void end_scope(Compiler* const compiler);
+static void pop_all_locals(Compiler* const compiler);
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length);
 
@@ -310,17 +311,22 @@ CompilationResult compile(const char* source, ObjFunction** const result) {
 
 static void start_scope(Compiler* const compiler) {
     compiler->scope_depth++;
+    compiler->locals[compiler->scope_depth] = 0;
     symbol_start_scope(&compiler->symbols);
 }
 
 static void end_scope(Compiler* const compiler) {
     compiler->next_local_index -= compiler->locals[compiler->scope_depth];
-    while (compiler->locals[compiler->scope_depth] > 0) {
-        emit(compiler, OP_POP);
-        compiler->locals[compiler->scope_depth]--;
-    }
+    pop_all_locals(compiler);
     compiler->scope_depth--;
     symbol_end_scope(&compiler->symbols);
+}
+
+static void pop_all_locals(Compiler* const compiler) {
+    int current_locals = compiler->locals[compiler->scope_depth];
+    for (; current_locals > 0; current_locals--) {
+        emit(compiler, OP_POP);
+    }
 }
 
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length) {
@@ -693,6 +699,7 @@ static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
         BREAK_CTX_PUSH_BREAK(compiler, break_pos);
     } else {
         assert(compiler->continue_ctx != CONTINUE_CTX_NOT_DEFINED);
+        pop_all_locals(compiler);
         emit_jump_to(compiler, OP_JUMP, compiler->continue_ctx);
     }
 }

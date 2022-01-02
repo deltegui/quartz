@@ -38,6 +38,8 @@ typedef struct {
     int locals[UINT8_COUNT];
     int scope_depth;
     int function_scope_depth;
+    bool is_in_loop;
+    int loop_scope_depth;
     int next_local_index;
 
     BreakContext* break_ctx;
@@ -58,6 +60,16 @@ typedef struct {
         compiler->continue_ctx = prev_continue;\
     } while(false)
 
+#define LOOP(compiler, ...)\
+    do {\
+        int prev_loop_scope = compiler->loop_scope_depth;\
+        compiler->loop_scope_depth = 0;\
+        compiler->is_in_loop = true;\
+        __VA_ARGS__\
+        compiler->is_in_loop = false;\
+        compiler->loop_scope_depth = prev_loop_scope;\
+    } while(false)
+
 struct IdentifierOps {
     uint8_t op_global;
     uint8_t op_global_long;
@@ -75,7 +87,8 @@ static Chunk* current_chunk(Compiler* const compiler);
 
 static void start_scope(Compiler* const compiler);
 static void end_scope(Compiler* const compiler);
-static void pop_all_locals(Compiler* const compiler);
+static void pop_all_locals(Compiler* const compiler, int scope);
+static void reset_loop_locals(Compiler* const compiler);
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length);
 
@@ -234,6 +247,8 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
 
     compiler->scope_depth = 0;
     compiler->function_scope_depth = 0;
+    compiler->loop_scope_depth = 0;
+    compiler->is_in_loop = false;
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
 
@@ -262,6 +277,8 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
 
     inner->scope_depth = outer->scope_depth;
     inner->function_scope_depth = 0;
+    inner->loop_scope_depth = 0;
+    inner->is_in_loop = false;
     inner->next_local_index = 1; // We expect to always have a function in pos 0
     memset(inner->locals, 0, UINT8_COUNT);
 
@@ -317,15 +334,21 @@ static void start_scope(Compiler* const compiler) {
 
 static void end_scope(Compiler* const compiler) {
     compiler->next_local_index -= compiler->locals[compiler->scope_depth];
-    pop_all_locals(compiler);
+    pop_all_locals(compiler, compiler->scope_depth);
     compiler->scope_depth--;
     symbol_end_scope(&compiler->symbols);
 }
 
-static void pop_all_locals(Compiler* const compiler) {
-    int current_locals = compiler->locals[compiler->scope_depth];
+static void pop_all_locals(Compiler* const compiler, int scope) {
+    int current_locals = compiler->locals[scope];
     for (; current_locals > 0; current_locals--) {
         emit(compiler, OP_POP);
+    }
+}
+
+static void reset_loop_locals(Compiler* const compiler) {
+    for (int i = 0; i < compiler->loop_scope_depth; i++) {
+        pop_all_locals(compiler, compiler->scope_depth - i);
     }
 }
 
@@ -382,22 +405,31 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
     return make_constant(compiler, value);
 }
 
+#define BLOCK(compiler, ...)\
+    do {\
+        start_scope(compiler);\
+        compiler->function_scope_depth++;\
+        if (compiler->is_in_loop) {\
+            compiler->loop_scope_depth++;\
+        }\
+        __VA_ARGS__\
+        compiler->function_scope_depth--;\
+        if (compiler->is_in_loop) {\
+            compiler->loop_scope_depth--;\
+        }\
+        end_scope(compiler);\
+    } while(false)
+
 static void compile_block(void* ctx, BlockStmt* block) {
     Compiler* compiler = (Compiler*)ctx;
-
-    start_scope(compiler);
-    compiler->function_scope_depth++;
-
-    if (compiler->scope_depth > UINT8_MAX) {
-        error(compiler, "Too many scopes!");
-        return;
-    }
-    ACCEPT_STMT(compiler, block->stmts);
-
-    emit_closed_variables(compiler, 0);
-
-    compiler->function_scope_depth--;
-    end_scope(compiler);
+    BLOCK(compiler, {
+        if (compiler->scope_depth > UINT8_MAX) {
+            error(compiler, "Too many scopes!");
+            return;
+        }
+        ACCEPT_STMT(compiler, block->stmts);
+        emit_closed_variables(compiler, 0);
+    });
 }
 
 static void emit_closed_variables(Compiler* const compiler, int depth) {
@@ -646,60 +678,64 @@ static void compile_if(void* ctx, IfStmt* if_) {
 
 static void compile_for(void* ctx, ForStmt* for_) {
     Compiler* compiler = (Compiler*) ctx;
-    start_scope(compiler);
-    BREAK_CTX_PUSH_LOOP(compiler);
+    LOOP(compiler, {
+        start_scope(compiler);
+        BREAK_CTX_PUSH_LOOP(compiler);
 
-    ACCEPT_STMT(compiler, for_->init);
+        ACCEPT_STMT(compiler, for_->init);
 
-    int loop_init = emit(compiler, OP_NOP);
+        int loop_init = emit(compiler, OP_NOP);
 
-    if (for_->condition != NULL) {
-        ACCEPT_EXPR(compiler, for_->condition);
-    } else {
-        emit(compiler, OP_TRUE);
-    }
-    int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
+        if (for_->condition != NULL) {
+            ACCEPT_EXPR(compiler, for_->condition);
+        } else {
+            emit(compiler, OP_TRUE);
+        }
+        int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
-    CONTINUE_CTX(compiler, loop_init, {
-        ACCEPT_STMT(compiler, for_->body);
+        CONTINUE_CTX(compiler, loop_init, {
+            ACCEPT_STMT(compiler, for_->body);
+        });
+        ACCEPT_STMT(compiler, for_->mod);
+
+        emit_jump_to(compiler, OP_JUMP, loop_init);
+
+        patch_jump(compiler, patch_for_pos);
+        patch_breaks(compiler);
+
+        end_scope(compiler);
     });
-    ACCEPT_STMT(compiler, for_->mod);
-
-    emit_jump_to(compiler, OP_JUMP, loop_init);
-
-    patch_jump(compiler, patch_for_pos);
-    patch_breaks(compiler);
-
-    end_scope(compiler);
 }
 
 static void compile_while(void* ctx, WhileStmt* while_) {
     Compiler* compiler = (Compiler*) ctx;
-    BREAK_CTX_PUSH_LOOP(compiler);
+    LOOP(compiler, {
+        BREAK_CTX_PUSH_LOOP(compiler);
 
-    int loop_init = emit(compiler, OP_NOP);
+        int loop_init = emit(compiler, OP_NOP);
 
-    ACCEPT_EXPR(compiler, while_->condition);
-    int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
+        ACCEPT_EXPR(compiler, while_->condition);
+        int patch_for_pos = emit_jump_to(compiler, OP_JUMP_IF_FALSE, 0);
 
-    CONTINUE_CTX(compiler, loop_init, {
-        ACCEPT_STMT(compiler, while_->body);
+        CONTINUE_CTX(compiler, loop_init, {
+            ACCEPT_STMT(compiler, while_->body);
+        });
+
+        emit_jump_to(compiler, OP_JUMP, loop_init);
+
+        patch_jump(compiler, patch_for_pos);
+        patch_breaks(compiler);
     });
-
-    emit_jump_to(compiler, OP_JUMP, loop_init);
-
-    patch_jump(compiler, patch_for_pos);
-    patch_breaks(compiler);
 }
 
 static void compile_loopg(void* ctx, LoopGotoStmt* loopg) {
     Compiler* compiler = (Compiler*) ctx;
+    reset_loop_locals(compiler);
     if (loopg->kind == LOOP_BREAK) {
         int break_pos = emit_jump_to(compiler, OP_JUMP, 0);
         BREAK_CTX_PUSH_BREAK(compiler, break_pos);
     } else {
         assert(compiler->continue_ctx != CONTINUE_CTX_NOT_DEFINED);
-        pop_all_locals(compiler);
         emit_jump_to(compiler, OP_JUMP, compiler->continue_ctx);
     }
 }

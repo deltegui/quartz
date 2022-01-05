@@ -286,6 +286,11 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
+    case 's': {
+        if (match_token(lexer, "elf", 1, 4)) {
+            return create_token(lexer, TOKEN_SELF);
+        }
+    }
     case 't': {
         if (match_token(lexer, "rue", 1, 4)) {
             return create_token(lexer, TOKEN_TRUE);

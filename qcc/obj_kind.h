@@ -12,5 +12,7 @@ typedef enum {
 
 #define CLASS_CONSTRUCTOR_NAME "init"
 #define CLASS_CONSTRUCTOR_LENGTH 4
+#define CLASS_SELF_NAME "self"
+#define CLASS_SELF_LENGTH 4
 
 #endif

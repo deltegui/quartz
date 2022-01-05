@@ -94,6 +94,7 @@ static Expr* expression(Parser* const parser);
 static Expr* grouping(Parser* const parser, bool can_assign);
 static Expr* primary(Parser* const parser, bool can_assign);
 static Expr* identifier(Parser* const parser, bool can_assign);
+static Expr* self(Parser* const parser, bool can_assign);
 static Expr* unary(Parser* const parser, bool can_assign);
 static Expr* new_(Parser* const parser, bool can_assign);
 static Expr* binary(Parser* const parser, bool can_assign, Expr* left);
@@ -150,6 +151,7 @@ ParseRule rules[] = {
     [TOKEN_IMPORT]        = {NULL,        NULL,   PREC_NONE},
     [TOKEN_CLASS]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_PUBLIC]        = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_SELF]          = {self,        NULL,   PREC_NONE},
 
     [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_STRING]   = {NULL,        NULL,   PREC_NONE},
@@ -164,7 +166,17 @@ ParseRule rules[] = {
         parser->is_in_loop = true;\
         __VA_ARGS__\
         parser->is_in_loop = prev;\
-    } while(false)
+    } while (false)
+
+#define IS_IN_CLASS(parser) (parser->current_class_type != NULL)
+
+#define IN_CLASS(parser, type, ...)\
+    do {\
+        Type* prev = parser->current_class_type;\
+        parser->current_class_type = type;\
+        __VA_ARGS__\
+        parser->current_class_type = prev;\
+    } while (false)
 
 static ParseRule* get_rule(TokenKind kind) {
     return &rules[kind];
@@ -203,6 +215,7 @@ void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* sy
     parser->function_deep_count = 0;
     parser->scope_depth = 0;
     parser->is_in_loop = false;
+    parser->current_class_type = NULL;
 }
 
 static void error(Parser* const parser, const char* message, ...) {
@@ -580,7 +593,9 @@ static Stmt* class_decl(Parser* const parser) {
     consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after class name in class declaration");
     create_scope(parser);
     symbol_update_class_body(parser, inserted);
-    klass.body = parse_class_body(parser, inserted);
+    IN_CLASS(parser, inserted->type, {
+        klass.body = parse_class_body(parser, inserted);
+    });
     end_scope(parser);
     consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' before class body");
 
@@ -688,6 +703,21 @@ static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* 
 }
 
 static void parse_function_params_declaration(Parser* const parser, Symbol* fn_sym) {
+    // TODO THIS
+    /*
+    if (IS_IN_CLASS(parser)) {
+        Token self_tkn;
+        self_tkn.kind = TOKEN_IDENTIFIER;
+        self_tkn.start = CLASS_SELF_NAME;
+        self_tkn.length = CLASS_SELF_LENGTH;
+        self_tkn.line = fn_sym->declaration_line;
+        self_tkn.column = 0;
+        Type* self_type = create_type_object(parser->current_class_type);
+        VECTOR_ADD_TOKEN(&fn_sym->function.param_names, self_tkn);
+        VECTOR_ADD_TYPE(&TYPE_FN_PARAMS(fn_sym->type), self_type);
+    }
+    */
+
     for (;;) {
         if (parser->current.kind != TOKEN_IDENTIFIER) {
             error(parser, "Expected to have an identifier in parameter in function declaration");
@@ -709,6 +739,18 @@ static void parse_function_params_declaration(Parser* const parser, Symbol* fn_s
 }
 
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
+    if (IS_IN_CLASS(parser)) {
+        Symbol self = create_symbol(
+            create_symbol_name(
+                CLASS_SELF_NAME,
+                CLASS_SELF_LENGTH),
+            fn_sym->declaration_line,
+            create_type_object(parser->current_class_type));
+        if (! register_symbol(parser, self)) {
+            free_symbol(&self);
+        }
+    }
+
     Token* param_names = VECTOR_AS_TOKENS(&fn_sym->function.param_names);
     Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(fn_sym->type));
     for (uint32_t i = 0; i < fn_sym->function.param_names.size; i++) {
@@ -1184,7 +1226,37 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: NAME value ");
     token_print(identifier);
-    printf("[PARSER DEBUG]: end PRIMARY Expression\n");
+    printf("[PARSER DEBUG]: end IDENTIFIER Expression\n");
+#endif
+    return expr;
+}
+
+static Expr* self(Parser* const parser, bool can_assign) {
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: SELF Expression\n");
+#endif
+
+    if (! IS_IN_CLASS(parser)) {
+        error(parser, "You can only use self inside a class deifinition");
+    }
+    Token self = parser->prev;
+    if (parser->current.kind == TOKEN_EQUAL) {
+        error(parser, "Cannot assign to 'self'");
+        return NULL;
+    }
+    Symbol* existing = get_identifier_symbol(parser, self);
+    if (!existing) {
+        return NULL;
+    }
+    IdentifierExpr node = (IdentifierExpr){
+        .name = self,
+    };
+    Expr* expr = CREATE_INDENTIFIER_EXPR(node);
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: NAME value ");
+    token_print(identifier);
+    printf("[PARSER DEBUG]: end SELF Expression\n");
 #endif
     return expr;
 }

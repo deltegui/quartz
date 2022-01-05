@@ -38,9 +38,11 @@ typedef struct {
     int locals[UINT8_COUNT];
     int scope_depth;
     int function_scope_depth;
-    bool is_in_loop;
     int loop_scope_depth;
     int next_local_index;
+
+    bool is_in_loop;
+    Expr* current_self;
 
     BreakContext* break_ctx;
     int continue_ctx;
@@ -58,7 +60,7 @@ typedef struct {
         compiler->continue_ctx = pos;\
         __VA_ARGS__\
         compiler->continue_ctx = prev_continue;\
-    } while(false)
+    } while (false)
 
 #define LOOP(compiler, ...)\
     do {\
@@ -68,7 +70,9 @@ typedef struct {
         __VA_ARGS__\
         compiler->is_in_loop = false;\
         compiler->loop_scope_depth = prev_loop_scope;\
-    } while(false)
+    } while (false)
+
+#define HAVE_SELF(compiler) (compiler->current_self != NULL)
 
 struct IdentifierOps {
     uint8_t op_global;
@@ -251,6 +255,8 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->is_in_loop = false;
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
     memset(compiler->locals, 0, UINT8_COUNT);
+
+    compiler->current_self = NULL;
 
     compiler->break_ctx = create_break_ctx();
     compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;

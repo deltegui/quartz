@@ -57,6 +57,7 @@ typedef enum {
     TOKEN_IMPORT,
     TOKEN_CLASS,
     TOKEN_PUBLIC,
+    TOKEN_SELF,
 
     TOKEN_TYPE_NUMBER,
     TOKEN_TYPE_STRING,

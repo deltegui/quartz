@@ -475,6 +475,14 @@ static void should_tokenize_new() {
     );
 }
 
+static void should_tokenize_self() {
+    assert_types(
+        "   self ",
+        1,
+        TOKEN_SELF
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),

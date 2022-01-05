@@ -548,7 +548,7 @@ void object_symbols_can_be_added() {
         assert_non_null(obj);
         symbol_create_scope(&table);
             // THE CLS MUST POINT TO ITS BODY TABLE
-            scoped_symbol_update_object_body(&table, obj);
+            scoped_symbol_update_class_body(&table, obj);
             scoped_symbol_insert(&table, sym_a);
         symbol_end_scope(&table);
 
@@ -556,7 +556,7 @@ void object_symbols_can_be_added() {
 
         Symbol* recover = scoped_symbol_lookup_str(&table, "Human", 5);
         assert_non_null(recover);
-        assert_non_null(recover->object.body);
+        assert_non_null(recover->klass.body);
         symbol_start_scope(&table);
             Symbol* property = scoped_symbol_lookup_str(&table, "a", 1);
             assert_non_null(property);

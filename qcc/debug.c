@@ -358,6 +358,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_CLASS: return "TokenClass";
     case TOKEN_PUBLIC: return "TokenPublic";
     case TOKEN_NEW: return "TokenNew";
+    case TOKEN_SELF: return "TokenSelf";
     default: return "Unknown";
     }
 }

@@ -9,6 +9,9 @@ ifneq ($(OS),Windows_NT)
 	endif
 endif
 
+default:
+	$(CC) $(LIBS) -Wall $(SOURCES) -o ./quartz
+
 release:
 	$(CC) $(LIBS) -Wall -O3 $(SOURCES) -o ./quartz
 

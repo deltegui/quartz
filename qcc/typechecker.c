@@ -620,15 +620,6 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
 #endif
         return;
     }
-    // TODO this
-    /*
-    if (var->visibility != SYMBOL_VISIBILITY_UNDEFINED) {
-#ifdef TYPECHECKER_DEBUG
-        printf("No, is defined in a class\n");
-#endif
-        return;
-    }
-    */
 #ifdef TYPECHECKER_DEBUG
     printf("Yes\n");
 #endif

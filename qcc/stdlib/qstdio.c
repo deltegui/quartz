@@ -81,6 +81,8 @@ static Value stdio_readstr(int argc, Value* argv) {
     free(buffer);
     return OBJ_VALUE(str, CREATE_TYPE_STRING());
 }
+
+// TODO delete this
 /*
 static Value stdio_readstr(int argc, Value* argv) {
     Vector buffer;

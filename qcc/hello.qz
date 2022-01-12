@@ -16,5 +16,5 @@ class Human {
 }
 
 
-var diego = new Human('diego', 24);
+var diego: Human = new Human('diego', 24);
 diego.say_hi();

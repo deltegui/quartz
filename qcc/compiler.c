@@ -489,6 +489,7 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
     Compiler* compiler = (Compiler*)ctx;
     ACCEPT_EXPR(compiler, expr->inner);
     emit(compiler, OP_POP);
+    compiler->obj_prop_call = NULL; // ensure after any expression that this shit is reset
 }
 
 static void compile_function(void* ctx, FunctionStmt* function) {

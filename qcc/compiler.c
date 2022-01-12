@@ -842,6 +842,7 @@ static void emit_variable_declaration(Compiler* const compiler, uint16_t index) 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
     identifier_use(compiler, identifier->name, &ops_get_identifier);
+    compiler->obj_prop_call = NULL;
 }
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {

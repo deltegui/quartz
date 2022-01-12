@@ -27,6 +27,8 @@ typedef struct {
     bool is_defining_variable;
     Symbol* defining_variable;
 
+    bool is_in_class;
+
     const char* source;
 } Typechecker;
 
@@ -212,6 +214,7 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     checker.is_defining_variable = false;
     checker.defining_variable = NULL;
     checker.prop_symbol = NULL;
+    checker.is_in_class = false;
     checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
@@ -405,7 +408,8 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
         prop->prop.start,
         prop->prop.length);
 
-    if (prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
+    assert(prop_symbol->visibility != SYMBOL_VISIBILITY_UNDEFINED);
+    if (! checker->is_in_class && prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
         error(
             checker,
             &prop->prop,
@@ -477,7 +481,8 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
         return;
     }
 
-    if (prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
+    // TODO this error is duplicated
+    if (! checker->is_in_class && prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
         error(
             checker,
             &prop_assignment->prop,
@@ -690,7 +695,10 @@ static void typecheck_native(void* ctx, NativeFunctionStmt* native) {
 static void typecheck_class(void* ctx, ClassStmt* klass) {
     Typechecker* checker = (Typechecker*) ctx;
     start_scope(checker);
+    bool old = checker->is_in_class;
+    checker->is_in_class = true;
     ACCEPT_STMT(ctx, klass->body);
+    checker->is_in_class = old;
     end_scope(checker);
 }
 

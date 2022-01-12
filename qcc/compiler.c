@@ -42,7 +42,8 @@ typedef struct {
     int next_local_index;
 
     bool is_in_loop;
-    Expr* current_self;
+    Symbol* current_self;
+    Symbol* obj_prop_call;
 
     BreakContext* break_ctx;
     int continue_ctx;
@@ -73,6 +74,7 @@ typedef struct {
     } while (false)
 
 #define HAVE_SELF(compiler) (compiler->current_self != NULL)
+#define IS_CALLING_PROP(compiler) (compiler->obj_prop_call != NULL)
 
 struct IdentifierOps {
     uint8_t op_global;
@@ -126,7 +128,7 @@ static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_s
 static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var);
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index);
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index);
-static void call_with_params(Compiler* const compiler, Vector* params);
+static void call_with_params(Compiler* const compiler, Vector* params, bool have_self);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -257,6 +259,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     memset(compiler->locals, 0, UINT8_COUNT);
 
     compiler->current_self = NULL;
+    compiler->obj_prop_call = NULL;
 
     compiler->break_ctx = create_break_ctx();
     compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
@@ -287,6 +290,9 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     inner->is_in_loop = false;
     inner->next_local_index = 1; // We expect to always have a function in pos 0
     memset(inner->locals, 0, UINT8_COUNT);
+
+    inner->current_self = outer->current_self;
+    inner->obj_prop_call = outer->obj_prop_call;
 
     inner->break_ctx = outer->break_ctx;
     inner->continue_ctx = outer->continue_ctx;
@@ -561,6 +567,8 @@ static void compile_class(void* ctx, ClassStmt* klass) {
     ObjClass* obj = new_class(klass->identifier.start, klass->identifier.length, symbol->type);
     start_scope(compiler);
 
+    // TODO create a macro with current self
+    compiler->current_self = symbol;
     assert(STMT_IS_LIST(*klass->body));
     ListStmt* body = klass->body->list;
     for (int i = 0; i < body->size; i++) {
@@ -586,6 +594,7 @@ static void compile_class(void* ctx, ClassStmt* klass) {
         // TODO Create a fixed size array for this part
         valuearray_write(&obj->instance, value);
     }
+    compiler->current_self = NULL;
 
     end_scope(compiler);
 
@@ -640,6 +649,13 @@ static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_s
 }
 
 static void update_param_index(Compiler* const compiler, Symbol* symbol) {
+    if (HAVE_SELF(compiler)) {
+        Symbol* self = lookup_str(compiler, CLASS_SELF_NAME, CLASS_SELF_LENGTH);
+        assert(self != NULL);
+        // TODO get next local index
+        self->constant_index = compiler->next_local_index;
+        compiler->next_local_index++;
+    }
     Token* param_names = VECTOR_AS_TOKENS(&symbol->function.param_names);
     for (uint32_t i = 0; i < symbol->function.param_names.size; i++) {
         Token param = param_names[i];
@@ -967,7 +983,15 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
     ACCEPT_EXPR(compiler, call->callee);
-    call_with_params(compiler, &call->params);
+
+    bool have_self = false;
+    if (IS_CALLING_PROP(compiler)) {
+        identifier_use_symbol(compiler, compiler->obj_prop_call, &ops_get_identifier);
+        have_self = true;
+    }
+    compiler->obj_prop_call = NULL;
+
+    call_with_params(compiler, &call->params, have_self);
 }
 
 static void compile_prop(void* ctx, PropExpr* prop) {
@@ -978,6 +1002,7 @@ static void compile_prop(void* ctx, PropExpr* prop) {
     Symbol* object_symbol = lookup_str(compiler, prop->identifier.start, prop->identifier.length);
     assert(object_symbol != NULL);
     assert(object_symbol->type != NULL);
+    compiler->obj_prop_call = object_symbol;
 
     Symbol* prop_symbol = scoped_symbol_get_object_prop(
         &compiler->symbols,
@@ -1029,19 +1054,20 @@ static void compile_new(void* ctx, NewExpr* new_) {
     }
 
     emit_short(compiler, OP_INIT, init_prop->constant_index);
-    call_with_params(compiler, &new_->params);
+    call_with_params(compiler, &new_->params, true);
     emit(compiler, OP_POP); // The result of calling init is always nil.
 }
 
-static void call_with_params(Compiler* const compiler, Vector* params) {
+static void call_with_params(Compiler* const compiler, Vector* params, bool have_self) {
     Expr** exprs = VECTOR_AS_EXPRS(params);
     uint32_t i = 0;
     for (; i < params->size; i++) {
         ACCEPT_EXPR(compiler, exprs[i]);
     }
-    if (i > UINT8_MAX) {
+    uint32_t num_params = i + have_self;
+    if (num_params > UINT8_MAX) {
         error(compiler, "Parameter count exceeds the max number of parameters: 254");
     }
-    emit_short(compiler, OP_CALL, i);
+    emit_short(compiler, OP_CALL, num_params);
 }
 

@@ -1255,7 +1255,7 @@ static Expr* self(Parser* const parser, bool can_assign) {
 
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: NAME value ");
-    token_print(identifier);
+    token_print(self);
     printf("[PARSER DEBUG]: end SELF Expression\n");
 #endif
     return expr;

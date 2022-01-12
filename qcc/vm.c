@@ -412,6 +412,7 @@ static void run(ObjFunction* func) {
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
             uint8_t init_pos = READ_BYTE();
             stack_push(object_get_property(instance, init_pos));
+            stack_push(val); // Push self for init fn
             // At this time, this thing is prepared to call init function.
             break;
         }
@@ -428,7 +429,9 @@ static void run(ObjFunction* func) {
         }
         case OP_SET_PROP: {
             Value val = stack_pop();
-            Value obj_val = stack_pop();
+            // This is an expression, so something should be in the stack
+            // to be popped later.
+            Value obj_val = stack_peek(0);
             if (VALUE_IS_NIL(obj_val)) {
                 runtime_error("Null pointer object!");
                 break;

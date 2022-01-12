@@ -24,8 +24,8 @@ typedef enum {
 
 typedef enum {
     SYMBOL_VISIBILITY_UNDEFINED,
-    SYMBOL_VISIBILITY_PUBLIC,
     SYMBOL_VISIBILITY_PRIVATE,
+    SYMBOL_VISIBILITY_PUBLIC,
 } SymbolVisibility;
 
 struct s_symbol_set;

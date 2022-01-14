@@ -61,6 +61,7 @@ typedef enum {
     OP_INIT,
     OP_GET_PROP,
     OP_SET_PROP,
+    OP_BINDED_METHOD,
 } OpCode;
 
 typedef struct {

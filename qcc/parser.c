@@ -1254,8 +1254,6 @@ static Expr* self(Parser* const parser, bool can_assign) {
     Expr* expr = CREATE_INDENTIFIER_EXPR(node);
 
 #ifdef PARSER_DEBUG
-    printf("[PARSER DEBUG]: NAME value ");
-    token_print(self);
     printf("[PARSER DEBUG]: end SELF Expression\n");
 #endif
     return expr;

@@ -45,6 +45,8 @@ typedef struct {
     Symbol* current_self;
     Symbol* obj_prop_call;
 
+    bool in_assigment;
+
     BreakContext* break_ctx;
     int continue_ctx;
 } Compiler;
@@ -261,6 +263,8 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->current_self = NULL;
     compiler->obj_prop_call = NULL;
 
+    compiler->in_assigment = false;
+
     compiler->break_ctx = create_break_ctx();
     compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
 }
@@ -293,6 +297,8 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
 
     inner->current_self = outer->current_self;
     inner->obj_prop_call = outer->obj_prop_call;
+
+    inner->in_assigment = false;
 
     inner->break_ctx = outer->break_ctx;
     inner->continue_ctx = outer->continue_ctx;
@@ -815,7 +821,9 @@ static void compile_var(void* ctx, VarStmt* var) {
         uint16_t default_value = make_constant(compiler, value_default(symbol->type));
         emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
     } else {
+        compiler->in_assigment = true; // TODO PONER EN MACRO?
         ACCEPT_EXPR(compiler, var->definition);
+        compiler->in_assigment = false; // TODO fix typo (assignment)
     }
     emit_variable_declaration(compiler, variable_index);
 }
@@ -848,7 +856,9 @@ static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
+    compiler->in_assigment = true;
     ACCEPT_EXPR(compiler, assignment->value);
+    compiler->in_assigment = false;
     identifier_use(compiler, assignment->name, &ops_set_identifier);
 }
 
@@ -1012,7 +1022,11 @@ static void compile_prop(void* ctx, PropExpr* prop) {
         prop->prop.start,
         prop->prop.length);
     assert(prop_symbol != NULL);
-    emit_short(compiler, OP_GET_PROP, prop_symbol->constant_index);
+
+    uint8_t opcode = (compiler->in_assigment && TYPE_IS_FUNCTION(prop_symbol->type)) ?
+        OP_BINDED_METHOD :
+        OP_GET_PROP;
+    emit_short(compiler, opcode, prop_symbol->constant_index);
 }
 
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {

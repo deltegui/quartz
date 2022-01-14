@@ -64,6 +64,12 @@ typedef struct {
     ValueArray props;
 } ObjInstance;
 
+typedef struct {
+    Obj obj;
+    ObjInstance* instance;
+    Obj* method; // This can be ObjFunction or ObjNative
+} ObjBindedMethod;
+
 void print_object(Obj* const obj);
 bool object_is_kind(Obj* const obj, ObjKind kind);
 void mark_object(Obj* const obj);
@@ -105,5 +111,10 @@ ObjClass* new_class(const char* name, int length, Type* type);
 ObjInstance* new_instance(ObjClass* origin);
 Value object_get_property(ObjInstance* obj, uint8_t index);
 void object_set_property(ObjInstance* obj, uint8_t index, Value val);
+
+#define OBJ_IS_BINDED_METHOD(obj) (object_is_kind(obj, OBJ_BINDED_METHOD))
+#define OBJ_AS_BINDED_METHOD(obj) ((ObjBindedMethod*) obj)
+
+ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method);
 
 #endif

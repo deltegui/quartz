@@ -100,6 +100,21 @@ static inline void call_native(ObjNative* native, uint8_t param_count) {
     stack_push(result);
 }
 
+static inline ObjFunction* prepare_binded_method(ObjBindedMethod* binded, uint8_t param_count) {
+    // TODO You can avoid this fucking shit if the self param of methods is last instead of first.
+    Value prev_params[param_count];
+    for (int i = 0; i < param_count; i++) {
+        prev_params[i] = stack_pop();
+    }
+    stack_push(OBJ_VALUE(binded->instance, binded->instance->obj.type));
+    for (int i = param_count - 1; i >= 0; i--) {
+        stack_push(prev_params[i]);
+    }
+
+    assert(OBJ_IS_FUNCTION(binded->method));
+    return OBJ_AS_FUNCTION(binded->method);
+}
+
 static inline void call(uint8_t param_count) {
     Value* fn_ptr = (qvm.stack_top - param_count - 1);
     Value fn_value = *fn_ptr;
@@ -114,7 +129,18 @@ static inline void call(uint8_t param_count) {
         runtime_error("Frame overflow");
         return;
     }
-    ObjFunction* fn = OBJ_AS_FUNCTION(obj);
+
+    ObjFunction* fn = NULL;
+    if (obj->kind == OBJ_BINDED_METHOD) {
+        fn = prepare_binded_method(OBJ_AS_BINDED_METHOD(obj), param_count);
+        param_count++;
+        fn_ptr = (qvm.stack_top - param_count - 1);
+        fn_value = *fn_ptr;
+    } else {
+        assert(OBJ_IS_FUNCTION(obj));
+        fn = OBJ_AS_FUNCTION(obj);
+    }
+
     qvm.frame_count++;
     qvm.frame = &qvm.frames[qvm.frame_count - 1];
     qvm.frame->func = fn;
@@ -439,6 +465,21 @@ static void run(ObjFunction* func) {
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(obj_val));
             uint8_t pos = READ_BYTE();
             object_set_property(instance, pos, val);
+            break;
+        }
+        case OP_BINDED_METHOD: {
+            // TODO These lines are repeated in the prev instructions
+            Value val = stack_peek(0);
+            if (VALUE_IS_NIL(val)) {
+                runtime_error("Null pointer object!");
+                break;
+            }
+            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
+            uint8_t pos = READ_BYTE();
+            Value method = object_get_property(instance, pos);
+            ObjBindedMethod* binded = new_binded_method(instance, VALUE_AS_OBJ(method));
+            stack_pop(); // Now its safe to pop the instance
+            stack_push(OBJ_VALUE(binded, binded->obj.type));
             break;
         }
         }

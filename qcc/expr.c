@@ -53,6 +53,7 @@ void free_expr(Expr* const expr) {
         free_expr(expr->unary.expr);
         break;
     case EXPR_CALL:
+        free_expr(expr->call.callee);
         free_params(&expr->call.params);
         break;
     case EXPR_NEW:

@@ -88,6 +88,13 @@ ObjInstance* new_instance(ObjClass* origin) {
     return instance;
 }
 
+ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method) {
+    ObjBindedMethod* binded = ALLOC_OBJ(ObjBindedMethod, OBJ_BINDED_METHOD, method->type);
+    binded->instance = instance;
+    binded->method = method;
+    return binded;
+}
+
 // TODO change the value array to be directly in obj?
 Value object_get_property(ObjInstance* obj, uint8_t index) {
     assert(index < obj->props.size);
@@ -176,6 +183,12 @@ void print_object(Obj* const obj) {
     case OBJ_INSTANCE: {
         ObjInstance* instance = OBJ_AS_INSTANCE(obj);
         printf("<Instance of class '%s'>", OBJ_AS_CSTRING(instance->klass->name));
+        break;
+    }
+    case OBJ_BINDED_METHOD: {
+        ObjBindedMethod* binded = OBJ_AS_BINDED_METHOD(obj);
+        printf("Binded Method: ");
+        print_object(binded->method);
         break;
     }
     }

@@ -99,8 +99,16 @@ static void free_type(Type* const type) {
         free(type->alias);
         break;
     }
-    default:
-        // Simple types do not have anything to free
+    case TYPE_OBJECT: {
+        free(type->object);
+        break;
+    }
+    case TYPE_NUMBER:
+    case TYPE_BOOL:
+    case TYPE_NIL:
+    case TYPE_STRING:
+    case TYPE_VOID:
+    case TYPE_UNKNOWN:
         break;
     }
 }

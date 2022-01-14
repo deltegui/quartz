@@ -4,6 +4,7 @@
 typedef enum {
     OBJ_STRING,
     OBJ_FUNCTION,
+    OBJ_BINDED_METHOD,
     OBJ_CLOSED,
     OBJ_NATIVE,
     OBJ_CLASS,

@@ -76,6 +76,10 @@ static void free_object(Obj* obj) {
         FREE(ObjInstance, obj);
         break;
     }
+    case OBJ_BINDED_METHOD: {
+        FREE(ObjBindedMethod, obj);
+        break;
+    }
     }
 }
 
@@ -219,6 +223,12 @@ static void blacken_object(Obj* obj) {
         ObjInstance* instance = OBJ_AS_INSTANCE(obj);
         mark_object((Obj*) instance->klass);
         mark_valuearray(&instance->props);
+        break;
+    }
+    case OBJ_BINDED_METHOD: {
+        ObjBindedMethod* binded = OBJ_AS_BINDED_METHOD(obj);
+        mark_object((Obj*) binded->instance);
+        mark_object(binded->method);
         break;
     }
     }

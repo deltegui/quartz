@@ -137,6 +137,7 @@ static const char* OpCodeStrings[] = {
     "OP_INIT",
     "OP_GET_PROP",
     "OP_SET_PROP",
+    "OP_BINDED_METHOD",
 };
 
 void opcode_print(uint8_t op) {
@@ -245,6 +246,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_CONSTANT:
         case OP_GET_PROP:
         case OP_SET_PROP:
+        case OP_BINDED_METHOD:
         case OP_INIT:
         case OP_CALL: {
             i = chunk_opcode_print(chunk, i);

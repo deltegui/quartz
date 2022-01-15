@@ -1,23 +1,21 @@
 import 'stdio';
 import 'stdconv';
 
-class Human {
-    var name: String;
-    var age: Number;
+fn do(): (): Void {
+    class Human {
+        var name: String;
+        var age: Number;
 
-    pub fn init(name: String, age: Number) {
-        self.name = name;
-        self.age = age;
-    }
+        pub fn init(name: String, age: Number) {
+            self.name = name;
+            self.age = age;
+        }
 
-    pub fn say_hi() {
-        println("Hello, im " + self.name + " and im " + ntos(self.age) + " years old!");
+        pub fn say_hi() {
+            println("Hello, im " + self.name + " and im " + ntos(self.age) + " years old!");
+        }
     }
+    var diego: Human = new Human('diego', 24);
+    return diego.say_hi;
 }
 
-
-var diego: Human = new Human('diego', 24);
-diego.say_hi();
-
-var hi = diego.say_hi;
-hi();

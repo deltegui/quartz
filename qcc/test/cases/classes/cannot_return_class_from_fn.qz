@@ -1,0 +1,4 @@
+[Line 23] Type error: Undefined property of class
+22 | 
+23 | do()();
+   | ~~^

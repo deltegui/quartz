@@ -20,4 +20,4 @@ fn do(): Human {
     return new Human('diego', 12);
 }
 
-do()();
+do().say_hi();

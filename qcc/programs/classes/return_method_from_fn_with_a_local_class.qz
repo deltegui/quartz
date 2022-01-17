@@ -1,9 +1,7 @@
 import 'stdio';
 import 'stdconv';
 
-class Human {}
-
-fn do(): Human {
+fn do(): (): Void {
     class Human {
         var name: String;
         var age: Number;
@@ -17,7 +15,8 @@ fn do(): Human {
             println("Hello, im " + self.name + " and im " + ntos(self.age) + " years old!");
         }
     }
-    return new Human('diego', 12);
+    var diego: Human = new Human('diego', 24);
+    return diego.say_hi;
 }
 
 do()();

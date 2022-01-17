@@ -678,7 +678,9 @@ static void compile_return(void* ctx, ReturnStmt* return_) {
     emit_closed_variables(compiler, compiler->function_scope_depth);
 
     if (return_->inner != NULL) {
+        compiler->in_assigment = true; // We assume a return is also an assigment
         ACCEPT_EXPR(compiler, return_->inner);
+        compiler->in_assigment = false;
     } else {
         emit(compiler, OP_NIL);
     }

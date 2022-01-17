@@ -348,14 +348,35 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 
     Token identifier = checker->last_token;
 
+    // TODO check all this shit. Specially get other way to implement checker->prop_symbol
     Symbol* symbol = lookup_str(checker, identifier.start, identifier.length);
     assert(symbol != NULL);
     assert(symbol->type != NULL);
 
-    Type* type = RESOLVE_IF_TYPEALIAS(symbol->type);
+    Type* type = RESOLVE_IF_TYPEALIAS(checker->last_type);
 
     if (TYPE_IS_OBJECT(type)) {
-        assert(checker->prop_symbol != NULL);
+        if (checker->prop_symbol == NULL) {
+            error(
+                checker,
+                &identifier,
+                "Cannot call an object\n");
+            return;
+        }
+
+        Symbol* klass = lookup_str(checker, type->object->klass->klass->identifier, type->object->klass->klass->length);
+        assert(klass != NULL);
+        assert(klass->kind == SYMBOL_CLASS);
+
+        Symbol* defined_prop = symbol_lookup(klass->klass.body, &checker->prop_symbol->name);
+        if (defined_prop == NULL || defined_prop != checker->prop_symbol) {
+            error(
+                checker,
+                &identifier,
+                "Undefined property of class\n");
+            return;
+        }
+
         symbol = checker->prop_symbol;
         type = symbol->type;
         // TODO fix identifier
@@ -939,6 +960,10 @@ static void check_return_return(void* ctx, ReturnStmt* function);
 static void check_return_if(void* ctx, IfStmt* if_);
 static void check_return_for(void* ctx, ForStmt* for_);
 static void check_return_while(void* ctx, WhileStmt* while_);
+static void check_return_typealias(void* ctx, TypealiasStmt* typealias);
+static void check_return_import(void* ctx, ImportStmt* import);
+static void check_return_native(void* ctx, NativeFunctionStmt* native);
+static void check_return_class(void* ctx, ClassStmt* native);
 
 StmtVisitor check_return_stmt_visitor = (StmtVisitor){
     .visit_expr = check_return_expr,
@@ -950,6 +975,10 @@ StmtVisitor check_return_stmt_visitor = (StmtVisitor){
     .visit_for = check_return_for,
     .visit_while = check_return_while,
     .visit_loopg = check_return_loopg,
+    .visit_typealias = check_return_typealias,
+    .visit_import = check_return_import,
+    .visit_native = check_return_native,
+    .visit_class = check_return_class,
 };
 
 typedef struct {
@@ -970,6 +999,10 @@ static void check_return_function(void* ctx, FunctionStmt* function) {}
 static void check_return_if(void* ctx, IfStmt* if_) {}
 static void check_return_for(void* ctx, ForStmt* for_) {}
 static void check_return_while(void* ctx, WhileStmt* while_) {}
+static void check_return_typealias(void* ctx, TypealiasStmt* typealias) {}
+static void check_return_import(void* ctx, ImportStmt* import) {}
+static void check_return_native(void* ctx, NativeFunctionStmt* native) {}
+static void check_return_class(void* ctx, ClassStmt* native) {}
 
 static void check_return_block(void* ctx, BlockStmt* block) {
     // Function body can be a single stmt or a Block stmt.

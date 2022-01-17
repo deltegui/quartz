@@ -41,7 +41,6 @@ void free_expr(Expr* const expr) {
         free_expr(expr->binary.left);
         free_expr(expr->binary.right);
         break;
-    case EXPR_PROP:
     case EXPR_IDENTIFIER:
     case EXPR_LITERAL:
         // There is nothing to free
@@ -60,7 +59,11 @@ void free_expr(Expr* const expr) {
         free_params(&expr->new_.params);
         break;
     case EXPR_PROP_ASSIGMENT:
+        free_expr(expr->prop_assigment.object);
         free_expr(expr->prop_assigment.value);
+        break;
+    case EXPR_PROP:
+        free_expr(expr->prop.object);
         break;
     }
     free(expr);

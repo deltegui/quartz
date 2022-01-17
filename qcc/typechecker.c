@@ -407,27 +407,47 @@ static void typecheck_call(void* ctx, CallExpr* call) {
 static void typecheck_prop(void* ctx, PropExpr* prop) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* object_symbol = lookup_str(checker, prop->identifier.start, prop->identifier.length);
-    assert(object_symbol != NULL);
-    assert(object_symbol->type != NULL);
+    ACCEPT_EXPR(checker, prop->object);
 
-    Type* obj_type = RESOLVE_IF_TYPEALIAS(object_symbol->type);
+    Type* obj_type = RESOLVE_IF_TYPEALIAS(checker->last_type);
+    prop->object_type = obj_type; // Now we do know which type is
 
     if (! TYPE_IS_OBJECT(obj_type)) {
         error(
             checker,
-            &prop->identifier,
+            &checker->last_token,
             "Accessing property of '%.*s' which is not an object\n",
-            prop->identifier.length,
-            prop->identifier.start);
+            checker->last_token.length,
+            checker->last_token.start);
         return;
     }
 
-    Symbol* prop_symbol = scoped_symbol_get_object_prop(
-        checker->symbols,
-        object_symbol,
-        prop->prop.start,
-        prop->prop.length);
+    // TODO probably the old scoped_symbol_get_object_prop should be substituted
+    // with something like scoped_symbol_get_class_prop(Type* class_type) which
+    // contents should probably be like the following lines
+    Symbol* klass_sym = lookup_str(checker, TYPE_OBJECT_CLASS_NAME(obj_type), TYPE_OBJECT_CLASS_LENGTH(obj_type));
+    if (klass_sym == NULL) {
+        error(
+            checker,
+            &checker->last_token,
+            "Use of an undefined class\n");
+        return;
+    }
+    assert(type_equals(klass_sym->type, obj_type));
+
+    Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop->prop.start, prop->prop.length);
+    if (prop_symbol == NULL) {
+        error(
+            checker,
+            &prop->prop,
+            "Class '%.*s' does not have property '%.*s'\n",
+            TYPE_OBJECT_CLASS_LENGTH(obj_type),
+            TYPE_OBJECT_CLASS_NAME(obj_type),
+            prop->prop.length,
+            prop->prop.start);
+        return;
+    }
+    // TODO end
 
     assert(prop_symbol->visibility != SYMBOL_VISIBILITY_UNDEFINED);
     if (! checker->is_in_class && prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
@@ -437,43 +457,59 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
             "'%.*s' property of class '%.*s' must be public\n",
             prop->prop.length,
             prop->prop.start,
-            prop->identifier.length,
-            prop->identifier.start);
+            TYPE_OBJECT_CLASS_LENGTH(obj_type),
+            TYPE_OBJECT_CLASS_NAME(obj_type));
     }
 
     checker->last_type = prop_symbol->type;
-    checker->last_token = prop->identifier;
+    // TODO check this
+    // checker->last_token = prop->identifier;
     checker->prop_symbol = prop_symbol;
 }
 
 static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* object_symbol = lookup_str(
-        checker,
-        prop_assignment->identifier.start,
-        prop_assignment->identifier.length);
-    assert(object_symbol != NULL);
-    assert(object_symbol->type != NULL);
-
     // TODO this part check if the symbol is an object. This part is repeated in prop.
-    Type* obj_type = RESOLVE_IF_TYPEALIAS(object_symbol->type);
+    Type* obj_type = RESOLVE_IF_TYPEALIAS(checker->last_type);
+    prop_assignment->object_type = obj_type; // Now we do know which type is
 
     if (! TYPE_IS_OBJECT(obj_type)) {
         error(
             checker,
-            &prop_assignment->identifier,
+            &checker->last_token,
             "Accessing property of '%.*s' which is not an object\n",
-            prop_assignment->identifier.length,
-            prop_assignment->identifier.start);
+            checker->last_token.length,
+            checker->last_token.start);
         return;
     }
 
-    Symbol* prop_symbol = scoped_symbol_get_object_prop(
-        checker->symbols,
-        object_symbol,
-        prop_assignment->prop.start,
-        prop_assignment->prop.length);
+    // TODO probably the old scoped_symbol_get_object_prop should be substituted
+    // with something like scoped_symbol_get_class_prop(Type* class_type) which
+    // contents should probably be like the following lines
+    Symbol* klass_sym = lookup_str(checker, TYPE_OBJECT_CLASS_NAME(obj_type), TYPE_OBJECT_CLASS_LENGTH(obj_type));
+    if (klass_sym == NULL) {
+        error(
+            checker,
+            &checker->last_token,
+            "Use of an undefined class\n");
+        return;
+    }
+    assert(type_equals(klass_sym->type, obj_type));
+
+    Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop_assignment->prop.start, prop_assignment->prop.length);
+    if (prop_symbol == NULL) {
+        error(
+            checker,
+            &prop_assignment->prop,
+            "Class '%.*s' does not have property '%.*s'\n",
+            TYPE_OBJECT_CLASS_LENGTH(obj_type),
+            TYPE_OBJECT_CLASS_NAME(obj_type),
+            prop_assignment->prop.length,
+            prop_assignment->prop.start);
+        return;
+    }
+    // TODO end
 
     ACCEPT_EXPR(checker, prop_assignment->value);
 
@@ -510,8 +546,8 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
             "'%.*s' property of class '%.*s' must be public\n",
             prop_assignment->prop.length,
             prop_assignment->prop.start,
-            prop_assignment->identifier.length,
-            prop_assignment->identifier.start);
+            TYPE_OBJECT_CLASS_LENGTH(obj_type),
+            TYPE_OBJECT_CLASS_NAME(obj_type));
     }
 
     // TODO Do I have to do this?

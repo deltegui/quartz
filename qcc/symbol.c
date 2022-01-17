@@ -40,7 +40,6 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
         .global = false, // we dont know
         .assigned = true, // normally is
         .native = false, // normally its not native
-        .static_ = false, // normally its not static
     };
     symbol.upvalue_fn_refs = create_symbol_set();
     if (symbol.kind == SYMBOL_FUNCTION) {

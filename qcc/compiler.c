@@ -1011,18 +1011,12 @@ static void compile_call(void* ctx, CallExpr* call) {
 static void compile_prop(void* ctx, PropExpr* prop) {
     Compiler* compiler = (Compiler*) ctx;
 
-    identifier_use(compiler, prop->identifier, &ops_get_identifier);
+    ACCEPT_EXPR(compiler, prop->object);
 
-    Symbol* object_symbol = lookup_str(compiler, prop->identifier.start, prop->identifier.length);
-    assert(object_symbol != NULL);
-    assert(object_symbol->type != NULL);
-    compiler->obj_prop_call = object_symbol;
-
-    Symbol* prop_symbol = scoped_symbol_get_object_prop(
-        &compiler->symbols,
-        object_symbol,
-        prop->prop.start,
-        prop->prop.length);
+    Symbol* klass_sym = lookup_str(compiler, TYPE_OBJECT_CLASS_NAME(prop->object_type), TYPE_OBJECT_CLASS_LENGTH(prop->object_type));
+    assert(klass_sym != NULL);
+    compiler->obj_prop_call = klass_sym;
+    Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop->prop.start, prop->prop.length);
     assert(prop_symbol != NULL);
 
     uint8_t opcode = (compiler->in_assigment && TYPE_IS_FUNCTION(prop_symbol->type)) ?
@@ -1034,18 +1028,16 @@ static void compile_prop(void* ctx, PropExpr* prop) {
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {
     Compiler* compiler = (Compiler*) ctx;
 
-    identifier_use(compiler, prop_assignment->identifier, &ops_get_identifier);
+    ACCEPT_EXPR(compiler, prop_assignment->object);
 
-    Symbol* object_symbol = lookup_str(
+    Symbol* klass_sym = lookup_str(
         compiler,
-        prop_assignment->identifier.start,
-        prop_assignment->identifier.length);
-    assert(object_symbol != NULL);
-    assert(object_symbol->type != NULL);
+        TYPE_OBJECT_CLASS_NAME(prop_assignment->object_type),
+        TYPE_OBJECT_CLASS_LENGTH(prop_assignment->object_type));
+    assert(klass_sym != NULL);
 
-    Symbol* prop_symbol = scoped_symbol_get_object_prop(
-        &compiler->symbols,
-        object_symbol,
+    Symbol* prop_symbol = symbol_lookup_str(
+        klass_sym->klass.body,
         prop_assignment->prop.start,
         prop_assignment->prop.length);
     assert(prop_symbol != NULL);

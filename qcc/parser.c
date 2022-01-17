@@ -1160,21 +1160,21 @@ static Expr* new_(Parser* const parser, bool can_assign) {
 
 // TODO spelling error: you are using assigment instead of assignment.
 static Expr* prop(Parser* const parser, bool can_assign, Expr* left) {
-    Token identifier = left->identifier.name;
     Token property = parser->current;
-    free_expr(left);
     consume(parser, TOKEN_IDENTIFIER, "Expected ");
     if (parser->current.kind == TOKEN_EQUAL) {
         advance(parser); // consume =
         PropAssigmentExpr assigment;
-        assigment.identifier = identifier;
+        assigment.object = left;
         assigment.prop = property;
         assigment.value = parse_precendence(parser, PREC_ASSIGNMENT);
+        assigment.object_type = NULL; // we dont know yet
         return CREATE_PROP_ASSIGMENT_EXPR(assigment);
     }
     PropExpr prop;
-    prop.identifier = identifier;
+    prop.object = left;
     prop.prop = property;
+    prop.object_type = NULL; // we dont know yet
     return CREATE_PROP_EXPR(prop);
 }
 

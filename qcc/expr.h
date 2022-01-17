@@ -4,6 +4,8 @@
 #include "lexer.h"
 #include "vector.h"
 
+struct s_type;
+
 typedef enum {
     EXPR_UNARY,
     EXPR_BINARY,
@@ -44,7 +46,6 @@ typedef struct {
 
 typedef struct {
     Vector params;
-    // Token identifier;
     struct s_expr* callee;
 } CallExpr;
 
@@ -54,14 +55,16 @@ typedef struct {
 } NewExpr;
 
 typedef struct {
-    Token identifier;
+    struct s_expr* object;
     Token prop;
+    struct s_type* object_type;
 } PropExpr;
 
 typedef struct {
-    Token identifier;
+    struct s_expr* object;
     Token prop;
     struct s_expr* value;
+    struct s_type* object_type;
 } PropAssigmentExpr;
 
 typedef struct s_expr {

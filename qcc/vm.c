@@ -15,7 +15,9 @@ static void init_gray_stack();
 static void free_gray_stack();
 static void runtime_error(const char* message);
 static inline void call_native(ObjNative* native, uint8_t param_count);
+static inline void call_function(Obj* obj, Value* slots, uint8_t param_count);
 static inline void call(uint8_t param_count);
+static inline void invoke(uint8_t prop_index, uint8_t param_count);
 static inline Value stack_peek(uint8_t distance);
 
 static void init_gray_stack() {
@@ -101,25 +103,12 @@ static inline void call_native(ObjNative* native, uint8_t param_count) {
 }
 
 static inline ObjFunction* prepare_binded_method(ObjBindedMethod* binded, uint8_t param_count) {
-    // TODO You can avoid this fucking shit if the self param of methods is last instead of first.
-    Value prev_params[param_count];
-    for (int i = 0; i < param_count; i++) {
-        prev_params[i] = stack_pop();
-    }
     stack_push(OBJ_VALUE(binded->instance, binded->instance->obj.type));
-    for (int i = param_count - 1; i >= 0; i--) {
-        stack_push(prev_params[i]);
-    }
-
     assert(OBJ_IS_FUNCTION(binded->method));
     return OBJ_AS_FUNCTION(binded->method);
 }
 
-static inline void call(uint8_t param_count) {
-    Value* fn_ptr = (qvm.stack_top - param_count - 1);
-    Value fn_value = *fn_ptr;
-    Obj* obj = VALUE_AS_OBJ(fn_value);
-
+static inline void call_function(Obj* obj, Value* slots, uint8_t param_count) {
     if (obj->kind == OBJ_NATIVE) {
         call_native(OBJ_AS_NATIVE(obj), param_count);
         return;
@@ -134,8 +123,7 @@ static inline void call(uint8_t param_count) {
     if (obj->kind == OBJ_BINDED_METHOD) {
         fn = prepare_binded_method(OBJ_AS_BINDED_METHOD(obj), param_count);
         param_count++;
-        fn_ptr = (qvm.stack_top - param_count - 1);
-        fn_value = *fn_ptr;
+        slots = (qvm.stack_top - param_count - 1);
     } else {
         assert(OBJ_IS_FUNCTION(obj));
         fn = OBJ_AS_FUNCTION(obj);
@@ -145,7 +133,26 @@ static inline void call(uint8_t param_count) {
     qvm.frame = &qvm.frames[qvm.frame_count - 1];
     qvm.frame->func = fn;
     qvm.frame->pc = fn->chunk.code;
-    qvm.frame->slots = fn_ptr;
+    qvm.frame->slots = slots;
+}
+
+static inline void call(uint8_t param_count) {
+    Value* slots = (qvm.stack_top - param_count - 1);
+    Value fn_value = *slots;
+    Obj* obj = VALUE_AS_OBJ(fn_value);
+    call_function(obj, slots, param_count);
+}
+
+static inline void invoke(uint8_t prop_index, uint8_t param_count) {
+    Value* slots = (qvm.stack_top - param_count - 1);
+    Value instance_value = *slots;
+
+    ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(instance_value));
+    Value fn_value = object_get_property(instance, prop_index);
+    Obj* obj = VALUE_AS_OBJ(fn_value);
+
+    stack_push(instance_value); // Push self
+    call_function(obj, slots, ++param_count);
 }
 
 void stack_push(Value val) {
@@ -429,17 +436,14 @@ static void run(ObjFunction* func) {
             Value val = stack_pop();
             ObjClass* klass = OBJ_AS_CLASS(VALUE_AS_OBJ(val));
             ObjInstance* instance = new_instance(klass);
-            // TODO now objects carry with them their type. Change value API.
-            stack_push(OBJ_VALUE(instance, klass->obj.type));
+            stack_push(OBJ_VALUE(instance, klass->obj.type)); // This is to assign to the var
+            stack_push(OBJ_VALUE(instance, klass->obj.type)); // This is to call init (or to be POPed)
             break;
         }
-        case OP_INIT: {
-            Value val = stack_peek(0);
-            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
-            uint8_t init_pos = READ_BYTE();
-            stack_push(object_get_property(instance, init_pos));
-            stack_push(val); // Push self for init fn
-            // At this time, this thing is prepared to call init function.
+        case OP_INVOKE: {
+            uint8_t prop_index = READ_BYTE();
+            uint8_t params = READ_BYTE();
+            invoke(prop_index, params);
             break;
         }
         case OP_GET_PROP: {

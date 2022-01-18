@@ -3,7 +3,7 @@ import 'stdconv';
 
 class Human {}
 
-fn do(): Human {
+fn omg(): Human {
     class Human {
         var name: String;
         var age: Number;
@@ -20,4 +20,4 @@ fn do(): Human {
     return new Human('diego', 12);
 }
 
-do()();
+omg().say_hi();

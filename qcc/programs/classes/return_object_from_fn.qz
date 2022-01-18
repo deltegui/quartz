@@ -8,11 +8,11 @@ class Demo {
     }
 
     pub fn print() {
-        println(self.str);
+        println(self.thing_to_print);
     }
 }
 
-fn rtn_obj(str: String) {
+fn rtn_obj(str: String): Demo {
     return new Demo(str);
 }
 

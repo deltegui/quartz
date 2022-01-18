@@ -58,7 +58,7 @@ typedef enum {
 
     // Objects
     OP_NEW,
-    OP_INIT,
+    OP_INVOKE,
     OP_GET_PROP,
     OP_SET_PROP,
     OP_BINDED_METHOD,

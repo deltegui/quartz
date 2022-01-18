@@ -134,7 +134,7 @@ static const char* OpCodeStrings[] = {
     "OP_JUMP",
     "OP_JUMP_IF_FALSE",
     "OP_NEW",
-    "OP_INIT",
+    "OP_INVOKE",
     "OP_GET_PROP",
     "OP_SET_PROP",
     "OP_BINDED_METHOD",
@@ -247,7 +247,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_GET_PROP:
         case OP_SET_PROP:
         case OP_BINDED_METHOD:
-        case OP_INIT:
         case OP_CALL: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
@@ -263,6 +262,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
             i = chunk_long_print(chunk, i);
             break;
         }
+        case OP_INVOKE:
         case OP_BIND_UPVALUE: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
@@ -746,8 +746,11 @@ static void print_class(void* ctx, ClassStmt* klass) {
 static void print_prop(void* ctx, PropExpr* prop) {
     pretty_print("Property: [\n");
     OFFSET({
-        pretty_print("Object: ");
-        token_print(prop->identifier);
+        pretty_print("Object: [\n");
+        OFFSET({
+            ACCEPT_EXPR(prop->object);
+        });
+        pretty_print("]\n");
         pretty_print("Prop: ");
         token_print(prop->prop);
     });
@@ -757,8 +760,11 @@ static void print_prop(void* ctx, PropExpr* prop) {
 static void print_prop_assigment(void* ctx, PropAssigmentExpr* prop) {
     pretty_print("Prop Assignment Expr: [\n");
     OFFSET({
-        pretty_print("Object: ");
-        token_print(prop->identifier);
+        pretty_print("Object: [\n");
+        OFFSET({
+            ACCEPT_EXPR(prop->object);
+        });
+        pretty_print("]\n");
         pretty_print("Prop: ");
         token_print(prop->prop);
         pretty_print("Value:\n");

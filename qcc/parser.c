@@ -727,7 +727,7 @@ static void parse_function_params_declaration(Parser* const parser, Symbol* fn_s
         consume(parser, TOKEN_COLON, "Expected function parameter to have a type in function declaration");
         Type* type = parse_type(parser);
         if (TYPE_IS_UNKNOWN(type)) {
-            error (parser, "Unknown type in function param in function declaration");
+            error(parser, "Unknown type in function param in function declaration");
         }
         VECTOR_ADD_TYPE(&TYPE_FN_PARAMS(fn_sym->type), type);
         advance(parser); // consume type

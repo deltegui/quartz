@@ -19,13 +19,14 @@ typedef struct {
     ScopedSymbolTable* symbols;
     Type* last_type;
     Token last_token;
-    Symbol* prop_symbol;
     bool has_error;
 
     Vector function_stack; // Vector<FuncMeta>
 
     bool is_defining_variable;
     Symbol* defining_variable;
+
+    Symbol* calling_prop_class;
 
     bool is_in_class;
 
@@ -213,7 +214,7 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     checker.has_error = false;
     checker.is_defining_variable = false;
     checker.defining_variable = NULL;
-    checker.prop_symbol = NULL;
+    checker.calling_prop_class = NULL;
     checker.is_in_class = false;
     checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
@@ -344,49 +345,29 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
 static void typecheck_call(void* ctx, CallExpr* call) {
     Typechecker* checker = (Typechecker*) ctx;
 
+    checker->calling_prop_class = NULL;
     ACCEPT_EXPR(checker, call->callee);
 
     Token identifier = checker->last_token;
-
-    // TODO check all this shit. Specially get other way to implement checker->prop_symbol
-    Symbol* symbol = lookup_str(checker, identifier.start, identifier.length);
-    assert(symbol != NULL);
-    assert(symbol->type != NULL);
-
     Type* type = RESOLVE_IF_TYPEALIAS(checker->last_type);
 
-    if (TYPE_IS_OBJECT(type)) {
-        if (checker->prop_symbol == NULL) {
-            error(
-                checker,
-                &identifier,
-                "Cannot call an object\n");
-            return;
-        }
-
-        Symbol* klass = lookup_str(checker, type->object->klass->klass->identifier, type->object->klass->klass->length);
-        assert(klass != NULL);
-        assert(klass->kind == SYMBOL_CLASS);
-
-        Symbol* defined_prop = symbol_lookup(klass->klass.body, &checker->prop_symbol->name);
-        if (defined_prop == NULL || defined_prop != checker->prop_symbol) {
+    if (checker->calling_prop_class != NULL) {
+        Symbol* defined_prop = symbol_lookup_str(
+                checker->calling_prop_class->klass.body,
+                identifier.start,
+                identifier.length);
+        if (defined_prop == NULL || ! type_equals(defined_prop->type, type)) {
             error(
                 checker,
                 &identifier,
                 "Undefined property of class\n");
             return;
         }
-
-        symbol = checker->prop_symbol;
-        type = symbol->type;
-        // TODO fix identifier
-        identifier = (Token){
-            .kind = TOKEN_IDENTIFIER,
-            .column = 0,
-            .line = symbol->declaration_line,
-            .start = symbol->name.key.start,
-            .length = symbol->name.key.length,
-        };
+    } else {
+        Symbol* symbol = lookup_str(checker, identifier.start, identifier.length);
+        assert(symbol != NULL);
+        assert(symbol->type != NULL);
+        check_and_mark_upvalue(checker, symbol);
     }
 
     if (! TYPE_IS_FUNCTION(type)) {
@@ -400,7 +381,6 @@ static void typecheck_call(void* ctx, CallExpr* call) {
     }
 
     check_call_params(checker, &identifier, &call->params, type);
-    check_and_mark_upvalue(checker, symbol);
     checker->last_type = TYPE_FN_RETURN(type);
 }
 
@@ -433,7 +413,7 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
             "Use of an undefined class\n");
         return;
     }
-    assert(type_equals(klass_sym->type, obj_type));
+    assert(type_equals(klass_sym->type, obj_type->object->klass));
 
     Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop->prop.start, prop->prop.length);
     if (prop_symbol == NULL) {
@@ -463,12 +443,14 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
 
     checker->last_type = prop_symbol->type;
     // TODO check this
-    // checker->last_token = prop->identifier;
-    checker->prop_symbol = prop_symbol;
+    checker->last_token = prop->prop;
+    checker->calling_prop_class = klass_sym;
 }
 
 static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {
     Typechecker* checker = (Typechecker*) ctx;
+
+    ACCEPT_EXPR(checker, prop_assignment->object);
 
     // TODO this part check if the symbol is an object. This part is repeated in prop.
     Type* obj_type = RESOLVE_IF_TYPEALIAS(checker->last_type);
@@ -495,7 +477,7 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
             "Use of an undefined class\n");
         return;
     }
-    assert(type_equals(klass_sym->type, obj_type));
+    assert(type_equals(klass_sym->type, obj_type->object->klass));
 
     Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop_assignment->prop.start, prop_assignment->prop.length);
     if (prop_symbol == NULL) {

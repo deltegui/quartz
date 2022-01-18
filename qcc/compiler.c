@@ -43,7 +43,10 @@ typedef struct {
 
     bool is_in_loop;
     Symbol* current_self;
-    Symbol* obj_prop_call;
+
+    // Vars needed to call a property
+    bool want_to_call;
+    int prop_index;
 
     bool in_assigment;
 
@@ -76,7 +79,16 @@ typedef struct {
     } while (false)
 
 #define HAVE_SELF(compiler) (compiler->current_self != NULL)
-#define IS_CALLING_PROP(compiler) (compiler->obj_prop_call != NULL)
+
+#define PROP_INDEX_NOT_DEFINED -1
+#define WANT_TO_CALL(compiler, ...)\
+    do {\
+        compiler->prop_index = PROP_INDEX_NOT_DEFINED;\
+        bool old = compiler->want_to_call;\
+        compiler->want_to_call = true;\
+        __VA_ARGS__\
+        compiler->want_to_call = old;\
+    } while(false)
 
 struct IdentifierOps {
     uint8_t op_global;
@@ -130,7 +142,7 @@ static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_s
 static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var);
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index);
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index);
-static void call_with_params(Compiler* const compiler, Vector* params, bool have_self);
+static void call_with_params(Compiler* const compiler, Vector* params);
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment);
 static void compile_identifier(void* ctx, IdentifierExpr* identifier);
@@ -261,7 +273,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     memset(compiler->locals, 0, UINT8_COUNT);
 
     compiler->current_self = NULL;
-    compiler->obj_prop_call = NULL;
+    compiler->prop_index = PROP_INDEX_NOT_DEFINED;
 
     compiler->in_assigment = false;
 
@@ -296,7 +308,7 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     memset(inner->locals, 0, UINT8_COUNT);
 
     inner->current_self = outer->current_self;
-    inner->obj_prop_call = outer->obj_prop_call;
+    inner->prop_index = PROP_INDEX_NOT_DEFINED;
 
     inner->in_assigment = false;
 
@@ -495,7 +507,6 @@ static void compile_expr(void* ctx, ExprStmt* expr) {
     Compiler* compiler = (Compiler*)ctx;
     ACCEPT_EXPR(compiler, expr->inner);
     emit(compiler, OP_POP);
-    compiler->obj_prop_call = NULL; // ensure after any expression that this shit is reset
 }
 
 static void compile_function(void* ctx, FunctionStmt* function) {
@@ -656,18 +667,18 @@ static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_s
 }
 
 static void update_param_index(Compiler* const compiler, Symbol* symbol) {
-    if (HAVE_SELF(compiler)) {
-        Symbol* self = lookup_str(compiler, CLASS_SELF_NAME, CLASS_SELF_LENGTH);
-        assert(self != NULL);
-        // TODO get next local index
-        self->constant_index = compiler->next_local_index;
-        compiler->next_local_index++;
-    }
     Token* param_names = VECTOR_AS_TOKENS(&symbol->function.param_names);
     for (uint32_t i = 0; i < symbol->function.param_names.size; i++) {
         Token param = param_names[i];
         Symbol* param_sym = lookup_str(compiler, param.start, param.length);
         param_sym->constant_index = compiler->next_local_index;
+        compiler->next_local_index++;
+    }
+    if (HAVE_SELF(compiler)) {
+        Symbol* self = lookup_str(compiler, CLASS_SELF_NAME, CLASS_SELF_LENGTH);
+        assert(self != NULL);
+        // TODO get next local index
+        self->constant_index = compiler->next_local_index;
         compiler->next_local_index++;
     }
 }
@@ -853,7 +864,6 @@ static void emit_variable_declaration(Compiler* const compiler, uint16_t index) 
 static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
     Compiler* compiler = (Compiler*) ctx;
     identifier_use(compiler, identifier->name, &ops_get_identifier);
-    compiler->obj_prop_call = NULL;
 }
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
@@ -996,16 +1006,10 @@ static void compile_unary(void* ctx, UnaryExpr* unary) {
 
 static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
-    ACCEPT_EXPR(compiler, call->callee);
-
-    bool have_self = false;
-    if (IS_CALLING_PROP(compiler)) {
-        identifier_use_symbol(compiler, compiler->obj_prop_call, &ops_get_identifier);
-        have_self = true;
-    }
-    compiler->obj_prop_call = NULL;
-
-    call_with_params(compiler, &call->params, have_self);
+    WANT_TO_CALL(compiler, {
+        ACCEPT_EXPR(compiler, call->callee);
+    });
+    call_with_params(compiler, &call->params);
 }
 
 static void compile_prop(void* ctx, PropExpr* prop) {
@@ -1015,9 +1019,15 @@ static void compile_prop(void* ctx, PropExpr* prop) {
 
     Symbol* klass_sym = lookup_str(compiler, TYPE_OBJECT_CLASS_NAME(prop->object_type), TYPE_OBJECT_CLASS_LENGTH(prop->object_type));
     assert(klass_sym != NULL);
-    compiler->obj_prop_call = klass_sym;
     Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop->prop.start, prop->prop.length);
     assert(prop_symbol != NULL);
+
+    if (compiler->want_to_call) {
+        // If someone wants to call this property, an OP_INVOKE will be emited
+        // instead of OP_BINDED_METHOD or OP_GET_PROP (see compile_call function)
+        compiler->prop_index = prop_symbol->constant_index;
+        return;
+    }
 
     uint8_t opcode = (compiler->in_assigment && TYPE_IS_FUNCTION(prop_symbol->type)) ?
         OP_BINDED_METHOD :
@@ -1060,24 +1070,33 @@ static void compile_new(void* ctx, NewExpr* new_) {
 
     Symbol* init_prop = SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(klass_sym);
     if (init_prop == NULL) {
+        emit(compiler, OP_POP); // OP_NEW pushes two times the object (the second to call init)
         return;
     }
 
-    emit_short(compiler, OP_INIT, init_prop->constant_index);
-    call_with_params(compiler, &new_->params, true);
+    compiler->prop_index = init_prop->constant_index;
+    call_with_params(compiler, &new_->params);
     emit(compiler, OP_POP); // The result of calling init is always nil.
 }
 
-static void call_with_params(Compiler* const compiler, Vector* params, bool have_self) {
+static void call_with_params(Compiler* const compiler, Vector* params) {
     Expr** exprs = VECTOR_AS_EXPRS(params);
+
     uint32_t i = 0;
     for (; i < params->size; i++) {
         ACCEPT_EXPR(compiler, exprs[i]);
     }
-    uint32_t num_params = i + have_self;
-    if (num_params > UINT8_MAX) {
+
+    if (i > UINT8_MAX) {
         error(compiler, "Parameter count exceeds the max number of parameters: 254");
     }
-    emit_short(compiler, OP_CALL, num_params);
+
+    if (compiler->prop_index != PROP_INDEX_NOT_DEFINED) {
+        emit_short(compiler, OP_INVOKE, compiler->prop_index);
+        emit(compiler, i);
+        compiler->prop_index = PROP_INDEX_NOT_DEFINED; // We have used it
+    } else {
+        emit_short(compiler, OP_CALL, i);
+    }
 }
 

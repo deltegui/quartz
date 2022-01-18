@@ -18,6 +18,7 @@ typedef enum {
     TYPE_UNKNOWN,
 } TypeKind;
 
+// TODO invert this thing (create a fordward decl of Type instead of these)
 struct s_func_type;
 struct s_alias_type;
 struct s_class_type;

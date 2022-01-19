@@ -1,0 +1,10 @@
+import 'stdio';
+
+fn concat(str: String): (String): String {
+    fn do_con(other: String): String {
+        return str + other;
+    }
+    return do_con;
+}
+
+println(concat("Hola ")("Amigos!"));

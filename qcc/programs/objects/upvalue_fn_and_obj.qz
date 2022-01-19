@@ -1,0 +1,28 @@
+class Num {
+    var num: Number;
+
+    pub fn init(n: Number) {
+        self.num = n;
+    }
+
+    pub fn sum(other: Num): Num {
+        return new Num(other.num + self.num);
+    }
+
+    pub fn unwrap(): Number {
+        return self.num;
+    }
+}
+
+fn sum_num(a: Number): (Number): Number {
+    var a_n = new Num(a);
+    fn s(other: Number): Number {
+        return (a_n.sum(new Num(other))).unwrap();
+    }
+    return s;
+}
+
+import 'stdio';
+import 'stdconv';
+
+println(ntos(sum_num(2)(3)));

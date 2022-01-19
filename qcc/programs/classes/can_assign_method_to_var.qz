@@ -18,6 +18,4 @@ class Human {
 var manolo = new Human("Manolo", 33);
 var salut_manolo = manolo.salut;
 
-
 salut_manolo();
-

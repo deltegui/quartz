@@ -174,12 +174,12 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         break;
     }
     case EXPR_PROP: {
-        assert_true(t_token_equals(&first->prop.identifier, &second->prop.identifier));
+        assert_expr_equals(first->prop.object, second->prop.object);
         assert_true(t_token_equals(&first->prop.prop, &second->prop.prop));
         break;
     }
     case EXPR_PROP_ASSIGMENT: {
-        assert_true(t_token_equals(&first->prop_assigment.identifier, &second->prop_assigment.identifier));
+        assert_expr_equals(first->prop_assigment.object, second->prop_assigment.object);
         assert_true(t_token_equals(&first->prop_assigment.prop, &second->prop_assigment.prop));
         assert_expr_equals(first->prop_assigment.value, second->prop_assigment.value);
         break;

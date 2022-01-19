@@ -83,11 +83,12 @@ typedef struct {
 #define PROP_INDEX_NOT_DEFINED -1
 #define WANT_TO_CALL(compiler, ...)\
     do {\
-        compiler->prop_index = PROP_INDEX_NOT_DEFINED;\
-        bool old = compiler->want_to_call;\
+        int old_prop_index = compiler->prop_index;\
+        bool old_want = compiler->want_to_call;\
         compiler->want_to_call = true;\
         __VA_ARGS__\
-        compiler->want_to_call = old;\
+        compiler->want_to_call = old_want;\
+        compiler->prop_index = old_prop_index;\
     } while(false)
 
 struct IdentifierOps {
@@ -1008,8 +1009,8 @@ static void compile_call(void* ctx, CallExpr* call) {
     Compiler* compiler = (Compiler*) ctx;
     WANT_TO_CALL(compiler, {
         ACCEPT_EXPR(compiler, call->callee);
+        call_with_params(compiler, &call->params);
     });
-    call_with_params(compiler, &call->params);
 }
 
 static void compile_prop(void* ctx, PropExpr* prop) {
@@ -1074,18 +1075,28 @@ static void compile_new(void* ctx, NewExpr* new_) {
         return;
     }
 
-    compiler->prop_index = init_prop->constant_index;
-    call_with_params(compiler, &new_->params);
+    WANT_TO_CALL(compiler, {
+        compiler->prop_index = init_prop->constant_index;
+        call_with_params(compiler, &new_->params);
+    });
     emit(compiler, OP_POP); // The result of calling init is always nil.
 }
 
 static void call_with_params(Compiler* const compiler, Vector* params) {
     Expr** exprs = VECTOR_AS_EXPRS(params);
 
+    // Disable want_to_call while processing params. If you dont disable it and
+    // one param is a property of an object, it will not emit OP_GET_PROP and
+    // it will try to call that param.
+    bool old_want = compiler->want_to_call;
+    compiler->want_to_call = false;
+
     uint32_t i = 0;
     for (; i < params->size; i++) {
         ACCEPT_EXPR(compiler, exprs[i]);
     }
+
+    compiler->want_to_call = old_want;
 
     if (i > UINT8_MAX) {
         error(compiler, "Parameter count exceeds the max number of parameters: 254");
@@ -1094,7 +1105,6 @@ static void call_with_params(Compiler* const compiler, Vector* params) {
     if (compiler->prop_index != PROP_INDEX_NOT_DEFINED) {
         emit_short(compiler, OP_INVOKE, compiler->prop_index);
         emit(compiler, i);
-        compiler->prop_index = PROP_INDEX_NOT_DEFINED; // We have used it
     } else {
         emit_short(compiler, OP_CALL, i);
     }

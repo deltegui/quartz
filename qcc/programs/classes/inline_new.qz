@@ -14,15 +14,10 @@ class Num {
     }
 }
 
-fn sum_num(a: Number): (Number): Number {
-    var a_n = new Num(a);
-    fn s(other: Number): Number {
-        return (a_n.sum(new Num(other))).unwrap();
-    }
-    return s;
-}
-
 import 'stdio';
 import 'stdconv';
 
-println(ntos(sum_num(2)(3)));
+var a_n = new Num(2);
+var other = 3;
+
+println(ntos((a_n.sum(new Num(other)).unwrap())));

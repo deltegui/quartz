@@ -363,12 +363,12 @@ static void typecheck_call(void* ctx, CallExpr* call) {
                 "Undefined property of class\n");
             return;
         }
-    } else {
+    } /*else {
         Symbol* symbol = lookup_str(checker, identifier.start, identifier.length);
         assert(symbol != NULL);
         assert(symbol->type != NULL);
         check_and_mark_upvalue(checker, symbol);
-    }
+    }*/
 
     if (! TYPE_IS_FUNCTION(type)) {
         error(

@@ -703,21 +703,6 @@ static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* 
 }
 
 static void parse_function_params_declaration(Parser* const parser, Symbol* fn_sym) {
-    // TODO THIS
-    /*
-    if (IS_IN_CLASS(parser)) {
-        Token self_tkn;
-        self_tkn.kind = TOKEN_IDENTIFIER;
-        self_tkn.start = CLASS_SELF_NAME;
-        self_tkn.length = CLASS_SELF_LENGTH;
-        self_tkn.line = fn_sym->declaration_line;
-        self_tkn.column = 0;
-        Type* self_type = create_type_object(parser->current_class_type);
-        VECTOR_ADD_TOKEN(&fn_sym->function.param_names, self_tkn);
-        VECTOR_ADD_TYPE(&TYPE_FN_PARAMS(fn_sym->type), self_type);
-    }
-    */
-
     for (;;) {
         if (parser->current.kind != TOKEN_IDENTIFIER) {
             error(parser, "Expected to have an identifier in parameter in function declaration");
@@ -1039,12 +1024,6 @@ static Expr* binary(Parser* const parser, bool can_assign, Expr* left) {
 }
 
 static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
-    // TODO Is this thing necessary
-    /*
-    if (! EXPR_IS_IDENTIFIER(*left)) {
-        error(parser, "You can only call functions");
-    }
-    */
     CallExpr call;
     call.callee = left;
     init_vector(&call.params, sizeof(Expr*));

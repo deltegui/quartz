@@ -81,21 +81,3 @@ static Value stdio_readstr(int argc, Value* argv) {
     free(buffer);
     return OBJ_VALUE(str, CREATE_TYPE_STRING());
 }
-
-// TODO delete this
-/*
-static Value stdio_readstr(int argc, Value* argv) {
-    Vector buffer;
-    init_vector(&buffer, sizeof(char));
-    char c;
-    while ((c = getchar()) != '\n' && c != EOF) {
-        VECTOR_ADD(&buffer, c, char);
-    }
-    VECTOR_ADD(&buffer, '\0', char);
-    printf("Esto es leido desde la mierda esta: %s\n", (char*)buffer.elements);
-    ObjString* str = copy_string(buffer.elements, buffer.size);
-    free_vector(&buffer);
-    return OBJ_VALUE(str, CREATE_TYPE_STRING());
-}
-*/
-

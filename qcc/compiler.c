@@ -48,7 +48,7 @@ typedef struct {
     bool want_to_call;
     int prop_index;
 
-    bool in_assigment;
+    bool in_assignment;
 
     BreakContext* break_ctx;
     int continue_ctx;
@@ -79,6 +79,21 @@ typedef struct {
     } while (false)
 
 #define HAVE_SELF(compiler) (compiler->current_self != NULL)
+#define ENABLE_SELF(compiler, self_symbol, ...)\
+    do {\
+        compiler->current_self = symbol;\
+        __VA_ARGS__\
+        compiler->current_self = NULL;\
+    } while(false)
+
+#define NEXT_LOCAL_INDEX(compiler) (compiler->next_local_index++)
+
+#define IN_ASSIGNMENT(compiler, ...)\
+    do {\
+        compiler->in_assignment = true;\
+        __VA_ARGS__\
+        compiler->in_assignment = false;\
+    } while(false)
 
 #define PROP_INDEX_NOT_DEFINED -1
 #define WANT_TO_CALL(compiler, ...)\
@@ -259,7 +274,6 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     init_scoped_symbol_table(&compiler->symbols);
     init_parser(&compiler->parser, source, &compiler->symbols);
 
-    // TODO global is a function but its special: cannot be called. Which type should it have?
     compiler->func = new_function("<GLOBAL>", 8, 0, CREATE_TYPE_UNKNOWN());
     compiler->mode = mode;
 
@@ -276,7 +290,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     compiler->current_self = NULL;
     compiler->prop_index = PROP_INDEX_NOT_DEFINED;
 
-    compiler->in_assigment = false;
+    compiler->in_assignment = false;
 
     compiler->break_ctx = create_break_ctx();
     compiler->continue_ctx = CONTINUE_CTX_NOT_DEFINED;
@@ -311,7 +325,7 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     inner->current_self = outer->current_self;
     inner->prop_index = PROP_INDEX_NOT_DEFINED;
 
-    inner->in_assigment = false;
+    inner->in_assignment = false;
 
     inner->break_ctx = outer->break_ctx;
     inner->continue_ctx = outer->continue_ctx;
@@ -586,34 +600,33 @@ static void compile_class(void* ctx, ClassStmt* klass) {
     ObjClass* obj = new_class(klass->identifier.start, klass->identifier.length, symbol->type);
     start_scope(compiler);
 
-    // TODO create a macro with current self
-    compiler->current_self = symbol;
     assert(STMT_IS_LIST(*klass->body));
     ListStmt* body = klass->body->list;
-    for (int i = 0; i < body->size; i++) {
-        Stmt* prop = body->stmts[i];
-        Value value;
+    ENABLE_SELF(compiler, symbol, {
+        for (int i = 0; i < body->size; i++) {
+            Stmt* prop = body->stmts[i];
+            Value value;
 
-        switch (prop->kind) {
-        case STMT_FUNCTION: {
-            value = do_compile_function(compiler, &prop->function, i);
-            break;
-        }
-        case STMT_VAR: {
-            value = compile_class_var_prop(compiler, &prop->var, i);
-            break;
-        }
-        default: {
-            assert(false); // You must not reach this
-            error(compiler, "Unexpected node inside class body. Expected to be function or variable");
-            return;
-        }
-        }
+            switch (prop->kind) {
+            case STMT_FUNCTION: {
+                value = do_compile_function(compiler, &prop->function, i);
+                break;
+            }
+            case STMT_VAR: {
+                value = compile_class_var_prop(compiler, &prop->var, i);
+                break;
+            }
+            default: {
+                assert(false); // You must not reach this line
+                error(compiler, "Unexpected node inside class body. Expected to be function or variable");
+                return;
+            }
+            }
 
-        // TODO Create a fixed size array for this part
-        valuearray_write(&obj->instance, value);
-    }
-    compiler->current_self = NULL;
+            // TODO Create a fixed size array for this part
+            valuearray_write(&obj->instance, value);
+        }
+    });
 
     end_scope(compiler);
 
@@ -672,15 +685,12 @@ static void update_param_index(Compiler* const compiler, Symbol* symbol) {
     for (uint32_t i = 0; i < symbol->function.param_names.size; i++) {
         Token param = param_names[i];
         Symbol* param_sym = lookup_str(compiler, param.start, param.length);
-        param_sym->constant_index = compiler->next_local_index;
-        compiler->next_local_index++;
+        param_sym->constant_index = NEXT_LOCAL_INDEX(compiler);
     }
     if (HAVE_SELF(compiler)) {
         Symbol* self = lookup_str(compiler, CLASS_SELF_NAME, CLASS_SELF_LENGTH);
         assert(self != NULL);
-        // TODO get next local index
-        self->constant_index = compiler->next_local_index;
-        compiler->next_local_index++;
+        self->constant_index = NEXT_LOCAL_INDEX(compiler);
     }
 }
 
@@ -690,9 +700,9 @@ static void compile_return(void* ctx, ReturnStmt* return_) {
     emit_closed_variables(compiler, compiler->function_scope_depth);
 
     if (return_->inner != NULL) {
-        compiler->in_assigment = true; // We assume a return is also an assigment
-        ACCEPT_EXPR(compiler, return_->inner);
-        compiler->in_assigment = false;
+        IN_ASSIGNMENT(compiler, { // We assume a return is also an assigment
+            ACCEPT_EXPR(compiler, return_->inner);
+        });
     } else {
         emit(compiler, OP_NIL);
     }
@@ -835,9 +845,9 @@ static void compile_var(void* ctx, VarStmt* var) {
         uint16_t default_value = make_constant(compiler, value_default(symbol->type));
         emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
     } else {
-        compiler->in_assigment = true; // TODO PONER EN MACRO?
-        ACCEPT_EXPR(compiler, var->definition);
-        compiler->in_assigment = false; // TODO fix typo (assignment)
+        IN_ASSIGNMENT(compiler, {
+            ACCEPT_EXPR(compiler, var->definition);
+        });
     }
     emit_variable_declaration(compiler, variable_index);
 }
@@ -850,9 +860,8 @@ static uint16_t get_variable_index(Compiler* const compiler, const Token* identi
     if (compiler->scope_depth == 0) {
         return identifier_constant(compiler, identifier);
     }
-    uint16_t index = compiler->next_local_index;
+    uint16_t index = NEXT_LOCAL_INDEX(compiler);
     compiler->locals[compiler->scope_depth]++;
-    compiler->next_local_index++;
     return index;
 }
 
@@ -869,9 +878,9 @@ static void compile_identifier(void* ctx, IdentifierExpr* identifier) {
 
 static void compile_assignment(void* ctx, AssignmentExpr* assignment) {
     Compiler* compiler = (Compiler*) ctx;
-    compiler->in_assigment = true;
-    ACCEPT_EXPR(compiler, assignment->value);
-    compiler->in_assigment = false;
+    IN_ASSIGNMENT(compiler, {
+        ACCEPT_EXPR(compiler, assignment->value);
+    });
     identifier_use(compiler, assignment->name, &ops_set_identifier);
 }
 
@@ -1030,7 +1039,7 @@ static void compile_prop(void* ctx, PropExpr* prop) {
         return;
     }
 
-    uint8_t opcode = (compiler->in_assigment && TYPE_IS_FUNCTION(prop_symbol->type)) ?
+    uint8_t opcode = (compiler->in_assignment && TYPE_IS_FUNCTION(prop_symbol->type)) ?
         OP_BINDED_METHOD :
         OP_GET_PROP;
     emit_short(compiler, opcode, prop_symbol->constant_index);

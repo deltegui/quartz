@@ -426,7 +426,7 @@ static void run(ObjFunction* func) {
         }
         case OP_JUMP_IF_FALSE: {
             Value condition = stack_pop();
-            uint8_t dst = READ_LONG(); // TODO something is wrong here
+            uint8_t dst = READ_LONG();
             if (! VALUE_AS_BOOL(condition)) {
                 GOTO(dst);
             }

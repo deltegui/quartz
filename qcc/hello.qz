@@ -8,7 +8,7 @@ class Blob {
 
 typedef Pipo = Blob;
 
-fn create_blob(): Pipo {
+fn create_blob(): ElAmigos {
     return new Blob();
 }
 

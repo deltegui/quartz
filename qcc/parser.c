@@ -178,6 +178,17 @@ ParseRule rules[] = {
         parser->current_class_type = prev;\
     } while (false)
 
+#define TRY_REGISTER_SYMBOL(parser, symbol, err)\
+    do {\
+        if (! register_symbol(parser, symbol)) {\
+            free_symbol(&symbol);\
+            if (err != NULL) {\
+                error(parser, err);\
+            }\
+        }\
+    } while (false)
+
+
 static ParseRule* get_rule(TokenKind kind) {
     return &rules[kind];
 }
@@ -462,9 +473,7 @@ static Stmt* parse_variable(Parser* const parser) {
     Symbol symbol = create_symbol_calc_global(parser, &var.identifier, var_type);
     symbol.assigned = var.definition != NULL;
     symbol.global = parser->scope_depth == 0;
-    if (! register_symbol(parser, symbol)) {
-        free_symbol(&symbol);
-    }
+    TRY_REGISTER_SYMBOL(parser, symbol, NULL);
 
     return CREATE_STMT_VAR(var);
 }
@@ -494,10 +503,7 @@ static Stmt* typealias_decl(Parser* const parser) {
         def);
     Symbol symbol = create_symbol_calc_global(parser, &stmt.identifier, alias);
     symbol.kind = SYMBOL_TYPEALIAS;
-    if (! register_symbol(parser, symbol)) {
-        free_symbol(&symbol);
-        error(parser, "Type alias already defined");
-    }
+    TRY_REGISTER_SYMBOL(parser, symbol, "Type alias already defined");
 
     return CREATE_STMT_TYPEALIAS(stmt);
 }
@@ -580,11 +586,8 @@ static Stmt* class_decl(Parser* const parser) {
         parser,
         &klass.identifier,
         create_type_class(klass.identifier.start, klass.identifier.length));
-    // TODO this block of code appears too many times
-    if (! register_symbol(parser, symbol)) {
-        free_symbol(&symbol);
-        error(parser, "Class already defined");
-    }
+    TRY_REGISTER_SYMBOL(parser, symbol, "Class already defined");
+
     advance(parser); // Consume identifier
 
     Symbol* inserted = lookup_str(parser, klass.identifier.start, klass.identifier.length);
@@ -604,11 +607,7 @@ static Stmt* class_decl(Parser* const parser) {
 
 static Stmt* parse_class_body(Parser* const parser, Symbol* klass_sym) {
     ListStmt* list = create_stmt_list();
-    for (;;) {
-        // TODO check if this condition can be in for
-        if (parser->current.kind == TOKEN_RIGHT_BRACE) {
-            break;
-        }
+    while (parser->current.kind != TOKEN_RIGHT_BRACE) {
         SymbolVisibility visibility = parse_property_visibility(parser);
         Stmt* stmt = NULL;
         Token identifier;
@@ -682,9 +681,7 @@ static Stmt* function_decl(Parser* const parser) {
 
     // Insert symbol before parsing the function body
     // so you can call a function inside a function
-    if (! register_symbol(parser, symbol)) {
-        free_symbol(&symbol);
-    }
+    TRY_REGISTER_SYMBOL(parser, symbol, NULL);
     Symbol* registered = lookup_str(parser, fn.identifier.start, fn.identifier.length);
     assert(registered != NULL);
 
@@ -731,9 +728,7 @@ static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
                 CLASS_SELF_LENGTH),
             fn_sym->declaration_line,
             create_type_object(parser->current_class_type));
-        if (! register_symbol(parser, self)) {
-            free_symbol(&self);
-        }
+        TRY_REGISTER_SYMBOL(parser, self, NULL);
     }
 
     Token* param_names = VECTOR_AS_TOKENS(&fn_sym->function.param_names);
@@ -742,9 +737,7 @@ static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
         Symbol param = create_symbol_from_token(
             &param_names[i],
             param_types[i]);
-        if (! register_symbol(parser, param)) {
-            free_symbol(&param);
-        }
+        TRY_REGISTER_SYMBOL(parser, param, NULL);
     }
 }
 
@@ -774,20 +767,6 @@ static Type* parse_type(Parser* const parser) {
         return create_type_object(symbol->type);
     }
     return symbol->type;
-    // TODO check if this is neccessary!
-    /*
-    switch (symbol->kind) {
-    case SYMBOL_TYPEALIAS:
-        return symbol->type;
-    default:
-        error(
-            parser,
-            "The identifier '%.*s' is not a type",
-            parser->current.length,
-            parser->current.start);
-        return CREATE_TYPE_UNKNOWN();
-    }
-    */
 }
 
 static Type* parse_function_type(Parser* const parser) {
@@ -1137,18 +1116,17 @@ static Expr* new_(Parser* const parser, bool can_assign) {
     return CREATE_NEW_EXPR(new_expr);
 }
 
-// TODO spelling error: you are using assigment instead of assignment.
 static Expr* prop(Parser* const parser, bool can_assign, Expr* left) {
     Token property = parser->current;
     consume(parser, TOKEN_IDENTIFIER, "Expected ");
     if (parser->current.kind == TOKEN_EQUAL) {
         advance(parser); // consume =
-        PropAssigmentExpr assigment;
-        assigment.object = left;
-        assigment.prop = property;
-        assigment.value = parse_precendence(parser, PREC_ASSIGNMENT);
-        assigment.object_type = NULL; // we dont know yet
-        return CREATE_PROP_ASSIGMENT_EXPR(assigment);
+        PropAssigmentExpr assignment;
+        assignment.object = left;
+        assignment.prop = property;
+        assignment.value = parse_precendence(parser, PREC_ASSIGNMENT);
+        assignment.object_type = NULL; // we dont know yet
+        return CREATE_PROP_ASSIGMENT_EXPR(assignment);
     }
     PropExpr prop;
     prop.object = left;

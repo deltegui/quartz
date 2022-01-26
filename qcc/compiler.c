@@ -540,7 +540,6 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     emit_bind_upvalues(compiler, symbol, function->identifier);
 }
 
-// TODO i dont know how can i name this function
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index) {
     Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);

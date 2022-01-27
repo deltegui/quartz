@@ -128,9 +128,9 @@ Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const 
 Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name);
 Symbol* scoped_symbol_lookup_object_prop_str(Symbol* const obj_sym, const char* name, int legnth);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
-void scoped_symbol_upvalue(ScopedSymbolTable* const table,  Symbol* fn, Symbol* var_upvalue);
+void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* var_upvalue);
 void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj);
-Symbol* scoped_symbol_get_object_prop(ScopedSymbolTable* const table, Symbol* obj, const char* prop, int length);
+Symbol* scoped_symbol_get_class_prop(ScopedSymbolTable* const table, Type* class_type, Token* prop, Symbol** class_sym_out);
 
 #define SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(sym) (scoped_symbol_lookup_object_prop_str(sym, CLASS_CONSTRUCTOR_NAME, CLASS_CONSTRUCTOR_LENGTH))
 

@@ -224,6 +224,14 @@ static inline Value stack_peek(uint8_t distance) {
 
 #define GOTO(pos) do { qvm.frame->pc = &qvm.frame->func->chunk.code[pos]; } while(false)
 
+#define ABORT_IF_NIL(val)\
+    do {\
+        if (VALUE_IS_NIL(val)) {\
+            runtime_error("Null pointer object");\
+            break;\
+        }\
+    } while (false)
+
 static void run(ObjFunction* func) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
@@ -448,10 +456,7 @@ static void run(ObjFunction* func) {
         }
         case OP_GET_PROP: {
             Value val = stack_pop();
-            if (VALUE_IS_NIL(val)) {
-                runtime_error("Null pointer object!");
-                break;
-            }
+            ABORT_IF_NIL(val);
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
             uint8_t pos = READ_BYTE();
             stack_push(object_get_property(instance, pos));
@@ -462,22 +467,15 @@ static void run(ObjFunction* func) {
             // This is an expression, so something should be in the stack
             // to be popped later.
             Value obj_val = stack_peek(0);
-            if (VALUE_IS_NIL(obj_val)) {
-                runtime_error("Null pointer object!");
-                break;
-            }
+            ABORT_IF_NIL(val);
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(obj_val));
             uint8_t pos = READ_BYTE();
             object_set_property(instance, pos, val);
             break;
         }
         case OP_BINDED_METHOD: {
-            // TODO These lines are repeated in the prev instructions
             Value val = stack_peek(0);
-            if (VALUE_IS_NIL(val)) {
-                runtime_error("Null pointer object!");
-                break;
-            }
+            ABORT_IF_NIL(val);
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
             uint8_t pos = READ_BYTE();
             Value method = object_get_property(instance, pos);

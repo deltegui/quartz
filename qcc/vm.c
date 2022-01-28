@@ -227,8 +227,8 @@ static inline Value stack_peek(uint8_t distance) {
 #define ABORT_IF_NIL(val)\
     do {\
         if (VALUE_IS_NIL(val)) {\
-            runtime_error("Null pointer object");\
-            break;\
+            runtime_error("Null pointer object!");\
+            return;\
         }\
     } while (false)
 
@@ -467,7 +467,7 @@ static void run(ObjFunction* func) {
             // This is an expression, so something should be in the stack
             // to be popped later.
             Value obj_val = stack_peek(0);
-            ABORT_IF_NIL(val);
+            ABORT_IF_NIL(obj_val);
             ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(obj_val));
             uint8_t pos = READ_BYTE();
             object_set_property(instance, pos, val);

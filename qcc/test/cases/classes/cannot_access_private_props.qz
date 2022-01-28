@@ -1,0 +1,10 @@
+[Line 18] Type error: 'name' property of class 'Macha' must be public
+17 | fn print_macha(m: Macha): Void {
+18 |     println("Name: " + m.name + " age: " + ntos(m.age));
+   | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+
+[Line 18] Type error: 'age' property of class 'Macha' must be public
+17 | fn print_macha(m: Macha): Void {
+18 |     println("Name: " + m.name + " age: " + ntos(m.age));
+   | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+

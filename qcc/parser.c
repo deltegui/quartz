@@ -39,8 +39,10 @@ static Expr* parse_precendence(Parser* const parser, Precedence precedence);
 
 static void error(Parser* const parser, const char* message, ...);
 static void error_prev(Parser* const parser, const char* message, ...);
-static void error_at(Parser* const parser, Token* token, const char* message, va_list params);
+static void error_at(Parser* const parser, Token* token, const char* message, va_list* params);
 static void syncronize(Parser* const parser);
+
+#define ERROR_AT(parser, token, msg) (error_at(parser, token, msg, NULL))
 
 static void create_scope(Parser* const parser);
 static void end_scope(Parser* const parser);
@@ -49,6 +51,7 @@ static Symbol* lookup_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static bool register_symbol(Parser* const parser, Symbol symbol);
 static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type);
+static void symbol_update_class_body(Parser* const parser, Symbol* obj);
 
 static void advance(Parser* const parser);
 static bool consume(Parser* const parser, TokenKind expected, const char* msg);
@@ -63,6 +66,9 @@ static Stmt* variable_decl(Parser* const parser);
 static Stmt* function_decl(Parser* const parser);
 static Stmt* typealias_decl(Parser* const parser);
 static Stmt* import_decl(Parser* const parser);
+static Stmt* class_decl(Parser* const parser);
+static Stmt* parse_class_body(Parser* const parser, Symbol* klass_sym);
+static SymbolVisibility parse_property_visibility(Parser* const parser);
 static Stmt* native_import(Parser* const parser, NativeImport import, int line);
 static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
@@ -88,9 +94,14 @@ static Expr* expression(Parser* const parser);
 static Expr* grouping(Parser* const parser, bool can_assign);
 static Expr* primary(Parser* const parser, bool can_assign);
 static Expr* identifier(Parser* const parser, bool can_assign);
+static Expr* self(Parser* const parser, bool can_assign);
 static Expr* unary(Parser* const parser, bool can_assign);
+static Expr* new_(Parser* const parser, bool can_assign);
 static Expr* binary(Parser* const parser, bool can_assign, Expr* left);
 static Expr* call(Parser* const parser, bool can_assign, Expr* left);
+static Expr* prop(Parser* const parser, bool can_assign, Expr* left);
+
+static void parse_call_params(Parser* const parser, Vector* params);
 
 ParseRule rules[] = {
     [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
@@ -103,7 +114,7 @@ ParseRule rules[] = {
     [TOKEN_PERCENT]       = {NULL,        binary, PREC_FACTOR},
     [TOKEN_LEFT_PAREN]    = {grouping,    call,   PREC_CALL},
     [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_DOT]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_DOT]           = {NULL,        prop,   PREC_CALL},
     [TOKEN_BANG]          = {unary,       NULL,   PREC_UNARY},
     [TOKEN_EQUAL]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_LOWER]         = {NULL,        binary, PREC_COMPARISON},
@@ -113,12 +124,7 @@ ParseRule rules[] = {
     [TOKEN_LEFT_BRACE]    = {NULL,        NULL,   PREC_NONE},
     [TOKEN_RIGHT_BRACE]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_COMMA]         = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
-    [TOKEN_FOR]           = {NULL,        NULL,   PREC_NONE},
 
-    [TOKEN_AND]           = {NULL,        binary, PREC_AND},
-    [TOKEN_OR]            = {NULL,        binary, PREC_OR},
     [TOKEN_EQUAL_EQUAL]   = {NULL,        binary, PREC_EQUALITY},
     [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
     [TOKEN_LOWER_EQUAL]   = {NULL,        binary, PREC_COMPARISON},
@@ -130,13 +136,27 @@ ParseRule rules[] = {
     [TOKEN_NUMBER]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_TRUE]          = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_FALSE]         = {primary,     NULL,   PREC_PRIMARY},
+    [TOKEN_AND]           = {NULL,        binary, PREC_AND},
+    [TOKEN_OR]            = {NULL,        binary, PREC_OR},
     [TOKEN_NIL]           = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_STRING]        = {primary,     NULL,   PREC_PRIMARY},
     [TOKEN_IDENTIFIER]    = {identifier,  NULL,   PREC_NONE},
+    [TOKEN_CONTINUE]      = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_IF]            = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_ELSE]          = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_FOR]           = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_WHILE]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_NEW]           = {new_,        NULL,   PREC_CALL},
+    [TOKEN_TYPEDEF]       = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_IMPORT]        = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_CLASS]         = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_PUBLIC]        = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_SELF]          = {self,        NULL,   PREC_NONE},
 
     [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_STRING]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_BOOL]     = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_TYPE_VOID]     = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_NIL]      = {NULL,        NULL,   PREC_NONE},
 };
 
@@ -146,7 +166,28 @@ ParseRule rules[] = {
         parser->is_in_loop = true;\
         __VA_ARGS__\
         parser->is_in_loop = prev;\
-    } while(false)
+    } while (false)
+
+#define IS_IN_CLASS(parser) (parser->current_class_type != NULL)
+
+#define IN_CLASS(parser, type, ...)\
+    do {\
+        Type* prev = parser->current_class_type;\
+        parser->current_class_type = type;\
+        __VA_ARGS__\
+        parser->current_class_type = prev;\
+    } while (false)
+
+#define TRY_REGISTER_SYMBOL(parser, symbol, err)\
+    do {\
+        if (! register_symbol(parser, symbol)) {\
+            free_symbol(&symbol);\
+            if (err != NULL) {\
+                error(parser, err);\
+            }\
+        }\
+    } while (false)
+
 
 static ParseRule* get_rule(TokenKind kind) {
     return &rules[kind];
@@ -185,23 +226,24 @@ void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* sy
     parser->function_deep_count = 0;
     parser->scope_depth = 0;
     parser->is_in_loop = false;
+    parser->current_class_type = NULL;
 }
 
 static void error(Parser* const parser, const char* message, ...) {
     va_list params;
     va_start(params, message);
-    error_at(parser, &parser->current, message, params);
+    error_at(parser, &parser->current, message, &params);
     va_end(params);
 }
 
 static void error_prev(Parser* const parser, const char* message, ...) {
     va_list params;
     va_start(params, message);
-    error_at(parser, &parser->prev, message, params);
+    error_at(parser, &parser->prev, message, &params);
     va_end(params);
 }
 
-static void error_at(Parser* const parser, Token* token, const char* format, va_list params) {
+static void error_at(Parser* const parser, Token* token, const char* format, va_list* params) {
     if (parser->panic_mode) {
         return;
     }
@@ -210,13 +252,16 @@ static void error_at(Parser* const parser, Token* token, const char* format, va_
     switch(token->kind) {
     case TOKEN_ERROR: break;
     case TOKEN_END:
-        fprintf(stderr, " at end");
+        fprintf(stderr, " at end: ");
         break;
     default:
-        fprintf(stderr, " at '%.*s'", token->length, token->start);
+        fprintf(stderr, " at '%.*s': ", token->length, token->start);
     }
-    fprintf(stderr, ": ");
-    vfprintf(stderr, format, params);
+    if (params != NULL) {
+        vfprintf(stderr, format, *params);
+    } else {
+        fprintf(stderr, "%s", format);
+    }
     fprintf(stderr, "\n");
     print_error_context(parser->lexer.source, token);
     parser->has_error = true;
@@ -280,6 +325,10 @@ static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type
     Symbol symbol = create_symbol_from_token(token, type);
     symbol.global = parser->scope_depth == 0;
     return symbol;
+}
+
+static void symbol_update_class_body(Parser* const parser, Symbol* obj) {
+    scoped_symbol_update_class_body(parser->symbols, obj);
 }
 
 static void advance(Parser* const parser) {
@@ -358,6 +407,8 @@ static Stmt* declaration(Parser* const parser) {
         return typealias_decl(parser);
     case TOKEN_IMPORT:
         return import_decl(parser);
+    case TOKEN_CLASS:
+        return class_decl(parser);
     default:
         return statement(parser);
     }
@@ -422,9 +473,7 @@ static Stmt* parse_variable(Parser* const parser) {
     Symbol symbol = create_symbol_calc_global(parser, &var.identifier, var_type);
     symbol.assigned = var.definition != NULL;
     symbol.global = parser->scope_depth == 0;
-    if (! register_symbol(parser, symbol)) {
-        free_symbol(&symbol);
-    }
+    TRY_REGISTER_SYMBOL(parser, symbol, NULL);
 
     return CREATE_STMT_VAR(var);
 }
@@ -454,10 +503,7 @@ static Stmt* typealias_decl(Parser* const parser) {
         def);
     Symbol symbol = create_symbol_calc_global(parser, &stmt.identifier, alias);
     symbol.kind = SYMBOL_TYPEALIAS;
-    if (! register_symbol(parser, symbol)) {
-        free_symbol(&symbol);
-        error(parser, "Type alias already defined");
-    }
+    TRY_REGISTER_SYMBOL(parser, symbol, "Type alias already defined");
 
     return CREATE_STMT_TYPEALIAS(stmt);
 }
@@ -527,6 +573,80 @@ static Stmt* file_import(Parser* const parser, FileImport import) {
     return subast;
 }
 
+static Stmt* class_decl(Parser* const parser) {
+    consume(parser, TOKEN_CLASS, "Expected class declaration to start with 'class'");
+
+    if (parser->current.kind != TOKEN_IDENTIFIER) {
+        error(parser, "Expected identifier to be class name");
+    }
+    ClassStmt klass;
+    klass.identifier = parser->current;
+
+    Symbol symbol = create_symbol_calc_global(
+        parser,
+        &klass.identifier,
+        create_type_class(klass.identifier.start, klass.identifier.length));
+    TRY_REGISTER_SYMBOL(parser, symbol, "Class already defined");
+
+    advance(parser); // Consume identifier
+
+    Symbol* inserted = lookup_str(parser, klass.identifier.start, klass.identifier.length);
+    assert(inserted != NULL);
+
+    consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after class name in class declaration");
+    create_scope(parser);
+    symbol_update_class_body(parser, inserted);
+    IN_CLASS(parser, inserted->type, {
+        klass.body = parse_class_body(parser, inserted);
+    });
+    end_scope(parser);
+    consume(parser, TOKEN_RIGHT_BRACE, "Expected '}' before class body");
+
+    return CREATE_STMT_CLASS(klass);
+}
+
+static Stmt* parse_class_body(Parser* const parser, Symbol* klass_sym) {
+    ListStmt* list = create_stmt_list();
+    while (parser->current.kind != TOKEN_RIGHT_BRACE) {
+        SymbolVisibility visibility = parse_property_visibility(parser);
+        Stmt* stmt = NULL;
+        Token identifier;
+
+        switch (parser->current.kind) {
+        case TOKEN_VAR:
+            stmt = variable_decl(parser);
+            if (stmt->var.definition != NULL) {
+                ERROR_AT(
+                    parser,
+                    &stmt->var.identifier,
+                    "Class variable properties cannot be initialized!");
+            }
+            identifier = stmt->var.identifier;
+            break;
+        case TOKEN_FUNCTION:
+            stmt = function_decl(parser);
+            identifier = stmt->function.identifier;
+            break;
+        default:
+            error(parser, "Unexpected token inside class body");
+            return CREATE_STMT_LIST(list);
+        }
+
+        Symbol* sym = lookup_str(parser, identifier.start, identifier.length);
+        sym->visibility = visibility;
+        stmt_list_add(list, stmt);
+    }
+    return CREATE_STMT_LIST(list);
+}
+
+static SymbolVisibility parse_property_visibility(Parser* const parser) {
+    if (parser->current.kind == TOKEN_PUBLIC) {
+        advance(parser); // consume pub token
+        return SYMBOL_VISIBILITY_PUBLIC;
+    }
+    return SYMBOL_VISIBILITY_PRIVATE;
+}
+
 static Stmt* function_decl(Parser* const parser) {
     consume(parser, TOKEN_FUNCTION, "Expected function declaration to start with 'fn'");
 
@@ -561,9 +681,7 @@ static Stmt* function_decl(Parser* const parser) {
 
     // Insert symbol before parsing the function body
     // so you can call a function inside a function
-    if (! register_symbol(parser, symbol)) {
-        free_symbol(&symbol);
-    }
+    TRY_REGISTER_SYMBOL(parser, symbol, NULL);
     Symbol* registered = lookup_str(parser, fn.identifier.start, fn.identifier.length);
     assert(registered != NULL);
 
@@ -591,7 +709,7 @@ static void parse_function_params_declaration(Parser* const parser, Symbol* fn_s
         consume(parser, TOKEN_COLON, "Expected function parameter to have a type in function declaration");
         Type* type = parse_type(parser);
         if (TYPE_IS_UNKNOWN(type)) {
-            error (parser, "Unknown type in function param in function declaration");
+            error(parser, "Unknown type in function param in function declaration");
         }
         VECTOR_ADD_TYPE(&TYPE_FN_PARAMS(fn_sym->type), type);
         advance(parser); // consume type
@@ -603,15 +721,23 @@ static void parse_function_params_declaration(Parser* const parser, Symbol* fn_s
 }
 
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
+    if (IS_IN_CLASS(parser)) {
+        Symbol self = create_symbol(
+            create_symbol_name(
+                CLASS_SELF_NAME,
+                CLASS_SELF_LENGTH),
+            fn_sym->declaration_line,
+            create_type_object(parser->current_class_type));
+        TRY_REGISTER_SYMBOL(parser, self, NULL);
+    }
+
     Token* param_names = VECTOR_AS_TOKENS(&fn_sym->function.param_names);
     Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(fn_sym->type));
     for (uint32_t i = 0; i < fn_sym->function.param_names.size; i++) {
         Symbol param = create_symbol_from_token(
             &param_names[i],
             param_types[i]);
-        if (! register_symbol(parser, param)) {
-            free_symbol(&param);
-        }
+        TRY_REGISTER_SYMBOL(parser, param, NULL);
     }
 }
 
@@ -637,17 +763,10 @@ static Type* parse_type(Parser* const parser) {
             parser->current.start);
         return CREATE_TYPE_UNKNOWN();
     }
-    switch (symbol->kind) {
-    case SYMBOL_TYPEALIAS:
-        return symbol->type;
-    default:
-        error(
-            parser,
-            "The identifier '%.*s' is not a type",
-            parser->current.length,
-            parser->current.start);
-        return CREATE_TYPE_UNKNOWN();
+    if (TYPE_IS_CLASS(symbol->type)) {
+        return create_type_object(symbol->type);
     }
+    return symbol->type;
 }
 
 static Type* parse_function_type(Parser* const parser) {
@@ -884,20 +1003,18 @@ static Expr* binary(Parser* const parser, bool can_assign, Expr* left) {
 }
 
 static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
-    if (! EXPR_IS_IDENTIFIER(*left)) {
-        error(parser, "You can only call functions");
-    }
-    IdentifierExpr fn_name = left->identifier;
-
-    CallExpr call = (CallExpr){
-        .identifier = fn_name.name,
-    };
+    CallExpr call;
+    call.callee = left;
     init_vector(&call.params, sizeof(Expr*));
+    parse_call_params(parser, &call.params);
+    return CREATE_CALL_EXPR(call);
+}
 
+static void parse_call_params(Parser* const parser, Vector* params) {
     if (parser->current.kind != TOKEN_RIGHT_PAREN) {
         for (;;) {
             Expr* param = expression(parser);
-            VECTOR_ADD_EXPR(&call.params, param);
+            VECTOR_ADD_EXPR(params, param);
             if (parser->current.kind != TOKEN_COMMA) {
                 break;
             }
@@ -908,9 +1025,6 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
         parser,
         TOKEN_RIGHT_PAREN,
         "Expected ')' to enclose '(' in function call");
-
-    free_expr(left); // We only need left identifier. We must free it.
-    return CREATE_CALL_EXPR(call);
 }
 
 static Expr* grouping(Parser* const parser, bool can_assign) {
@@ -970,6 +1084,57 @@ static Expr* unary(Parser* const parser, bool can_assign) {
     return expr;
 }
 
+static Expr* new_(Parser* const parser, bool can_assign) {
+#ifdef PARSER_DEBUG
+    printf("[PARSER_DEBUG]: NEW Expression\n");
+#endif
+
+    Token klass = parser->current;
+
+    NewExpr new_expr;
+    new_expr.klass = klass;
+    init_vector(&new_expr.params, sizeof(Expr*));
+
+    Symbol* klass_sym = lookup_str(parser, klass.start, klass.length);
+    if (klass_sym == NULL) {
+        error(parser, "Undeclared class");
+        return CREATE_NEW_EXPR(new_expr);
+    }
+    if (klass_sym->kind != SYMBOL_CLASS) {
+        error(parser, "Cannot use 'new' with something that is not a class");
+    }
+    advance(parser); // consume klass name
+    consume(parser, TOKEN_LEFT_PAREN, "Expected a '(' after class name in new statement");
+
+    parse_call_params(parser, &new_expr.params);
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: NEW class: ");
+    token_print(klass);
+    printf("[PARSER DEBUG]: end NEW Expression\n");
+#endif
+    return CREATE_NEW_EXPR(new_expr);
+}
+
+static Expr* prop(Parser* const parser, bool can_assign, Expr* left) {
+    Token property = parser->current;
+    consume(parser, TOKEN_IDENTIFIER, "Expected ");
+    if (parser->current.kind == TOKEN_EQUAL) {
+        advance(parser); // consume =
+        PropAssigmentExpr assignment;
+        assignment.object = left;
+        assignment.prop = property;
+        assignment.value = parse_precendence(parser, PREC_ASSIGNMENT);
+        assignment.object_type = NULL; // we dont know yet
+        return CREATE_PROP_ASSIGMENT_EXPR(assignment);
+    }
+    PropExpr prop;
+    prop.object = left;
+    prop.prop = property;
+    prop.object_type = NULL; // we dont know yet
+    return CREATE_PROP_EXPR(prop);
+}
+
 static Expr* identifier(Parser* const parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: IDENTIFIER Expression\n");
@@ -1018,7 +1183,35 @@ static Expr* identifier(Parser* const parser, bool can_assign) {
 #ifdef PARSER_DEBUG
     printf("[PARSER DEBUG]: NAME value ");
     token_print(identifier);
-    printf("[PARSER DEBUG]: end PRIMARY Expression\n");
+    printf("[PARSER DEBUG]: end IDENTIFIER Expression\n");
+#endif
+    return expr;
+}
+
+static Expr* self(Parser* const parser, bool can_assign) {
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: SELF Expression\n");
+#endif
+
+    if (! IS_IN_CLASS(parser)) {
+        error(parser, "You can only use self inside a class deifinition");
+    }
+    Token self = parser->prev;
+    if (parser->current.kind == TOKEN_EQUAL) {
+        error(parser, "Cannot assign to 'self'");
+        return NULL;
+    }
+    Symbol* existing = get_identifier_symbol(parser, self);
+    if (!existing) {
+        return NULL;
+    }
+    IdentifierExpr node = (IdentifierExpr){
+        .name = self,
+    };
+    Expr* expr = CREATE_INDENTIFIER_EXPR(node);
+
+#ifdef PARSER_DEBUG
+    printf("[PARSER DEBUG]: end SELF Expression\n");
 #endif
     return expr;
 }

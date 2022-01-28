@@ -1,5 +1,6 @@
 #include "qstdio.h"
 #include <stdio.h>
+#include <string.h>
 #include "../values.h"
 #include "../object.h"
 #include "../common.h"
@@ -8,6 +9,7 @@
 // TODO print for numbers and so on?
 static Value stdio_println(int argc, Value* argv);
 static Value stdio_print(int argc, Value* argv);
+static Value stdio_readstr(int argc, Value* argv);
 
 void register_stdio(CTable* table) {
     Type* print_type = create_type_function();
@@ -28,10 +30,21 @@ void register_stdio(CTable* table) {
         .type = print_type,
     };
 
-#define FN_LENGTH 2
+    Type* readstr_type = create_type_function();
+    readstr_type->function->return_type = CREATE_TYPE_STRING();
+
+    NativeFunction readstr = (NativeFunction) {
+        .name = "readstr",
+        .length = 7,
+        .function = stdio_readstr,
+        .type = readstr_type,
+    };
+
+#define FN_LENGTH 3
     static NativeFunction functions[FN_LENGTH];
     functions[0] = println;
     functions[1] = print;
+    functions[2] = readstr;
 
     NativeImport stdio_import = (NativeImport) {
         .name = "stdio",
@@ -59,4 +72,12 @@ static Value stdio_print(int argc, Value* argv) {
     char* str = OBJ_AS_CSTRING(VALUE_AS_OBJ(argv[0]));
     printf("%s", str);
     return NIL_VALUE();
+}
+
+static Value stdio_readstr(int argc, Value* argv) {
+    char* buffer;
+    scanf("%ms", &buffer);
+    ObjString* str = copy_string(buffer, strlen(buffer));
+    free(buffer);
+    return OBJ_VALUE(str, CREATE_TYPE_STRING());
 }

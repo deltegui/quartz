@@ -1,4 +1,5 @@
 #include "values.h"
+#include <string.h>
 #include "object.h" // used for print_object and mark_object
 // ValueArray is a runtime data structure, so its memory
 // must be managed by vm_memory.h
@@ -93,4 +94,15 @@ void mark_valuearray(ValueArray* const array) {
     for (int i = 0; i < array->size; i++) {
         mark_value(array->values[i]);
     }
+}
+
+void valuearray_deep_copy(ValueArray* const origin, ValueArray* destiny) {
+    destiny->capacity = origin->capacity;
+    destiny->values = GROW_ARRAY(
+        Value,
+        destiny->values,
+        0,
+        destiny->capacity);
+    memcpy(destiny->values, origin->values, sizeof(Value) * origin->capacity);
+    destiny->size = origin->size;
 }

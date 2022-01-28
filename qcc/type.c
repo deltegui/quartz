@@ -6,12 +6,12 @@
 // of these types. Simple types only stores it's kind,
 // so let repeating these inside the type pool
 // eats resources and is useless.
-Type number_type;
-Type bool_type;
-Type nil_type;
-Type string_type;
-Type void_type;
-Type unknown_type;
+static Type number_type;
+static Type bool_type;
+static Type nil_type;
+static Type string_type;
+static Type void_type;
+static Type unknown_type;
 
 // A type pool it's a place where types by value are
 // stored. The rest of the interpreter just have
@@ -33,9 +33,9 @@ typedef struct s_pool_node {
     Type types[];
 } PoolNode;
 
-uint32_t last_capacity = 0;
-PoolNode* type_pool = NULL;
-PoolNode* current_node = NULL;
+static uint32_t last_capacity = 0;
+static PoolNode* type_pool = NULL;
+static PoolNode* current_node = NULL;
 
 inline static uint32_t next_capacity();
 static void free_pool_node(PoolNode* const node);
@@ -43,8 +43,12 @@ static void free_type(Type* const type);
 static Type* type_pool_add(Type type);
 static PoolNode* alloc_node();
 static void type_alias_print(FILE* out, const Type* const type);
-static void function_type_print(FILE* out, const Type* const type);
+static void type_function_print(FILE* out, const Type* const type);
+static void type_class_print(FILE* out, const Type* const type);
+static void type_object_print(FILE* out, const Type* const type);
 static bool fn_params_equals(FunctionType* first, FunctionType* second);
+static bool type_function_equals(Type* first, Type* second);
+static bool type_class_equals(Type* first, Type* second);
 
 inline static uint32_t next_capacity() {
     last_capacity = ((last_capacity < 8) ? 8 : last_capacity * 2);
@@ -55,6 +59,7 @@ void init_type_pool() {
     last_capacity = 0;
     type_pool = NULL;
     current_node = NULL;
+
     number_type.kind = TYPE_NUMBER;
     bool_type.kind = TYPE_BOOL;
     nil_type.kind = TYPE_NIL;
@@ -81,6 +86,10 @@ static void free_pool_node(PoolNode* const node) {
 
 static void free_type(Type* const type) {
     switch (type->kind) {
+    case TYPE_CLASS: {
+        free(type->klass);
+        break;
+    }
     case TYPE_FUNCTION: {
         free_vector(&type->function->param_types);
         free(type->function);
@@ -90,8 +99,16 @@ static void free_type(Type* const type) {
         free(type->alias);
         break;
     }
-    default:
-        // Simple types do not have anything to free
+    case TYPE_OBJECT: {
+        free(type->object);
+        break;
+    }
+    case TYPE_NUMBER:
+    case TYPE_BOOL:
+    case TYPE_NIL:
+    case TYPE_STRING:
+    case TYPE_VOID:
+    case TYPE_UNKNOWN:
         break;
     }
 }
@@ -161,6 +178,29 @@ Type* create_type_alias(const char* identifier, int length, Type* original) {
     return type_pool_add(type);
 }
 
+Type* create_type_class(const char* identifier, int length) {
+    ClassType* klass_type = (ClassType*) malloc(sizeof(ClassType) + (sizeof(char) * length + 1));
+    memcpy(klass_type->identifier, identifier, length);
+    klass_type->identifier[length] = '\0';
+    klass_type->length = length;
+    Type type = (Type) {
+        .kind = TYPE_CLASS,
+        .klass = klass_type,
+    };
+    return type_pool_add(type);
+}
+
+Type* create_type_object(Type* klass) {
+    assert(klass->kind == TYPE_CLASS);
+    ObjectType* obj_type = (ObjectType*) malloc(sizeof(ObjectType));
+    obj_type->klass = klass;
+    Type type = (Type) {
+        .kind = TYPE_OBJECT,
+        .object = obj_type,
+    };
+    return type_pool_add(type);
+}
+
 Type* simple_type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return CREATE_TYPE_NUMBER();
@@ -174,12 +214,14 @@ Type* simple_type_from_token_kind(TokenKind kind) {
 
 void type_fprint(FILE* out, const Type* const type) {
     switch (type->kind) {
+    case TYPE_OBJECT: type_object_print(out, type); break;
     case TYPE_ALIAS: type_alias_print(out, type); break;
     case TYPE_NUMBER: fprintf(out, "Number"); break;
     case TYPE_BOOL: fprintf(out, "Bool"); break;
     case TYPE_NIL: fprintf(out, "Nil"); break;
     case TYPE_STRING: fprintf(out, "String"); break;
-    case TYPE_FUNCTION: function_type_print(out, type); break;
+    case TYPE_FUNCTION: type_function_print(out, type); break;
+    case TYPE_CLASS: type_class_print(out, type); break;
     case TYPE_VOID: fprintf(out, "Void"); break;
     case TYPE_UNKNOWN: fprintf(out, "Unknown"); break;
     }
@@ -194,7 +236,7 @@ static void type_alias_print(FILE* out, const Type* const type) {
     type_fprint(out, type->alias->def);
 }
 
-static void function_type_print(FILE* out, const Type* const type) {
+static void type_function_print(FILE* out, const Type* const type) {
     assert(type->kind == TYPE_FUNCTION);
     Type** params = VECTOR_AS_TYPES(&type->function->param_types);
     uint32_t size = type->function->param_types.size;
@@ -209,6 +251,17 @@ static void function_type_print(FILE* out, const Type* const type) {
     type_fprint(out, type->function->return_type);
 }
 
+static void type_class_print(FILE* out, const Type* const type) {
+    assert(type->kind == TYPE_CLASS);
+    fprintf(out, "Class<%.*s>", type->klass->length, type->klass->identifier);
+}
+
+static void type_object_print(FILE* out, const Type* const type) {
+    assert(type->kind == TYPE_OBJECT);
+    fprintf(out, "Instance of ");
+    type_class_print(out, type->object->klass);
+}
+
 bool type_equals(Type* first, Type* second) {
     assert(first != NULL && second != NULL);
     if (first == second) {
@@ -220,13 +273,20 @@ bool type_equals(Type* first, Type* second) {
         return false;
     }
     if (first->kind == TYPE_FUNCTION) {
-        assert(first->function != NULL && second->function != NULL);
-        if (! fn_params_equals(first->function, second->function)) {
-            return false;
-        }
-        return first->function->return_type == second->function->return_type;
+        return type_function_equals(first, second);
+    }
+    if (first->kind == TYPE_CLASS) {
+        return type_class_equals(first, second);
     }
     return true;
+}
+
+static bool type_function_equals(Type* first, Type* second) {
+    assert(first->function != NULL && second->function != NULL);
+    if (! fn_params_equals(first->function, second->function)) {
+        return false;
+    }
+    return first->function->return_type == second->function->return_type;
 }
 
 static bool fn_params_equals(FunctionType* first, FunctionType* second) {
@@ -243,4 +303,15 @@ static bool fn_params_equals(FunctionType* first, FunctionType* second) {
         }
     }
     return true;
+}
+
+static bool type_class_equals(Type* first, Type* second) {
+    assert(first->klass != NULL && second->klass != NULL);
+    if (first->klass->length != second->klass->length) {
+        return false;
+    }
+    return memcmp(
+        first->klass->identifier,
+        second->klass->identifier,
+        first->klass->length) == 0;
 }

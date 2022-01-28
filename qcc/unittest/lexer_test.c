@@ -448,6 +448,41 @@ static void should_import_correctly() {
     );
 }
 
+static void should_tokenize_class_correctly() {
+    assert_types(
+        " class Human {}  ",
+        4,
+        TOKEN_CLASS,
+        TOKEN_IDENTIFIER,
+        TOKEN_LEFT_BRACE,
+        TOKEN_RIGHT_BRACE
+    );
+}
+
+static void should_tokenize_public() {
+    assert_types(
+        " pub ",
+        1,
+        TOKEN_PUBLIC
+    );
+}
+
+static void should_tokenize_new() {
+    assert_types(
+        " new ",
+        1,
+        TOKEN_NEW
+    );
+}
+
+static void should_tokenize_self() {
+    assert_types(
+        "   self ",
+        1,
+        TOKEN_SELF
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -473,7 +508,10 @@ int main(void) {
         cmocka_unit_test(should_tokenize_break_correctly),
         cmocka_unit_test(should_tokenize_continue_correctly),
         cmocka_unit_test(should_tokenize_typedef_correctly),
-        cmocka_unit_test(should_import_correctly)
+        cmocka_unit_test(should_import_correctly),
+        cmocka_unit_test(should_tokenize_class_correctly),
+        cmocka_unit_test(should_tokenize_public),
+        cmocka_unit_test(should_tokenize_new)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

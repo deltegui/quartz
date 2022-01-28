@@ -33,16 +33,20 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
     Symbol symbol = (Symbol){
         .kind = kind_from_type(type),
         .name = name,
-        .declaration_line = line,
         .type = type,
+        .visibility = SYMBOL_VISIBILITY_UNDEFINED,
+        .declaration_line = line,
         .constant_index = UINT16_MAX,
-        .native = false, // normally its not native
         .global = false, // we dont know
         .assigned = true, // normally is
+        .native = false, // normally its not native
     };
     symbol.upvalue_fn_refs = create_symbol_set();
     if (symbol.kind == SYMBOL_FUNCTION) {
         create_function_symbol(&symbol);
+    }
+    if (symbol.kind == SYMBOL_CLASS) {
+        symbol.klass.body = NULL;
     }
     return symbol;
 }
@@ -50,6 +54,7 @@ Symbol create_symbol(SymbolName name, int line, Type* type) {
 static SymbolKind kind_from_type(Type* type) {
     switch (type->kind) {
     case TYPE_FUNCTION: return SYMBOL_FUNCTION;
+    case TYPE_CLASS: return SYMBOL_CLASS;
     default: return SYMBOL_VAR;
     }
 }
@@ -68,6 +73,7 @@ void free_symbol(Symbol* const symbol) {
         free_symbol_set(symbol->function.upvalues);
         break;
     }
+    case SYMBOL_CLASS:
     case SYMBOL_TYPEALIAS:
     case SYMBOL_VAR:
         break;
@@ -233,6 +239,20 @@ Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const ch
     return scoped_symbol_lookup_levels(table, &symbol_name, levels);
 }
 
+Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name) {
+    assert(obj_sym != NULL);
+    assert(obj_sym->kind == SYMBOL_CLASS);
+    assert(obj_sym->klass.body != NULL);
+    SymbolTable* klass_body = obj_sym->klass.body;
+    Symbol* prop = symbol_lookup(klass_body, name);
+    return prop;
+}
+
+Symbol* scoped_symbol_lookup_object_prop_str(Symbol* const obj_sym, const char* name, int length) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return scoped_symbol_lookup_object_prop(obj_sym, &symbol_name);
+}
+
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry) {
     assert(table->current != NULL);
     symbol_insert(&table->current->symbols, entry);
@@ -244,6 +264,26 @@ void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* v
     assert(var_upvalue != NULL);
     symbol_set_add(fn->function.upvalues, var_upvalue);
     symbol_set_add(var_upvalue->upvalue_fn_refs, fn);
+}
+
+void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj) {
+    obj->klass.body = &table->current->symbols;
+}
+
+Symbol* scoped_symbol_get_class_prop(ScopedSymbolTable* const table, Type* class_type, Token* prop, Symbol** class_sym_out) {
+    Symbol* class_sym = scoped_symbol_lookup_str(
+            table,
+            TYPE_OBJECT_CLASS_NAME(class_type),
+            TYPE_OBJECT_CLASS_LENGTH(class_type));
+    if (class_sym == NULL) {
+        return NULL;
+    }
+    assert(class_sym != NULL);
+    assert(class_sym->kind == SYMBOL_CLASS);
+    assert(class_sym->klass.body != NULL);
+    assert(type_equals(class_sym->type, class_type->object->klass));
+    *class_sym_out = class_sym;
+    return symbol_lookup_str(class_sym->klass.body, prop->start, prop->length);
 }
 
 SymbolSet* create_symbol_set() {

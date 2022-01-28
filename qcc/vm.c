@@ -15,7 +15,9 @@ static void init_gray_stack();
 static void free_gray_stack();
 static void runtime_error(const char* message);
 static inline void call_native(ObjNative* native, uint8_t param_count);
+static inline void call_function(Obj* obj, Value* slots, uint8_t param_count);
 static inline void call(uint8_t param_count);
+static inline void invoke(uint8_t prop_index, uint8_t param_count);
 static inline Value stack_peek(uint8_t distance);
 
 static void init_gray_stack() {
@@ -100,11 +102,13 @@ static inline void call_native(ObjNative* native, uint8_t param_count) {
     stack_push(result);
 }
 
-static inline void call(uint8_t param_count) {
-    Value* fn_ptr = (qvm.stack_top - param_count - 1);
-    Value fn_value = *fn_ptr;
-    Obj* obj = VALUE_AS_OBJ(fn_value);
+static inline ObjFunction* prepare_binded_method(ObjBindedMethod* binded, uint8_t param_count) {
+    stack_push(OBJ_VALUE(binded->instance, binded->instance->obj.type));
+    assert(OBJ_IS_FUNCTION(binded->method));
+    return OBJ_AS_FUNCTION(binded->method);
+}
 
+static inline void call_function(Obj* obj, Value* slots, uint8_t param_count) {
     if (obj->kind == OBJ_NATIVE) {
         call_native(OBJ_AS_NATIVE(obj), param_count);
         return;
@@ -114,12 +118,41 @@ static inline void call(uint8_t param_count) {
         runtime_error("Frame overflow");
         return;
     }
-    ObjFunction* fn = OBJ_AS_FUNCTION(obj);
+
+    ObjFunction* fn = NULL;
+    if (obj->kind == OBJ_BINDED_METHOD) {
+        fn = prepare_binded_method(OBJ_AS_BINDED_METHOD(obj), param_count);
+        param_count++;
+        slots = (qvm.stack_top - param_count - 1);
+    } else {
+        assert(OBJ_IS_FUNCTION(obj));
+        fn = OBJ_AS_FUNCTION(obj);
+    }
+
     qvm.frame_count++;
     qvm.frame = &qvm.frames[qvm.frame_count - 1];
     qvm.frame->func = fn;
     qvm.frame->pc = fn->chunk.code;
-    qvm.frame->slots = fn_ptr;
+    qvm.frame->slots = slots;
+}
+
+static inline void call(uint8_t param_count) {
+    Value* slots = (qvm.stack_top - param_count - 1);
+    Value fn_value = *slots;
+    Obj* obj = VALUE_AS_OBJ(fn_value);
+    call_function(obj, slots, param_count);
+}
+
+static inline void invoke(uint8_t prop_index, uint8_t param_count) {
+    Value* slots = (qvm.stack_top - param_count - 1);
+    Value instance_value = *slots;
+
+    ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(instance_value));
+    Value fn_value = object_get_property(instance, prop_index);
+    Obj* obj = VALUE_AS_OBJ(fn_value);
+
+    stack_push(instance_value); // Push self
+    call_function(obj, slots, ++param_count);
 }
 
 void stack_push(Value val) {
@@ -190,6 +223,14 @@ static inline Value stack_peek(uint8_t distance) {
 #define READ_GLOBAL_STRING_LONG() OBJ_AS_STRING(VALUE_AS_OBJ(READ_GLOBAL_CONSTANT_LONG()))
 
 #define GOTO(pos) do { qvm.frame->pc = &qvm.frame->func->chunk.code[pos]; } while(false)
+
+#define ABORT_IF_NIL(val)\
+    do {\
+        if (VALUE_IS_NIL(val)) {\
+            runtime_error("Null pointer object!");\
+            return;\
+        }\
+    } while (false)
 
 static void run(ObjFunction* func) {
 #ifdef VM_DEBUG
@@ -397,6 +438,50 @@ static void run(ObjFunction* func) {
             if (! VALUE_AS_BOOL(condition)) {
                 GOTO(dst);
             }
+            break;
+        }
+        case OP_NEW: {
+            Value val = stack_pop();
+            ObjClass* klass = OBJ_AS_CLASS(VALUE_AS_OBJ(val));
+            ObjInstance* instance = new_instance(klass);
+            stack_push(OBJ_VALUE(instance, klass->obj.type)); // This is to assign to the var
+            stack_push(OBJ_VALUE(instance, klass->obj.type)); // This is to call init (or to be POPed)
+            break;
+        }
+        case OP_INVOKE: {
+            uint8_t prop_index = READ_BYTE();
+            uint8_t params = READ_BYTE();
+            invoke(prop_index, params);
+            break;
+        }
+        case OP_GET_PROP: {
+            Value val = stack_pop();
+            ABORT_IF_NIL(val);
+            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
+            uint8_t pos = READ_BYTE();
+            stack_push(object_get_property(instance, pos));
+            break;
+        }
+        case OP_SET_PROP: {
+            Value val = stack_pop();
+            // This is an expression, so something should be in the stack
+            // to be popped later.
+            Value obj_val = stack_peek(0);
+            ABORT_IF_NIL(obj_val);
+            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(obj_val));
+            uint8_t pos = READ_BYTE();
+            object_set_property(instance, pos, val);
+            break;
+        }
+        case OP_BINDED_METHOD: {
+            Value val = stack_peek(0);
+            ABORT_IF_NIL(val);
+            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
+            uint8_t pos = READ_BYTE();
+            Value method = object_get_property(instance, pos);
+            ObjBindedMethod* binded = new_binded_method(instance, VALUE_AS_OBJ(method));
+            stack_pop(); // Now its safe to pop the instance
+            stack_push(OBJ_VALUE(binded, binded->obj.type));
             break;
         }
         }

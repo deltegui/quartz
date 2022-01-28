@@ -71,6 +71,41 @@ ObjNative* new_native(const char* name, int length, native_fn_t function, Type* 
     return native;
 }
 
+ObjClass* new_class(const char* name, int length, Type* type) {
+    ObjClass* klass = ALLOC_OBJ(ObjClass, OBJ_CLASS, type);
+    klass->name = copy_string(name, length);
+    init_valuearray(&klass->instance);
+    return klass;
+}
+
+ObjInstance* new_instance(ObjClass* origin) {
+    ObjInstance* instance = ALLOC_OBJ(ObjInstance, OBJ_INSTANCE, origin->obj.type);
+    instance->klass = origin;
+    init_valuearray(&instance->props);
+    stack_push(OBJ_VALUE(instance, instance->obj.type));
+    valuearray_deep_copy(&origin->instance, &instance->props);
+    stack_pop();
+    return instance;
+}
+
+ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method) {
+    ObjBindedMethod* binded = ALLOC_OBJ(ObjBindedMethod, OBJ_BINDED_METHOD, method->type);
+    binded->instance = instance;
+    binded->method = method;
+    return binded;
+}
+
+// TODO change the value array to be directly in obj?
+Value object_get_property(ObjInstance* obj, uint8_t index) {
+    assert(index < obj->props.size);
+    return obj->props.values[index];
+}
+
+void object_set_property(ObjInstance* obj, uint8_t index, Value val) {
+    assert(index < obj->props.size);
+    obj->props.values[index] = val;
+}
+
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash) {
     ObjString* obj_str = ALLOC_STR(length + 1);
     obj_str->length = length;
@@ -138,6 +173,22 @@ void print_object(Obj* const obj) {
             native->name);
         TYPE_PRINT(obj->type);
         printf(">");
+        break;
+    }
+    case OBJ_CLASS: {
+        ObjClass* klass = OBJ_AS_CLASS(obj);
+        printf("<Class '%s'>", OBJ_AS_CSTRING(klass->name));
+        break;
+    }
+    case OBJ_INSTANCE: {
+        ObjInstance* instance = OBJ_AS_INSTANCE(obj);
+        printf("<Instance of class '%s'>", OBJ_AS_CSTRING(instance->klass->name));
+        break;
+    }
+    case OBJ_BINDED_METHOD: {
+        ObjBindedMethod* binded = OBJ_AS_BINDED_METHOD(obj);
+        printf("Binded Method: ");
+        print_object(binded->method);
         break;
     }
     }

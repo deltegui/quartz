@@ -18,12 +18,17 @@ typedef struct {
 typedef struct {
     ScopedSymbolTable* symbols;
     Type* last_type;
+    Token last_token;
     bool has_error;
 
     Vector function_stack; // Vector<FuncMeta>
 
     bool is_defining_variable;
     Symbol* defining_variable;
+
+    Symbol* calling_prop_class;
+
+    bool is_in_class;
 
     const char* source;
 } Typechecker;
@@ -47,9 +52,12 @@ static void start_scope(Typechecker* const checker);
 static void end_scope(Typechecker* const checker);
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
 static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level);
+static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Token* prop, Symbol** class_out);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
+static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type);
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var);
 static bool var_is_current_function_local(Typechecker* const checker, Symbol* var);
+static Type* resolve_and_check_last_object_type(Typechecker* const checker);
 
 static void start_variable_definition(Typechecker* const checker, Symbol* var);
 static void end_variable_definition(Typechecker* const checker);
@@ -60,6 +68,9 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary);
 static void typecheck_unary(void* ctx, UnaryExpr* unary);
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment);
 static void typecheck_call(void* ctx, CallExpr* call);
+static void typecheck_new(void* ctx, NewExpr* new_);
+static void typecheck_prop(void* ctx, PropExpr* prop);
+static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -68,6 +79,9 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_identifier = typecheck_identifier,
     .visit_assignment = typecheck_assignment,
     .visit_call = typecheck_call,
+    .visit_new = typecheck_new,
+    .visit_prop = typecheck_prop,
+    .visit_prop_assigment = typecheck_prop_assigment,
 };
 
 static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
@@ -82,6 +96,7 @@ static void typecheck_for(void* ctx, ForStmt* for_);
 static void typecheck_while(void* ctx, WhileStmt* while_);
 static void typecheck_import(void* ctx, ImportStmt* import);
 static void typecheck_native(void* ctx, NativeFunctionStmt* native);
+static void typecheck_class(void* ctx, ClassStmt* klass);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -96,6 +111,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_typealias = typecheck_typealias,
     .visit_import = typecheck_import,
     .visit_native = typecheck_native,
+    .visit_class = typecheck_class,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -194,12 +210,37 @@ static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int le
     return scoped_symbol_lookup_levels(checker->symbols, &name, level);
 }
 
+static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Token* prop, Symbol** class_out) {
+    Symbol* prop_symbol = scoped_symbol_get_class_prop(checker->symbols, class_type, prop, class_out);
+    if ((*class_out) == NULL) {
+        error(
+            checker,
+            &checker->last_token,
+            "Use of an undefined class\n");
+        return NULL;
+    }
+    if (prop_symbol == NULL) {
+        error(
+            checker,
+            prop,
+            "Class '%.*s' does not have property '%.*s'\n",
+            TYPE_OBJECT_CLASS_LENGTH(class_type),
+            TYPE_OBJECT_CLASS_NAME(class_type),
+            prop->length,
+            prop->start);
+        return NULL;
+    }
+    return prop_symbol;
+}
+
 bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
     checker.is_defining_variable = false;
     checker.defining_variable = NULL;
+    checker.calling_prop_class = NULL;
+    checker.is_in_class = false;
     checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
@@ -255,6 +296,8 @@ static void typecheck_var(void* ctx, VarStmt* var) {
     ACCEPT_EXPR(ctx, var->definition);
     end_variable_definition(checker);
 
+    checker->last_token = var->identifier;
+
     if (TYPE_IS_VOID(checker->last_type)) {
         error(
             checker,
@@ -262,7 +305,7 @@ static void typecheck_var(void* ctx, VarStmt* var) {
             "Cannot declare Void variable\n");
         return;
     }
-    if (type_equals(symbol->type, checker->last_type)) {
+    if (TYPE_IS_ASSIGNABLE(symbol->type, checker->last_type)) {
         return;
     }
     if (TYPE_IS_UNKNOWN(symbol->type)) {
@@ -291,6 +334,7 @@ static void typecheck_identifier(void* ctx, IdentifierExpr* identifier) {
     check_and_mark_upvalue(checker, symbol);
 
     checker->last_type = symbol->type;
+    checker->last_token = identifier->name;
 }
 
 static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
@@ -308,7 +352,7 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
             "Cannot assign variable to Void\n");
         return;
     }
-    if (! type_equals(symbol->type, checker->last_type)) {
+    if (! TYPE_IS_ASSIGNABLE(symbol->type, checker->last_type)) {
         error_last_type_match(
             checker,
             &assignment->name,
@@ -320,61 +364,223 @@ static void typecheck_assignment(void* ctx, AssignmentExpr* assignment) {
     check_and_mark_upvalue(checker, symbol);
 
     checker->last_type = symbol->type;
+    checker->last_token = assignment->name;
 }
 
 static void typecheck_call(void* ctx, CallExpr* call) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* symbol = lookup_str(checker, call->identifier.start, call->identifier.length);
-    assert(symbol != NULL);
-    assert(symbol->type != NULL);
+    checker->calling_prop_class = NULL;
+    ACCEPT_EXPR(checker, call->callee);
 
-    Type* type = RESOLVE_IF_TYPEALIAS(symbol->type);
+    Token identifier = checker->last_token;
+    Type* type = RESOLVE_IF_TYPEALIAS(checker->last_type);
+
+    if (checker->calling_prop_class != NULL) {
+        Symbol* defined_prop = symbol_lookup_str(
+                checker->calling_prop_class->klass.body,
+                identifier.start,
+                identifier.length);
+        if (defined_prop == NULL || ! type_equals(defined_prop->type, type)) {
+            error(
+                checker,
+                &identifier,
+                "Undefined property of class\n");
+            return;
+        }
+    }
 
     if (! TYPE_IS_FUNCTION(type)) {
         error(
             checker,
-            &call->identifier,
+            &identifier,
             "Calling '%.*s' which is not a function\n",
-            call->identifier.length,
-            call->identifier.start);
+            identifier.length,
+            identifier.start);
         return;
     }
 
-    uint32_t fn_param_type_size = TYPE_FN_PARAMS(type).size;
-    if (fn_param_type_size != call->params.size) {
+    check_call_params(checker, &identifier, &call->params, type);
+    checker->last_type = TYPE_FN_RETURN(type);
+}
+
+static void typecheck_prop(void* ctx, PropExpr* prop) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    ACCEPT_EXPR(checker, prop->object);
+
+    Type* obj_type = resolve_and_check_last_object_type(checker);
+    prop->object_type = obj_type; // Now we do know which type is
+
+    Symbol* klass_sym;
+    Symbol* prop_symbol = get_class_prop(checker, obj_type, &prop->prop, &klass_sym);
+    if (prop_symbol == NULL || klass_sym == NULL) {
+        return;
+    }
+
+    assert(prop_symbol->visibility != SYMBOL_VISIBILITY_UNDEFINED);
+    if (! checker->is_in_class && prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
         error(
             checker,
-            &call->identifier,
-            "Function '%.*s' expects %d params, but was called with %d params\n",
-            call->identifier.length,
-            call->identifier.start,
-            fn_param_type_size,
-            call->params.size);
+            &prop->prop,
+            "'%.*s' property of class '%.*s' must be public\n",
+            prop->prop.length,
+            prop->prop.start,
+            TYPE_OBJECT_CLASS_LENGTH(obj_type),
+            TYPE_OBJECT_CLASS_NAME(obj_type));
+    }
+
+    checker->last_type = prop_symbol->type;
+    checker->last_token = prop->prop;
+    checker->calling_prop_class = klass_sym;
+}
+
+static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    ACCEPT_EXPR(checker, prop_assignment->object);
+
+    Type* obj_type = resolve_and_check_last_object_type(checker);
+    prop_assignment->object_type = obj_type; // Now we do know which type is
+
+    Symbol* klass_sym;
+    Symbol* prop_symbol = get_class_prop(checker, obj_type, &prop_assignment->prop, &klass_sym);
+    if (prop_symbol == NULL || klass_sym == NULL) {
         return;
     }
 
-    Expr** exprs = VECTOR_AS_EXPRS(&call->params);
-    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(type));
-    assert(call->params.size == TYPE_FN_PARAMS(type).size);
+    ACCEPT_EXPR(checker, prop_assignment->value);
 
-    for (uint32_t i = 0; i < call->params.size; i++) {
+    // TODO should we let users change the implementation of a function?
+    if (TYPE_IS_FUNCTION(prop_symbol->type)) {
+        error(
+            checker,
+            &prop_assignment->prop,
+            "Cannot rewrite a function property\n");
+        return;
+    }
+
+    if (TYPE_IS_VOID(checker->last_type)) {
+        error(
+            checker,
+            &prop_assignment->prop,
+            "Cannot assign property to Void\n");
+        return;
+    }
+    if (! TYPE_IS_ASSIGNABLE(prop_symbol->type, checker->last_type)) {
+        error_last_type_match(
+            checker,
+            &prop_assignment->prop,
+            prop_symbol->type,
+            "in property assignment.");
+        return;
+    }
+
+    // TODO this error is duplicated
+    assert(prop_symbol->visibility != SYMBOL_VISIBILITY_UNDEFINED);
+    if (! checker->is_in_class && prop_symbol->visibility != SYMBOL_VISIBILITY_PUBLIC) {
+        error(
+            checker,
+            &prop_assignment->prop,
+            "'%.*s' property of class '%.*s' must be public\n",
+            prop_assignment->prop.length,
+            prop_assignment->prop.start,
+            TYPE_OBJECT_CLASS_LENGTH(obj_type),
+            TYPE_OBJECT_CLASS_NAME(obj_type));
+    }
+
+    checker->last_type = prop_symbol->type;
+}
+
+static void typecheck_new(void* ctx, NewExpr* new_) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Symbol* symbol = lookup_str(checker, new_->klass.start, new_->klass.length);
+    assert(symbol != NULL);
+    if (symbol->kind != SYMBOL_CLASS) {
+        error(
+            checker,
+            &new_->klass,
+            "Cannot use 'new' with something that is not a class\n");
+        return;
+    }
+    assert(symbol->klass.body != NULL);
+
+    Symbol* init_prop = SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(symbol);
+    if (init_prop == NULL) {
+        if (new_->params.size != 0) {
+            error(
+                checker,
+                &new_->klass,
+                "Calling constructor that takes no paremeters\n");
+        }
+        checker->last_type = create_type_object(symbol->type);
+        checker->last_token = new_->klass;
+        return;
+    }
+    if (init_prop->kind != OBJ_FUNCTION) {
+        error(
+            checker,
+            &new_->klass,
+            "'init' property of class '%.*s' must be a function\n",
+            new_->klass.length,
+            new_->klass.start);
+        return;
+    }
+    if (init_prop->visibility != SYMBOL_VISIBILITY_PUBLIC) {
+        error(
+            checker,
+            &new_->klass,
+            "'init' property of class '%.*s' must be public\n",
+            new_->klass.length,
+            new_->klass.start);
+    }
+    if (! TYPE_IS_VOID(TYPE_FN_RETURN(init_prop->type))) {
+        error(
+            checker,
+            &new_->klass,
+            "'init' property of class '%.*s' must return Void\n",
+            new_->klass.length,
+            new_->klass.start);
+    }
+    check_call_params(checker, &new_->klass, &new_->params, init_prop->type);
+
+    checker->last_type = create_type_object(symbol->type);
+    checker->last_token = new_->klass;
+}
+
+static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type) {
+    assert(TYPE_IS_FUNCTION(type));
+    Expr** exprs = VECTOR_AS_EXPRS(params);
+    Type** param_types = VECTOR_AS_TYPES(&TYPE_FN_PARAMS(type));
+
+    uint32_t fn_param_type_size = TYPE_FN_PARAMS(type).size;
+    if (fn_param_type_size != params->size) {
+        error(
+            checker,
+            identifier,
+            "Function '%.*s' expects %d params, but was called with %d params\n",
+            identifier->length,
+            identifier->start,
+            fn_param_type_size,
+            params->size);
+        return;
+    }
+    assert(params->size == TYPE_FN_PARAMS(type).size);
+
+    for (uint32_t i = 0; i < params->size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
-        if (! type_equals(last, def_type)) {
+        if (! TYPE_IS_ASSIGNABLE(last, def_type)) {
             error_param_number(
                 checker,
-                &call->identifier,
+                identifier,
                 last,
                 def_type,
                 i);
         }
     }
-
-    check_and_mark_upvalue(checker, symbol);
-
-    checker->last_type = TYPE_FN_RETURN(type);
 }
 
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
@@ -387,7 +593,6 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
         SYMBOL_NAME_START(var->name));
 #endif
     if (TYPECHECK_IS_GLOBAL_FN(checker)) {
-    // if (var->global) {
 #ifdef TYPECHECKER_DEBUG
         printf("No, it's in global.\n");
 #endif
@@ -425,6 +630,19 @@ static bool var_is_current_function_local(Typechecker* const checker, Symbol* va
     return var_sym != NULL;
 }
 
+static Type* resolve_and_check_last_object_type(Typechecker* const checker) {
+    Type* obj_type = RESOLVE_IF_TYPEALIAS(checker->last_type);
+    if (! TYPE_IS_OBJECT(obj_type)) {
+        error(
+            checker,
+            &checker->last_token,
+            "Accessing property of '%.*s' which is not an object\n",
+            checker->last_token.length,
+            checker->last_token.start);
+    }
+    return obj_type;
+}
+
 static void start_variable_definition(Typechecker* const checker, Symbol* var) {
     checker->is_defining_variable = true;
     checker->defining_variable = var;
@@ -451,6 +669,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     function_stack_pop(checker);
 
     checker->last_type = TYPE_FN_RETURN(symbol->type);
+    checker->last_token = function->identifier;
 
 #define FN_RETURNS_SOMETHING() !(TYPE_IS_NIL(checker->last_type) || TYPE_IS_VOID(checker->last_type))
     if (FN_RETURNS_SOMETHING()) {
@@ -465,6 +684,16 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
 }
 
 static void typecheck_native(void* ctx, NativeFunctionStmt* native) {
+}
+
+static void typecheck_class(void* ctx, ClassStmt* klass) {
+    Typechecker* checker = (Typechecker*) ctx;
+    start_scope(checker);
+    bool old = checker->is_in_class;
+    checker->is_in_class = true;
+    ACCEPT_STMT(ctx, klass->body);
+    checker->is_in_class = old;
+    end_scope(checker);
 }
 
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {
@@ -562,6 +791,7 @@ static void typecheck_import(void* ctx, ImportStmt* import) {
 
 static void typecheck_literal(void* ctx, LiteralExpr* literal) {
     Typechecker* checker = (Typechecker*) ctx;
+    checker->last_token = literal->literal;
 
     switch (literal->literal.kind) {
     case TOKEN_NUMBER: {
@@ -609,7 +839,7 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
             checker->last_type = CREATE_TYPE_STRING();
             return;
         }
-        // just continue to TYPE_NUMBER
+        // just continue
     }
     case TOKEN_MINUS:
     case TOKEN_STAR:
@@ -712,6 +942,10 @@ static void check_return_return(void* ctx, ReturnStmt* function);
 static void check_return_if(void* ctx, IfStmt* if_);
 static void check_return_for(void* ctx, ForStmt* for_);
 static void check_return_while(void* ctx, WhileStmt* while_);
+static void check_return_typealias(void* ctx, TypealiasStmt* typealias);
+static void check_return_import(void* ctx, ImportStmt* import);
+static void check_return_native(void* ctx, NativeFunctionStmt* native);
+static void check_return_class(void* ctx, ClassStmt* native);
 
 StmtVisitor check_return_stmt_visitor = (StmtVisitor){
     .visit_expr = check_return_expr,
@@ -723,6 +957,10 @@ StmtVisitor check_return_stmt_visitor = (StmtVisitor){
     .visit_for = check_return_for,
     .visit_while = check_return_while,
     .visit_loopg = check_return_loopg,
+    .visit_typealias = check_return_typealias,
+    .visit_import = check_return_import,
+    .visit_native = check_return_native,
+    .visit_class = check_return_class,
 };
 
 typedef struct {
@@ -743,6 +981,10 @@ static void check_return_function(void* ctx, FunctionStmt* function) {}
 static void check_return_if(void* ctx, IfStmt* if_) {}
 static void check_return_for(void* ctx, ForStmt* for_) {}
 static void check_return_while(void* ctx, WhileStmt* while_) {}
+static void check_return_typealias(void* ctx, TypealiasStmt* typealias) {}
+static void check_return_import(void* ctx, ImportStmt* import) {}
+static void check_return_native(void* ctx, NativeFunctionStmt* native) {}
+static void check_return_class(void* ctx, ClassStmt* native) {}
 
 static void check_return_block(void* ctx, BlockStmt* block) {
     // Function body can be a single stmt or a Block stmt.
@@ -753,4 +995,3 @@ static void check_return_return(void* ctx, ReturnStmt* function) {
     ReturnChecker* checker = (ReturnChecker*) ctx;
     checker->have_return = true;
 }
-

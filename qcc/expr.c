@@ -1,5 +1,7 @@
 #include "expr.h"
 
+static void free_params(Vector* params);
+
 Expr* create_expr(ExprKind kind, const void* const expr_node) {
     Expr* expr = (Expr*) malloc(sizeof(Expr));
 
@@ -16,6 +18,9 @@ Expr* create_expr(ExprKind kind, const void* const expr_node) {
     CASE_EXPR(EXPR_IDENTIFIER, identifier, IdentifierExpr);
     CASE_EXPR(EXPR_ASSIGNMENT, assignment, AssignmentExpr);
     CASE_EXPR(EXPR_CALL, call, CallExpr);
+    CASE_EXPR(EXPR_NEW, new_, NewExpr);
+    CASE_EXPR(EXPR_PROP, prop, PropExpr);
+    CASE_EXPR(EXPR_PROP_ASSIGMENT, prop_assigment, PropAssigmentExpr);
     }
     return expr;
 
@@ -46,16 +51,30 @@ void free_expr(Expr* const expr) {
     case EXPR_UNARY:
         free_expr(expr->unary.expr);
         break;
-    case EXPR_CALL: {
-        Expr** exprs = VECTOR_AS_EXPRS(&expr->call.params);
-        for (uint32_t i = 0; i < expr->call.params.size; i++) {
-            free_expr(exprs[i]);
-        }
-        free_vector(&expr->call.params);
+    case EXPR_CALL:
+        free_expr(expr->call.callee);
+        free_params(&expr->call.params);
+        break;
+    case EXPR_NEW:
+        free_params(&expr->new_.params);
+        break;
+    case EXPR_PROP_ASSIGMENT:
+        free_expr(expr->prop_assigment.object);
+        free_expr(expr->prop_assigment.value);
+        break;
+    case EXPR_PROP:
+        free_expr(expr->prop.object);
         break;
     }
-    }
     free(expr);
+}
+
+static void free_params(Vector* params) {
+    Expr** exprs = VECTOR_AS_EXPRS(params);
+    for (uint32_t i = 0; i < params->size; i++) {
+        free_expr(exprs[i]);
+    }
+    free_vector(params);
 }
 
 // Here we emulate visitor pattern in C. The DISPATCH macro
@@ -78,6 +97,9 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     case EXPR_IDENTIFIER: DISPATCH(visit_identifier, identifier); break;
     case EXPR_ASSIGNMENT: DISPATCH(visit_assignment, assignment); break;
     case EXPR_CALL: DISPATCH(visit_call, call); break;
+    case EXPR_NEW: DISPATCH(visit_new, new_); break;
+    case EXPR_PROP: DISPATCH(visit_prop, prop); break;
+    case EXPR_PROP_ASSIGMENT: DISPATCH(visit_prop_assigment, prop_assigment); break;
     }
 #undef DISPATCH
 }

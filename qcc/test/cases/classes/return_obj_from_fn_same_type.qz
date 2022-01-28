@@ -1,0 +1,10 @@
+[Line 23] Type error: Class 'Human' does not have property 'say_hi'
+22 | 
+23 | omg().say_hi();
+   | ~~~~~~~~~~~~^
+
+[Line 23] Type error: Calling 'omg' which is not a function
+22 | 
+23 | omg().say_hi();
+   | ~~~^
+

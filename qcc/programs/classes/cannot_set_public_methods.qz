@@ -1,0 +1,18 @@
+import 'stdio';
+import 'stdconv';
+
+class Macha {
+    pub var name: String;
+    pub var age: Number;
+
+    pub fn hello() {
+        println("Hello");
+    }
+}
+
+fn sub_hello() {
+}
+
+var diego = new Macha();
+diego.hello();
+diego.hello = sub_hello;

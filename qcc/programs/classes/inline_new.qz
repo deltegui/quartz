@@ -1,0 +1,23 @@
+class Num {
+    var num: Number;
+
+    pub fn init(n: Number) {
+        self.num = n;
+    }
+
+    pub fn sum(other: Num): Num {
+        return new Num(other.num + self.num);
+    }
+
+    pub fn unwrap(): Number {
+        return self.num;
+    }
+}
+
+import 'stdio';
+import 'stdconv';
+
+var a_n = new Num(2);
+var other = 3;
+
+println(ntos((a_n.sum(new Num(other)).unwrap())));

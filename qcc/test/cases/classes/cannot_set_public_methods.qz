@@ -1,0 +1,4 @@
+[Line 18] Type error: Cannot rewrite a function property
+17 | diego.hello();
+18 | diego.hello = sub_hello;
+   | ~~~~~~~~~~~^

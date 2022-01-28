@@ -1,0 +1,23 @@
+import 'stdio';
+import 'stdconv';
+
+class Macha {
+    pub var name: String;
+    pub var age: Number;
+
+    pub fn init(name: String, age: Number) {
+        println("Hello from here putos");
+    }
+
+    pub fn hello() {
+        println("Hello");
+    }
+}
+
+fn print_macha(m: Macha): Void {
+    println("Name: " + m.name + " age: " + ntos(m.age));
+}
+
+var diego = new Macha('diego', 22);
+diego.hello();
+print_macha(diego);

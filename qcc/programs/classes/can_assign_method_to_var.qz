@@ -1,0 +1,21 @@
+import 'stdio';
+import 'stdconv';
+
+class Human {
+    var name: String;
+    var age: Number;
+
+    pub fn init(name: String, age: Number) {
+        self.name = name;
+        self.age = age;
+    }
+
+    pub fn salut() {
+        println("Hello Im " + self.name + " and Im " + ntos(self.age) + " years old!");
+    }
+}
+
+var manolo = new Human("Manolo", 33);
+var salut_manolo = manolo.salut;
+
+salut_manolo();

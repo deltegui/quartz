@@ -1,0 +1,6 @@
+class Macha {
+    pub var a: Number;
+}
+
+var m: Macha = nil;
+m.a = 1;

@@ -69,7 +69,7 @@ static Stmt* import_decl(Parser* const parser);
 static Stmt* class_decl(Parser* const parser);
 static Stmt* parse_class_body(Parser* const parser, Symbol* klass_sym);
 static SymbolVisibility parse_property_visibility(Parser* const parser);
-static Stmt* native_import(Parser* const parser, NativeImport import, int line);
+static Stmt* native_import(Parser* const parser, NativeImport import, int line, int column);
 static Stmt* file_import(Parser* const parser, FileImport import);
 static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* fn_sym);
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
@@ -314,7 +314,7 @@ static void insert(Parser* const parser, Symbol entry){
 static bool register_symbol(Parser* const parser, Symbol symbol) {
     Symbol* exsting = current_scope_lookup(parser, &symbol.name);
     if (exsting) {
-        error_prev(parser, "Variable already declared in line %d", exsting->declaration_line);
+        error_prev(parser, "Variable already declared in line %d", exsting->line);
         return false;
     }
     insert(parser, symbol);
@@ -354,7 +354,7 @@ static Symbol* get_identifier_symbol(Parser* const parser, Token identifier) {
         error_prev(parser, "Use of undeclared variable", identifier.length, identifier.start);
         return NULL;
     }
-    if (existing->declaration_line > identifier.line) {
+    if (existing->line > identifier.line) {
         error_prev(parser, "Use of variable '%.*s' before declaration", identifier.length, identifier.start);
         return NULL;
     }
@@ -520,12 +520,12 @@ static Stmt* import_decl(Parser* const parser) {
         import_stmt.filename.start,
         import_stmt.filename.length);
     import_stmt.ast = (imp.is_native) ?
-        native_import(parser, imp.native, import_stmt.filename.line) :
+        native_import(parser, imp.native, import_stmt.filename.line, import_stmt.filename.column) :
         file_import(parser, imp.file);
     return CREATE_STMT_IMPORT(import_stmt);
 }
 
-static Stmt* native_import(Parser* const parser, NativeImport import, int line) {
+static Stmt* native_import(Parser* const parser, NativeImport import, int line, int column) {
     ListStmt* list = create_stmt_list();
     for (int i = 0; i < import.functions_length; i++) {
         NativeFunction fn = import.functions[i];
@@ -546,6 +546,7 @@ static Stmt* native_import(Parser* const parser, NativeImport import, int line) 
         Symbol native_symbol = create_symbol(
             create_symbol_name(fn.name, fn.length),
             line,
+            column,
             CREATE_TYPE_UNKNOWN());
         native_symbol.kind = SYMBOL_VAR;
         native_symbol.type = fn.type;
@@ -726,7 +727,8 @@ static void add_params_to_body(Parser* const parser, Symbol* fn_sym) {
             create_symbol_name(
                 CLASS_SELF_NAME,
                 CLASS_SELF_LENGTH),
-            fn_sym->declaration_line,
+            fn_sym->line,
+            fn_sym->column,
             create_type_object(parser->current_class_type));
         TRY_REGISTER_SYMBOL(parser, self, NULL);
     }

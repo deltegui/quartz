@@ -28,7 +28,7 @@ static void upvalues_print(const SymbolSet* set) {
             "'%.*s'(%d), ",
             SYMBOL_NAME_LENGTH(current->name),
             SYMBOL_NAME_START(current->name),
-            current->declaration_line);
+            current->line);
     });
 }
 
@@ -54,7 +54,7 @@ static void symbol_table_print(const SymbolTable* table) {
             "| %.*s\t| %d\t| ",
             SYMBOL_NAME_LENGTH(current->name),
             SYMBOL_NAME_START(current->name),
-            current->declaration_line);
+            current->line);
         TYPE_PRINT(current->type);
 
         printf("\t| %s\t", (current->global ? "Yes" : "No"));

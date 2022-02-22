@@ -55,7 +55,8 @@ typedef struct {
 
     SymbolVisibility visibility;
 
-    uint32_t declaration_line;
+    uint32_t line;
+    uint32_t column;
     uint16_t constant_index;
 
     bool global;
@@ -75,7 +76,7 @@ typedef struct {
 } Symbol;
 
 Symbol create_symbol_from_token(Token* token, Type* type);
-Symbol create_symbol(SymbolName name, int line, Type* type);
+Symbol create_symbol(SymbolName name, int line, int column, Type* type);
 void free_symbol(Symbol* const symbol);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 

@@ -26,16 +26,18 @@ Symbol create_symbol_from_token(Token* token, Type* type) {
     return create_symbol(
         create_symbol_name(token->start, token->length),
         token->line,
+        token->column,
         type);
 }
 
-Symbol create_symbol(SymbolName name, int line, Type* type) {
+Symbol create_symbol(SymbolName name, int line, int column, Type* type) {
     Symbol symbol = (Symbol){
         .kind = kind_from_type(type),
         .name = name,
         .type = type,
         .visibility = SYMBOL_VISIBILITY_UNDEFINED,
-        .declaration_line = line,
+        .line = line,
+        .column = column,
         .constant_index = UINT16_MAX,
         .global = false, // we dont know
         .assigned = true, // normally is

@@ -514,7 +514,8 @@ static Token symbol_to_token_identifier(Symbol* symbol) {
         .kind = TOKEN_IDENTIFIER,
         .start = SYMBOL_NAME_START(symbol->name),
         .length = SYMBOL_NAME_LENGTH(symbol->name),
-        .line = symbol->declaration_line,
+        .line = symbol->line,
+        .column = symbol->column,
     };
 }
 
@@ -570,8 +571,8 @@ static void compile_native(void* ctx, NativeFunctionStmt* native) {
     identifier.kind = TOKEN_IDENTIFIER;
     identifier.start = native->name;
     identifier.length = native->length;
-    identifier.line = symbol->declaration_line;
-    identifier.column = 0;
+    identifier.line = symbol->line;
+    identifier.column = symbol->column;
 
     uint16_t native_index = get_variable_index(compiler, &identifier);
     update_symbol_variable_info(compiler, symbol, native_index);

@@ -7,7 +7,7 @@ static Value stdtime_time(int argc, Value* argv);
 
 void register_stdtime(CTable* table) {
     Type* time_type = create_type_function();\
-    time_type->function->return_type = CREATE_TYPE_NUMBER();
+    time_type->function.return_type = CREATE_TYPE_NUMBER();
 
     NativeFunction time = (NativeFunction) {
         .name = "time",

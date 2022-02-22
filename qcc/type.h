@@ -18,50 +18,46 @@ typedef enum {
     TYPE_UNKNOWN,
 } TypeKind;
 
-// TODO invert this thing (create a fordward decl of Type instead of these)
-struct s_func_type;
-struct s_alias_type;
-struct s_class_type;
-struct s_object_type;
+struct s_type;
+
+typedef struct {
+    Vector param_types;
+    struct s_type* return_type;
+} FunctionType;
+
+typedef struct {
+    struct s_type* def;
+    char* identifier;
+} AliasType;
+
+typedef struct {
+    int length;
+    char* identifier;
+} ClassType;
+
+typedef struct {
+    struct s_type* klass;
+} ObjectType;
 
 typedef struct s_type {
     TypeKind kind;
     union {
-        struct s_func_type* function;
-        struct s_alias_type* alias;
-        struct s_class_type* klass;
-        struct s_object_type* object;
+        FunctionType function;
+        AliasType alias;
+        ClassType klass;
+        ObjectType object;
     };
 } Type;
 
-typedef struct s_func_type {
-    Vector param_types;
-    Type* return_type;
-} FunctionType;
-
-typedef struct s_alias_type {
-    Type* def;
-    char identifier[];
-} AliasType;
-
-typedef struct s_class_type {
-    int length;
-    char identifier[];
-} ClassType;
-
-typedef struct s_object_type {
-    Type* klass;
-} ObjectType;
-
-#define TYPE_ALIAS_RESOLVE(type_alias) ((type_alias)->alias->def)
+#define TYPE_ALIAS_RESOLVE(type_alias) ((type_alias)->alias.def)
 #define RESOLVE_IF_TYPEALIAS(type) ((type)->kind == TYPE_ALIAS) ? TYPE_ALIAS_RESOLVE(type) : type
 
-#define TYPE_FN_RETURN(type_fn) ((type_fn)->function->return_type)
-#define TYPE_FN_PARAMS(type_fn) ((type_fn)->function->param_types)
+#define TYPE_FN_RETURN(type_fn) ((type_fn)->function.return_type)
+#define TYPE_FN_PARAMS(type_fn) ((type_fn)->function.param_types)
 #define TYPE_FN_ADD_PARAM(type_fn, param_type) (VECTOR_ADD_TYPE(&TYPE_FN_PARAMS(type_fn), param_type))
 
-#define TYPE_OBJECT_CLASS_NAME(type_obj) ((type_obj)->object->klass->klass->identifier)
-#define TYPE_OBJECT_CLASS_LENGTH(type_obj) ((type_obj)->object->klass->klass->length)
+#define TYPE_OBJECT_CLASS_NAME(type_obj) ((type_obj)->object.klass->klass.identifier)
+#define TYPE_OBJECT_CLASS_LENGTH(type_obj) ((type_obj)->object.klass->klass.length)
 
 #define TYPE_IS_OBJECT(type) ((type)->kind == TYPE_OBJECT)
 #define TYPE_IS_CLASS(type) ((type)->kind == TYPE_CLASS)

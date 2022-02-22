@@ -13,8 +13,8 @@ static Value stdconv_ston(int argc, Value* argv);
 
 #define DEFINE_TYPE(name, param_type)\
     Type* name = create_type_function();\
-    VECTOR_ADD_TYPE(&name->function->param_types, param_type);\
-    name->function->return_type = CREATE_TYPE_STRING()
+    VECTOR_ADD_TYPE(&name->function.param_types, param_type);\
+    name->function.return_type = CREATE_TYPE_STRING()
 
 void register_stdconv(CTable* table) {
     DEFINE_TYPE(ntos_type, CREATE_TYPE_NUMBER());
@@ -34,10 +34,10 @@ void register_stdconv(CTable* table) {
     };
 
     Type* sum_type = create_type_function();
-    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_NUMBER());
-    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_NUMBER());
-    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_BOOL());
-    sum_type->function->return_type = CREATE_TYPE_VOID();
+    VECTOR_ADD_TYPE(&sum_type->function.param_types, CREATE_TYPE_NUMBER());
+    VECTOR_ADD_TYPE(&sum_type->function.param_types, CREATE_TYPE_NUMBER());
+    VECTOR_ADD_TYPE(&sum_type->function.param_types, CREATE_TYPE_BOOL());
+    sum_type->function.return_type = CREATE_TYPE_VOID();
     NativeFunction sum = (NativeFunction) {
         .name = "__t_sum",
         .length = 7,
@@ -46,7 +46,7 @@ void register_stdconv(CTable* table) {
     };
 
     Type* ston_type = create_type_function();
-    VECTOR_ADD_TYPE(&ston_type->function->param_types, CREATE_TYPE_STRING());
+    VECTOR_ADD_TYPE(&ston_type->function.param_types, CREATE_TYPE_STRING());
     TYPE_FN_RETURN(ston_type) = CREATE_TYPE_NUMBER();
     NativeFunction ston = (NativeFunction) {
         .name = "ston",

@@ -283,7 +283,7 @@ Symbol* scoped_symbol_get_class_prop(ScopedSymbolTable* const table, Type* class
     assert(class_sym != NULL);
     assert(class_sym->kind == SYMBOL_CLASS);
     assert(class_sym->klass.body != NULL);
-    assert(type_equals(class_sym->type, class_type->object->klass));
+    assert(type_equals(class_sym->type, class_type->object.klass));
     *class_sym_out = class_sym;
     return symbol_lookup_str(class_sym->klass.body, prop->start, prop->length);
 }

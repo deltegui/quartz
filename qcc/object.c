@@ -66,7 +66,7 @@ ObjNative* new_native(const char* name, int length, native_fn_t function, Type* 
     ObjNative* native = ALLOC_OBJ(ObjNative, OBJ_NATIVE, type);
     native->name = name;
     native->length = length;
-    native->arity = type->function->param_types.size;
+    native->arity = type->function.param_types.size;
     native->function = function;
     return native;
 }

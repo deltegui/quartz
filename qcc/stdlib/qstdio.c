@@ -13,8 +13,8 @@ static Value stdio_readstr(int argc, Value* argv);
 
 void register_stdio(CTable* table) {
     Type* print_type = create_type_function();
-    VECTOR_ADD_TYPE(&print_type->function->param_types, CREATE_TYPE_STRING());
-    print_type->function->return_type = CREATE_TYPE_VOID();
+    VECTOR_ADD_TYPE(&print_type->function.param_types, CREATE_TYPE_STRING());
+    print_type->function.return_type = CREATE_TYPE_VOID();
 
     NativeFunction println = (NativeFunction) {
         .name = "println",
@@ -31,7 +31,7 @@ void register_stdio(CTable* table) {
     };
 
     Type* readstr_type = create_type_function();
-    readstr_type->function->return_type = CREATE_TYPE_STRING();
+    readstr_type->function.return_type = CREATE_TYPE_STRING();
 
     NativeFunction readstr = (NativeFunction) {
         .name = "readstr",

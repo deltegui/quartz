@@ -12,6 +12,9 @@ endif
 default:
 	$(CC) $(LIBS) -Wall $(SOURCES) -o ./quartz
 
+clean:
+	rm ./quartz
+
 release:
 	$(CC) $(LIBS) -Wall -O3 $(SOURCES) -o ./quartz
 

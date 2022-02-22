@@ -86,23 +86,19 @@ static void free_pool_node(PoolNode* const node) {
 
 static void free_type(Type* const type) {
     switch (type->kind) {
-    case TYPE_CLASS: {
-        free(type->klass);
+    case TYPE_FUNCTION: {
+        free_vector(&type->function.param_types);
         break;
     }
-    case TYPE_FUNCTION: {
-        free_vector(&type->function->param_types);
-        free(type->function);
+    case TYPE_CLASS: {
+        free(type->klass.identifier);
         break;
     }
     case TYPE_ALIAS: {
-        free(type->alias);
+        free(type->alias.identifier);
         break;
     }
-    case TYPE_OBJECT: {
-        free(type->object);
-        break;
-    }
+    case TYPE_OBJECT:
     case TYPE_NUMBER:
     case TYPE_BOOL:
     case TYPE_NIL:
@@ -153,13 +149,10 @@ Type* create_type_simple(TypeKind kind) {
 }
 
 Type* create_type_function() {
-    FunctionType* fn_type = (FunctionType*) malloc(sizeof(FunctionType));
-    init_vector(&fn_type->param_types, sizeof(Type*));
-    fn_type->return_type = CREATE_TYPE_VOID();
-    Type type = (Type) {
-        .kind = TYPE_FUNCTION,
-        .function = fn_type,
-    };
+    Type type;
+    type.kind = TYPE_FUNCTION;
+    type.function.return_type = CREATE_TYPE_VOID();
+    init_vector(&type.function.param_types, sizeof(Type*));
     return type_pool_add(type);
 }
 
@@ -167,37 +160,29 @@ Type* create_type_alias(const char* identifier, int length, Type* original) {
     // So, the token pool outlives other compiler data structures like the original
     // code buffer, the AST or the Symbol Table. Knowing that, the alias identifier
     // must be copied.
-    AliasType* alias = (AliasType*) malloc(sizeof(AliasType) + (sizeof(char) * length + 1));
-    memcpy(alias->identifier, identifier, length);
-    alias->identifier[length] = '\0';
-    alias->def = original;
-    Type type = (Type) {
-        .kind = TYPE_ALIAS,
-        .alias = alias,
-    };
+    Type type;
+    type.kind = TYPE_ALIAS;
+    type.alias.def = original;
+    type.alias.identifier = (char*) malloc(sizeof(char) * (length + 1));
+    memcpy(type.alias.identifier, identifier, length);
+    type.alias.identifier[length] = '\0';
     return type_pool_add(type);
 }
 
 Type* create_type_class(const char* identifier, int length) {
-    ClassType* klass_type = (ClassType*) malloc(sizeof(ClassType) + (sizeof(char) * length + 1));
-    memcpy(klass_type->identifier, identifier, length);
-    klass_type->identifier[length] = '\0';
-    klass_type->length = length;
-    Type type = (Type) {
-        .kind = TYPE_CLASS,
-        .klass = klass_type,
-    };
+    Type type;
+    type.kind = TYPE_CLASS;
+    type.klass.identifier = (char*) malloc(sizeof(char) * (length + 1));
+    type.klass.length = length;
+    memcpy(type.klass.identifier, identifier, length);
+    type.klass.identifier[length] = '\0';
     return type_pool_add(type);
 }
 
 Type* create_type_object(Type* klass) {
-    assert(klass->kind == TYPE_CLASS);
-    ObjectType* obj_type = (ObjectType*) malloc(sizeof(ObjectType));
-    obj_type->klass = klass;
-    Type type = (Type) {
-        .kind = TYPE_OBJECT,
-        .object = obj_type,
-    };
+    Type type;
+    type.kind = TYPE_OBJECT;
+    type.object.klass = klass;
     return type_pool_add(type);
 }
 
@@ -232,14 +217,14 @@ static void type_alias_print(FILE* out, const Type* const type) {
     fprintf(
         out,
         "Alias: '%s' = ",
-        type->alias->identifier);
-    type_fprint(out, type->alias->def);
+        type->alias.identifier);
+    type_fprint(out, type->alias.def);
 }
 
 static void type_function_print(FILE* out, const Type* const type) {
     assert(type->kind == TYPE_FUNCTION);
-    Type** params = VECTOR_AS_TYPES(&type->function->param_types);
-    uint32_t size = type->function->param_types.size;
+    Type** params = VECTOR_AS_TYPES(&type->function.param_types);
+    uint32_t size = type->function.param_types.size;
     fprintf(out, "(");
     for (uint32_t i = 0; i < size; i++) {
         type_fprint(out, params[i]);
@@ -248,18 +233,18 @@ static void type_function_print(FILE* out, const Type* const type) {
         }
     }
     fprintf(out, "): ");
-    type_fprint(out, type->function->return_type);
+    type_fprint(out, type->function.return_type);
 }
 
 static void type_class_print(FILE* out, const Type* const type) {
     assert(type->kind == TYPE_CLASS);
-    fprintf(out, "Class<%.*s>", type->klass->length, type->klass->identifier);
+    fprintf(out, "Class<%.*s>", type->klass.length, type->klass.identifier);
 }
 
 static void type_object_print(FILE* out, const Type* const type) {
     assert(type->kind == TYPE_OBJECT);
     fprintf(out, "Instance of ");
-    type_class_print(out, type->object->klass);
+    type_class_print(out, type->object.klass);
 }
 
 bool type_equals(Type* first, Type* second) {
@@ -282,11 +267,11 @@ bool type_equals(Type* first, Type* second) {
 }
 
 static bool type_function_equals(Type* first, Type* second) {
-    assert(first->function != NULL && second->function != NULL);
-    if (! fn_params_equals(first->function, second->function)) {
+    assert(first->kind == TYPE_FUNCTION && second->kind == TYPE_FUNCTION);
+    if (! fn_params_equals(&first->function, &second->function)) {
         return false;
     }
-    return first->function->return_type == second->function->return_type;
+    return first->function.return_type == second->function.return_type;
 }
 
 static bool fn_params_equals(FunctionType* first, FunctionType* second) {
@@ -306,12 +291,12 @@ static bool fn_params_equals(FunctionType* first, FunctionType* second) {
 }
 
 static bool type_class_equals(Type* first, Type* second) {
-    assert(first->klass != NULL && second->klass != NULL);
-    if (first->klass->length != second->klass->length) {
+    assert(first->kind == TOKEN_CLASS && second->kind == TOKEN_CLASS);
+    if (first->klass.length != second->klass.length) {
         return false;
     }
     return memcmp(
-        first->klass->identifier,
-        second->klass->identifier,
-        first->klass->length) == 0;
+        first->klass.identifier,
+        second->klass.identifier,
+        first->klass.length) == 0;
 }

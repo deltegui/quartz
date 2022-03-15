@@ -483,6 +483,18 @@ static void should_tokenize_self() {
     );
 }
 
+static void should_tokenize_brakets() {
+    assert_types(
+        "   hello[1]; ",
+        5,
+        TOKEN_IDENTIFIER,
+        TOKEN_LEFT_BRAKET,
+        TOKEN_NUMBER,
+        TOKEN_RIGHT_BRAKET,
+        TOKEN_SEMICOLON
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -511,7 +523,8 @@ int main(void) {
         cmocka_unit_test(should_import_correctly),
         cmocka_unit_test(should_tokenize_class_correctly),
         cmocka_unit_test(should_tokenize_public),
-        cmocka_unit_test(should_tokenize_new)
+        cmocka_unit_test(should_tokenize_new),
+        cmocka_unit_test(should_tokenize_brakets)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

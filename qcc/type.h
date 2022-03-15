@@ -6,6 +6,7 @@
 #include "vector.h"
 
 typedef enum {
+    TYPE_ARRAY,
     TYPE_CLASS,
     TYPE_OBJECT,
     TYPE_ALIAS,
@@ -16,6 +17,7 @@ typedef enum {
     TYPE_FUNCTION,
     TYPE_VOID,
     TYPE_UNKNOWN,
+    TYPE_ANY,
 } TypeKind;
 
 struct s_type;
@@ -39,6 +41,10 @@ typedef struct {
     struct s_type* klass;
 } ObjectType;
 
+typedef struct {
+    struct s_type* inner;
+} ArrayType;
+
 typedef struct s_type {
     TypeKind kind;
     union {
@@ -46,6 +52,7 @@ typedef struct s_type {
         AliasType alias;
         ClassType klass;
         ObjectType object;
+        ArrayType array;
     };
 } Type;
 
@@ -59,6 +66,7 @@ typedef struct s_type {
 #define TYPE_OBJECT_CLASS_NAME(type_obj) ((type_obj)->object.klass->klass.identifier)
 #define TYPE_OBJECT_CLASS_LENGTH(type_obj) ((type_obj)->object.klass->klass.length)
 
+#define TYPE_IS_ARRAY(type) ((type)->kind == TYPE_ARRAY)
 #define TYPE_IS_OBJECT(type) ((type)->kind == TYPE_OBJECT)
 #define TYPE_IS_CLASS(type) ((type)->kind == TYPE_CLASS)
 #define TYPE_IS_ALIAS(type) ((type)->kind == TYPE_ALIAS)
@@ -69,6 +77,7 @@ typedef struct s_type {
 #define TYPE_IS_FUNCTION(type) ((type)->kind == TYPE_FUNCTION)
 #define TYPE_IS_VOID(type) ((type)->kind == TYPE_VOID)
 #define TYPE_IS_UNKNOWN(type) ((type)->kind == TYPE_UNKNOWN)
+#define TYPE_IS_ANY(type) ((type)->kind == TYPE_ANY)
 
 void init_type_pool();
 void free_type_pool();
@@ -78,6 +87,7 @@ Type* create_type_function();
 Type* create_type_alias(const char* identifier, int length, Type* original);
 Type* create_type_class(const char* identifier, int length);
 Type* create_type_object(Type* klass);
+Type* create_type_array(Type* inner);
 
 #define CREATE_TYPE_NUMBER() create_type_simple(TYPE_NUMBER)
 #define CREATE_TYPE_BOOL() create_type_simple(TYPE_BOOL)
@@ -85,11 +95,17 @@ Type* create_type_object(Type* klass);
 #define CREATE_TYPE_STRING() create_type_simple(TYPE_STRING)
 #define CREATE_TYPE_VOID() create_type_simple(TYPE_VOID)
 #define CREATE_TYPE_UNKNOWN() create_type_simple(TYPE_UNKNOWN)
+#define CREATE_TYPE_ANY() create_type_simple(TYPE_ANY)
 
 #define TYPE_PRINT(typ) type_fprint(stdout, typ)
 #define ERR_TYPE_PRINT(typ) type_fprint(stderr, typ)
 
-#define TYPE_IS_ASSIGNABLE(var_type, expr_type) ((TYPE_IS_NIL(expr_type) && TYPE_IS_OBJECT(var_type)) || type_equals(var_type, expr_type))
+#define TYPE_IS_ASSIGNABLE(var_type, expr_type) (\
+        (TYPE_IS_NIL(expr_type) && TYPE_IS_OBJECT(var_type)) ||\
+        (TYPE_IS_ANY(expr_type)) ||\
+        (TYPE_IS_ANY(var_type)) ||\
+        type_equals(var_type, expr_type)\
+    )
 
 Type* simple_type_from_token_kind(TokenKind kind);
 void type_fprint(FILE* out, const Type* const type);

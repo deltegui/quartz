@@ -388,6 +388,7 @@ static void print_call(void* ctx, CallExpr* call);
 static void print_new(void* ctx, NewExpr* new_);
 static void print_prop(void* ctx, PropExpr* prop);
 static void print_prop_assigment(void* ctx, PropAssigmentExpr* prop);
+static void print_arr_expr(void* ctx, ArrayExpr* arr);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
@@ -399,6 +400,7 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_new = print_new,
     .visit_prop = print_prop,
     .visit_prop_assigment = print_prop_assigment,
+    .visit_array = print_arr_expr,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
@@ -553,6 +555,21 @@ static void print_call(void* ctx, CallExpr* call) {
         pretty_print("Params: [\n");
         OFFSET({
             for (uint32_t i = 0; i < call->params.size; i++) {
+                ACCEPT_EXPR(exprs[i]);
+            }
+        });
+        pretty_print("]\n");
+    });
+    pretty_print("]\n");
+}
+
+static void print_arr_expr(void* ctx, ArrayExpr* arr) {
+    Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
+    pretty_print("ArrayExpr: [\n");
+    OFFSET({
+        pretty_print("Elements: [\n");
+        OFFSET({
+            for (uint32_t i = 0; i < arr->elements.size; i++) {
                 ACCEPT_EXPR(exprs[i]);
             }
         });

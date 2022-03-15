@@ -80,6 +80,12 @@ static void free_object(Obj* obj) {
         FREE(ObjBindedMethod, obj);
         break;
     }
+    case OBJ_ARRAY: {
+        ObjArray* arr = OBJ_AS_ARRAY(obj);
+        free_valuearray(&arr->elements);
+        FREE(ObjArray, arr);
+        break;
+    }
     }
 }
 
@@ -229,6 +235,11 @@ static void blacken_object(Obj* obj) {
         ObjBindedMethod* binded = OBJ_AS_BINDED_METHOD(obj);
         mark_object((Obj*) binded->instance);
         mark_object(binded->method);
+        break;
+    }
+    case OBJ_ARRAY: {
+        ObjArray* arr = OBJ_AS_ARRAY(obj);
+        mark_valuearray(&arr->elements);
         break;
     }
     }

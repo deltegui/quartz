@@ -55,6 +55,13 @@ Value* function_get_upvalue(ObjFunction* const function, int slot) {
     return target;
 }
 
+ObjArray* new_array(Type* type) {
+    assert(TYPE_IS_ARRAY(type));
+    ObjArray* arr = ALLOC_OBJ(ObjArray, OBJ_ARRAY, type);
+    init_valuearray(&arr->elements);
+    return arr;
+}
+
 ObjClosed* new_closed(Value value) {
     // TODO again, which type should be a ObjClosed (look vm.c too)
     ObjClosed* closed = ALLOC_OBJ(ObjClosed, OBJ_CLOSED, CREATE_TYPE_UNKNOWN());
@@ -189,6 +196,13 @@ void print_object(Obj* const obj) {
         ObjBindedMethod* binded = OBJ_AS_BINDED_METHOD(obj);
         printf("Binded Method: ");
         print_object(binded->method);
+        break;
+    }
+    case OBJ_ARRAY: {
+        ObjArray* arr = OBJ_AS_ARRAY(obj);
+        printf("<Array with %d elements: ", arr->elements.size);
+        TYPE_PRINT(obj->type);
+        printf(">");
         break;
     }
     }

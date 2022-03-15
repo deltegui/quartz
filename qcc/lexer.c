@@ -354,6 +354,8 @@ static inline Token scan_token(Lexer* const lexer) {
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '{': return create_token(lexer, TOKEN_LEFT_BRACE);
     case '}': return create_token(lexer, TOKEN_RIGHT_BRACE);
+    case '[': return create_token(lexer, TOKEN_LEFT_BRAKET);
+    case ']': return create_token(lexer, TOKEN_RIGHT_BRAKET);
     case '.': return create_token(lexer, TOKEN_DOT);
     case ';': return create_token(lexer, TOKEN_SEMICOLON);
     case ':': return create_token(lexer, TOKEN_COLON);

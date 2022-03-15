@@ -45,6 +45,7 @@ Value stack_pop();
 void qvm_execute(ObjFunction* func);
 void qvm_push_gray(Obj* obj);
 Obj* qvm_pop_gray();
+void runtime_error(const char* message);
 
 extern QVM qvm;
 

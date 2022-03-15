@@ -169,6 +169,7 @@ static void compile_call(void* ctx, CallExpr* call);
 static void compile_new(void* ctx, NewExpr* new_);
 static void compile_prop(void* ctx, PropExpr* prop);
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
+static void compile_array(void* ctx, ArrayExpr* arr);
 
 ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
@@ -180,6 +181,7 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_new = compile_new,
     .visit_prop = compile_prop,
     .visit_prop_assigment = compile_prop_assigment,
+    .visit_array = compile_array,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -1043,6 +1045,10 @@ static void compile_prop(void* ctx, PropExpr* prop) {
         OP_BINDED_METHOD :
         OP_GET_PROP;
     emit_short(compiler, opcode, prop_symbol->constant_index);
+}
+
+static void compile_array(void* ctx, ArrayExpr* arr) {
+    // Compiler* compiler = (Compiler*) ctx;
 }
 
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {

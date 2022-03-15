@@ -75,6 +75,7 @@ static void parse_function_body(Parser* const parser, FunctionStmt* fn, Symbol* 
 static void parse_function_params_declaration(Parser* const parser, Symbol* symbol);
 static void add_params_to_body(Parser* const parser, Symbol* fn_sym);
 static Type* parse_type(Parser* const parser);
+static Type* parse_array_type(Parser* const parser);
 static Type* parse_function_type(Parser* const parser);
 
 static Stmt* statement(Parser* const parser);
@@ -97,11 +98,13 @@ static Expr* identifier(Parser* const parser, bool can_assign);
 static Expr* self(Parser* const parser, bool can_assign);
 static Expr* unary(Parser* const parser, bool can_assign);
 static Expr* new_(Parser* const parser, bool can_assign);
+static Expr* arr(Parser* const parser, bool can_assign);
 static Expr* binary(Parser* const parser, bool can_assign, Expr* left);
 static Expr* call(Parser* const parser, bool can_assign, Expr* left);
 static Expr* prop(Parser* const parser, bool can_assign, Expr* left);
 
 static void parse_call_params(Parser* const parser, Vector* params);
+static void parse_expression_list(Parser* const parser, Vector* params, TokenKind end, const char* error_end_missing);
 
 ParseRule rules[] = {
     [TOKEN_END]           = {NULL,        NULL,   PREC_NONE},
@@ -123,6 +126,8 @@ ParseRule rules[] = {
     [TOKEN_COLON]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_LEFT_BRACE]    = {NULL,        NULL,   PREC_NONE},
     [TOKEN_RIGHT_BRACE]   = {NULL,        NULL,   PREC_NONE},
+    [TOKEN_LEFT_BRAKET]   = {arr,         NULL,   PREC_NONE},
+    [TOKEN_RIGHT_BRAKET]  = {NULL,        NULL,   PREC_NONE},
     [TOKEN_COMMA]         = {NULL,        NULL,   PREC_NONE},
 
     [TOKEN_EQUAL_EQUAL]   = {NULL,        binary, PREC_EQUALITY},
@@ -751,6 +756,9 @@ static Type* parse_type(Parser* const parser) {
     if (parser->current.kind == TOKEN_LEFT_PAREN) {
         return parse_function_type(parser);
     }
+    if (parser->current.kind == TOKEN_LEFT_BRAKET) {
+        return parse_array_type(parser);
+    }
     if (parser->current.kind != TOKEN_IDENTIFIER) {
         return CREATE_TYPE_UNKNOWN();
     }
@@ -769,6 +777,14 @@ static Type* parse_type(Parser* const parser) {
         return create_type_object(symbol->type);
     }
     return symbol->type;
+}
+
+static Type* parse_array_type(Parser* const parser) {
+    consume(parser, TOKEN_LEFT_BRAKET, "Expected left braket in array type");
+    consume(parser, TOKEN_RIGHT_BRAKET, "Expected right braket in array type");
+    Type* inner = parse_type(parser);
+    // advance(parser); // consume type
+    return create_type_array(inner);
 }
 
 static Type* parse_function_type(Parser* const parser) {
@@ -1013,7 +1029,15 @@ static Expr* call(Parser* const parser, bool can_assign, Expr* left) {
 }
 
 static void parse_call_params(Parser* const parser, Vector* params) {
-    if (parser->current.kind != TOKEN_RIGHT_PAREN) {
+    parse_expression_list(
+        parser,
+        params,
+        TOKEN_RIGHT_PAREN,
+        "Expected ')' to enclose '(' in function call");
+}
+
+static void parse_expression_list(Parser* const parser, Vector* params, TokenKind end, const char* error_end_missing) {
+    if (parser->current.kind != end) {
         for (;;) {
             Expr* param = expression(parser);
             VECTOR_ADD_EXPR(params, param);
@@ -1025,8 +1049,8 @@ static void parse_call_params(Parser* const parser, Vector* params) {
     }
     consume(
         parser,
-        TOKEN_RIGHT_PAREN,
-        "Expected ')' to enclose '(' in function call");
+        end,
+        error_end_missing);
 }
 
 static Expr* grouping(Parser* const parser, bool can_assign) {
@@ -1135,6 +1159,20 @@ static Expr* prop(Parser* const parser, bool can_assign, Expr* left) {
     prop.prop = property;
     prop.object_type = NULL; // we dont know yet
     return CREATE_PROP_EXPR(prop);
+}
+
+static Expr* arr(Parser* const parser, bool can_assign) {
+    ArrayExpr array;
+    array.left_braket = parser->current;
+    init_vector(&array.elements, sizeof(Expr*));
+
+    parse_expression_list(
+        parser,
+        &array.elements,
+        TOKEN_RIGHT_BRAKET,
+        "Expected array expression to end with ']'");
+
+    return CREATE_ARRAY_EXPR(array);
 }
 
 static Expr* identifier(Parser* const parser, bool can_assign) {

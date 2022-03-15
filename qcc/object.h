@@ -70,6 +70,12 @@ typedef struct {
     Obj* method; // This can be ObjFunction or ObjNative
 } ObjBindedMethod;
 
+
+typedef struct {
+    Obj obj;
+    ValueArray elements;
+} ObjArray;
+
 void print_object(Obj* const obj);
 bool object_is_kind(Obj* const obj, ObjKind kind);
 void mark_object(Obj* const obj);
@@ -117,4 +123,8 @@ void object_set_property(ObjInstance* obj, uint8_t index, Value val);
 
 ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method);
 
+#define OBJ_IS_ARRAY(obj) (object_is_kind(obj, OBJ_ARRAY))
+#define OBJ_AS_ARRAY(obj) ((ObjArray*) obj)
+
+ObjArray* new_array(Type* type);
 #endif

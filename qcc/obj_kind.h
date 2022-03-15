@@ -9,6 +9,7 @@ typedef enum {
     OBJ_NATIVE,
     OBJ_CLASS,
     OBJ_INSTANCE,
+    OBJ_ARRAY,
 } ObjKind;
 
 #define CLASS_CONSTRUCTOR_NAME "init"

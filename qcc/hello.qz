@@ -1,15 +1,6 @@
 import 'stdio';
+import 'stdconv';
 
-class Blob {
-    pub fn init() {
-        println("HEELLOOO STRUCTS");
-    }
-}
 
-typedef Pipo = Blob;
+typeof([]);
 
-fn create_blob(): ElAmigos {
-    return new Blob();
-}
-
-create_blob();

@@ -12,6 +12,7 @@ static Type nil_type;
 static Type string_type;
 static Type void_type;
 static Type unknown_type;
+static Type any_type;
 
 // A type pool it's a place where types by value are
 // stored. The rest of the interpreter just have
@@ -46,6 +47,7 @@ static void type_alias_print(FILE* out, const Type* const type);
 static void type_function_print(FILE* out, const Type* const type);
 static void type_class_print(FILE* out, const Type* const type);
 static void type_object_print(FILE* out, const Type* const type);
+static void type_array_print(FILE* out, const Type* const type);
 static bool fn_params_equals(FunctionType* first, FunctionType* second);
 static bool type_function_equals(Type* first, Type* second);
 static bool type_class_equals(Type* first, Type* second);
@@ -66,6 +68,7 @@ void init_type_pool() {
     string_type.kind = TYPE_STRING;
     void_type.kind = TYPE_VOID;
     unknown_type.kind = TYPE_UNKNOWN;
+    any_type.kind = TYPE_ANY;
 }
 
 void free_type_pool() {
@@ -98,6 +101,7 @@ static void free_type(Type* const type) {
         free(type->alias.identifier);
         break;
     }
+    case TYPE_ANY:
     case TYPE_OBJECT:
     case TYPE_NUMBER:
     case TYPE_BOOL:
@@ -105,6 +109,7 @@ static void free_type(Type* const type) {
     case TYPE_STRING:
     case TYPE_VOID:
     case TYPE_UNKNOWN:
+    case TYPE_ARRAY:
         break;
     }
 }
@@ -140,6 +145,7 @@ Type* create_type_simple(TypeKind kind) {
     case TYPE_STRING: return &string_type;
     case TYPE_VOID: return &void_type;
     case TYPE_UNKNOWN: return &unknown_type;
+    case TYPE_ANY: return &any_type;
     default:
         // If we reach this assert, you forget to put a case in the swith
         // or you are calling the wrong function.
@@ -186,6 +192,13 @@ Type* create_type_object(Type* klass) {
     return type_pool_add(type);
 }
 
+Type* create_type_array(Type* inner) {
+    Type type;
+    type.kind = TYPE_ARRAY;
+    type.array.inner = inner;
+    return type_pool_add(type);
+}
+
 Type* simple_type_from_token_kind(TokenKind kind) {
     switch (kind) {
     case TOKEN_TYPE_NUMBER: return CREATE_TYPE_NUMBER();
@@ -209,7 +222,18 @@ void type_fprint(FILE* out, const Type* const type) {
     case TYPE_CLASS: type_class_print(out, type); break;
     case TYPE_VOID: fprintf(out, "Void"); break;
     case TYPE_UNKNOWN: fprintf(out, "Unknown"); break;
+    case TYPE_ANY: fprintf(out, "Any"); break;
+    case TYPE_ARRAY: type_array_print(out, type); break;
     }
+}
+
+static void type_array_print(FILE* out, const Type* const type) {
+    assert(type->kind == TYPE_ARRAY);
+    fprintf(
+        out,
+        "[");
+    type_fprint(out, type->array.inner);
+    fprintf(out, "]");
 }
 
 static void type_alias_print(FILE* out, const Type* const type) {
@@ -262,6 +286,9 @@ bool type_equals(Type* first, Type* second) {
     }
     if (first->kind == TYPE_CLASS) {
         return type_class_equals(first, second);
+    }
+    if (first->kind == TYPE_ARRAY) {
+        return type_equals(first->array.inner, second->array.inner);
     }
     return true;
 }

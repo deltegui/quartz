@@ -71,6 +71,7 @@ static void typecheck_call(void* ctx, CallExpr* call);
 static void typecheck_new(void* ctx, NewExpr* new_);
 static void typecheck_prop(void* ctx, PropExpr* prop);
 static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
+static void typecheck_array(void* ctx, ArrayExpr* arr);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -82,6 +83,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_new = typecheck_new,
     .visit_prop = typecheck_prop,
     .visit_prop_assigment = typecheck_prop_assigment,
+    .visit_array= typecheck_array,
 };
 
 static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
@@ -490,6 +492,29 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
     }
 
     checker->last_type = prop_symbol->type;
+}
+
+static void typecheck_array(void* ctx, ArrayExpr* arr) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Type* inner = CREATE_TYPE_ANY();
+    Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
+    for (uint32_t i = 0; i < arr->elements.size; i++) {
+        ACCEPT_EXPR(checker, exprs[i]);
+        if (TYPE_IS_UNKNOWN(inner)) {
+            inner = checker->last_type;
+            continue;
+        }
+        if (! type_equals(inner, checker->last_type)) {
+            error(
+                checker,
+                &arr->left_braket,
+                "Not matching type in %d position of array. Expected all elements to have the same type.\n",
+                i);
+        }
+    }
+
+    checker->last_type = create_type_array(inner);
 }
 
 static void typecheck_new(void* ctx, NewExpr* new_) {

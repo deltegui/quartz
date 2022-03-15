@@ -23,7 +23,6 @@ Value value_default(Type* type) {
         Value str = OBJ_VALUE(copy_string("", 0), CREATE_TYPE_STRING());
         return str;
     }
-    case TYPE_NIL:
     default:
         return NIL_VALUE();
     }

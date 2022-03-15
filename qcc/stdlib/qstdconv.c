@@ -10,6 +10,7 @@ static Value stdconv_ntos(int argc, Value* argv);
 static Value stdconv_btos(int argc, Value* argv);
 static Value stdconv_sum(int argc, Value* argv);
 static Value stdconv_ston(int argc, Value* argv);
+static Value stdconv_typeof(int argc, Value* argv);
 
 #define DEFINE_TYPE(name, param_type)\
     Type* name = create_type_function();\
@@ -45,6 +46,16 @@ void register_stdconv(CTable* table) {
         .type = sum_type,
     };
 
+    Type* typeof_type = create_type_function();
+    VECTOR_ADD_TYPE(&typeof_type->function.param_types, CREATE_TYPE_ANY());
+    typeof_type->function.return_type = CREATE_TYPE_VOID();
+    NativeFunction typeof_ = (NativeFunction) {
+        .name = "typeof",
+        .length = 6,
+        .function = stdconv_typeof,
+        .type = typeof_type,
+    };
+
     Type* ston_type = create_type_function();
     VECTOR_ADD_TYPE(&ston_type->function.param_types, CREATE_TYPE_STRING());
     TYPE_FN_RETURN(ston_type) = CREATE_TYPE_NUMBER();
@@ -55,12 +66,13 @@ void register_stdconv(CTable* table) {
         .type = ston_type,
     };
 
-#define FN_LENGTH 4
+#define FN_LENGTH 5
     static NativeFunction functions[FN_LENGTH];
     functions[0] = ntos;
     functions[1] = btos;
     functions[2] = sum;
     functions[3] = ston;
+    functions[4] = typeof_;
 
     NativeImport stdconv_import = (NativeImport) {
         .name = "stdconv",
@@ -111,4 +123,11 @@ static Value stdconv_ston(int argc, Value* argv) {
     char* str = OBJ_AS_CSTRING(VALUE_AS_OBJ(argv[0]));
     double result = strtod(str, NULL);
     return NUMBER_VALUE(result);
+}
+
+static Value stdconv_typeof(int argc, Value* argv) {
+    assert(argc == 1);
+    type_fprint(stdout, argv[0].type);
+    printf("\n");
+    return NIL_VALUE();
 }

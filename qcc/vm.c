@@ -13,7 +13,7 @@ QVM qvm;
 
 static void init_gray_stack();
 static void free_gray_stack();
-static void runtime_error(const char* message);
+void runtime_error(const char* message);
 static inline void call_native(ObjNative* native, uint8_t param_count);
 static inline void call_function(Obj* obj, Value* slots, uint8_t param_count);
 static inline void call(uint8_t param_count);
@@ -79,7 +79,7 @@ Obj* qvm_pop_gray() {
     return qvm.gray_stack[--qvm.gray_stack_size];
 }
 
-static void runtime_error(const char* message) {
+void runtime_error(const char* message) {
     qvm.had_runtime_error = true;
     printf("%s\n", message);
 }

@@ -484,6 +484,19 @@ static void run(ObjFunction* func) {
             stack_push(OBJ_VALUE(binded, binded->obj.type));
             break;
         }
+        case OP_ARRAY: {
+            uint16_t size = READ_LONG();
+            ObjArray* arr = new_array(CREATE_TYPE_ANY());
+            for (uint16_t i = 0; i < size; i++) {
+                Value val = stack_pop();
+                if (arr->obj.type->array.inner->kind == TYPE_ANY) {
+                    arr->obj.type->array.inner = val.type;
+                }
+                valuearray_write(&arr->elements, val);
+            }
+            stack_push(OBJ_VALUE(arr, arr->obj.type));
+            break;
+        }
         }
 #ifdef VM_DEBUG
         printf("\t");

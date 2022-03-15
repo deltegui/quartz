@@ -6,6 +6,7 @@
 #include "type.h"
 #include "error.h"
 #include "import.h"
+#include "array.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -58,7 +59,9 @@ static bool consume(Parser* const parser, TokenKind expected, const char* msg);
 
 static Symbol* get_identifier_symbol(Parser* const parser, Token identifier);
 
+static Stmt* parse_global(Parser* parser);
 static Stmt* declaration_block(Parser* const parser, TokenKind limit_token);
+static void write_declaration_block(Parser* const parser, TokenKind limit, ListStmt* write);
 
 static Stmt* declaration(Parser* const parser);
 static Stmt* parse_variable(Parser* const parser);
@@ -379,16 +382,32 @@ Stmt* parse(Parser* const parser) {
     if (parser->current.kind == TOKEN_END) {
         return NULL;
     }
-    Stmt* ast = declaration_block(parser, TOKEN_END);
+    Stmt* ast = parse_global(parser);
 #ifdef PARSER_DEBUG
     ast_print(ast);
 #endif
     return ast;
 }
 
+static Stmt* parse_global(Parser* const parser) {
+    ListStmt* list = create_stmt_list();
+
+    Stmt* array_import = native_import(parser, array_get_import(), 0, 0);
+    stmt_list_add(list, array_import);
+
+    write_declaration_block(parser, TOKEN_END, list);
+
+    return CREATE_STMT_LIST(list);
+}
+
 static Stmt* declaration_block(Parser* const parser, TokenKind limit_token) {
     ListStmt* list = create_stmt_list();
-    while (parser->current.kind != limit_token && parser->current.kind != TOKEN_END) {
+    write_declaration_block(parser, limit_token, list);
+    return CREATE_STMT_LIST(list);
+}
+
+static void write_declaration_block(Parser* const parser, TokenKind limit, ListStmt* write) {
+    while (parser->current.kind != limit && parser->current.kind != TOKEN_END) {
         Stmt* stmt = declaration(parser);
         assert(stmt != NULL);
         if (parser->panic_mode) {
@@ -396,10 +415,9 @@ static Stmt* declaration_block(Parser* const parser, TokenKind limit_token) {
             free_stmt(stmt);
             syncronize(parser);
         } else {
-            stmt_list_add(list, stmt);
+            stmt_list_add(write, stmt);
         }
     }
-    return CREATE_STMT_LIST(list);
 }
 
 static Stmt* declaration(Parser* const parser) {

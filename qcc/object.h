@@ -126,5 +126,5 @@ ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method);
 #define OBJ_IS_ARRAY(obj) (object_is_kind(obj, OBJ_ARRAY))
 #define OBJ_AS_ARRAY(obj) ((ObjArray*) obj)
 
-ObjArray* new_array(Type* type);
+ObjArray* new_array(Type* inner);
 #endif

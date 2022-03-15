@@ -55,8 +55,9 @@ Value* function_get_upvalue(ObjFunction* const function, int slot) {
     return target;
 }
 
-ObjArray* new_array(Type* type) {
-    assert(TYPE_IS_ARRAY(type));
+ObjArray* new_array(Type* inner) {
+    assert(inner != NULL);
+    Type* type = create_type_array(inner);
     ObjArray* arr = ALLOC_OBJ(ObjArray, OBJ_ARRAY, type);
     init_valuearray(&arr->elements);
     return arr;

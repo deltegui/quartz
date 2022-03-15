@@ -2,5 +2,10 @@ import 'stdio';
 import 'stdconv';
 
 
-typeof([]);
+var a: []Number = [5, 6];
+array_push(a, 4);
+
+var b = array_get(a, 0);
+typeof(b);
+
 

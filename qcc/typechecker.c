@@ -501,7 +501,7 @@ static void typecheck_array(void* ctx, ArrayExpr* arr) {
     Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
     for (uint32_t i = 0; i < arr->elements.size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
-        if (TYPE_IS_UNKNOWN(inner)) {
+        if (TYPE_IS_ANY(inner)) {
             inner = checker->last_type;
             continue;
         }

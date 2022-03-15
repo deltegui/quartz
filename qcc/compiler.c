@@ -1048,7 +1048,14 @@ static void compile_prop(void* ctx, PropExpr* prop) {
 }
 
 static void compile_array(void* ctx, ArrayExpr* arr) {
-    // Compiler* compiler = (Compiler*) ctx;
+    Compiler* compiler = (Compiler*) ctx;
+
+    Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
+    for (uint32_t i = 0; i < arr->elements.size; i++) {
+        ACCEPT_EXPR(compiler, exprs[i]);
+    }
+
+    emit_long(compiler, OP_ARRAY, arr->elements.size);
 }
 
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {

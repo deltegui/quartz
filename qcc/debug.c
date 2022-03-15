@@ -138,6 +138,7 @@ static const char* OpCodeStrings[] = {
     "OP_GET_PROP",
     "OP_SET_PROP",
     "OP_BINDED_METHOD",
+    "OP_ARRAY",
 };
 
 void opcode_print(uint8_t op) {
@@ -247,6 +248,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_GET_PROP:
         case OP_SET_PROP:
         case OP_BINDED_METHOD:
+        case OP_BIND_CLOSED:
         case OP_CALL: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
@@ -256,6 +258,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_SET_GLOBAL_LONG:
         case OP_DEFINE_GLOBAL_LONG:
         case OP_CONSTANT_LONG:
+        case OP_ARRAY:
         case OP_JUMP:
         case OP_JUMP_IF_FALSE: {
             i = chunk_opcode_print(chunk, i);
@@ -266,11 +269,6 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_BIND_UPVALUE: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
-            i = chunk_short_print(chunk, i);
-            break;
-        }
-        case OP_BIND_CLOSED: {
-            i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
             break;
         }
@@ -361,6 +359,8 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_PUBLIC: return "TokenPublic";
     case TOKEN_NEW: return "TokenNew";
     case TOKEN_SELF: return "TokenSelf";
+    case TOKEN_LEFT_BRAKET: return "TokenLeftBraket";
+    case TOKEN_RIGHT_BRAKET: return "TokenRightBraket";
     default: return "Unknown";
     }
 }

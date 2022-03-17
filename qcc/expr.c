@@ -23,6 +23,7 @@ Expr* create_expr(ExprKind kind, const void* const expr_node) {
     CASE_EXPR(EXPR_PROP_ASSIGMENT, prop_assigment, PropAssigmentExpr);
     CASE_EXPR(EXPR_ARRAY, array, ArrayExpr);
     CASE_EXPR(EXPR_ARRAY_ACCESS, array_access, ArrayAccesExpr);
+    CASE_EXPR(EXPR_CAST, cast, CastExpr);
     }
     return expr;
 
@@ -71,6 +72,9 @@ void free_expr(Expr* const expr) {
     case EXPR_ARRAY:
         free_params(&expr->array.elements);
         break;
+    case EXPR_CAST:
+        free_expr(expr->cast.inner);
+        break;
     }
     free(expr);
 }
@@ -108,6 +112,7 @@ void expr_dispatch(ExprVisitor* visitor, void* ctx, Expr* expr) {
     case EXPR_PROP_ASSIGMENT: DISPATCH(visit_prop_assigment, prop_assigment); break;
     case EXPR_ARRAY: DISPATCH(visit_array, array); break;
     case EXPR_ARRAY_ACCESS: DISPATCH(visit_array_access, array_access); break;
+    case EXPR_CAST: DISPATCH(visit_cast, cast); break;
     }
 #undef DISPATCH
 }

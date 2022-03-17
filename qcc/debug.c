@@ -389,6 +389,7 @@ static void print_new(void* ctx, NewExpr* new_);
 static void print_prop(void* ctx, PropExpr* prop);
 static void print_prop_assigment(void* ctx, PropAssigmentExpr* prop);
 static void print_arr_expr(void* ctx, ArrayExpr* arr);
+static void print_cast(void* ctx, CastExpr* cast);
 
 ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_literal = print_literal,
@@ -401,6 +402,7 @@ ExprVisitor printer_expr_visitor = (ExprVisitor){
     .visit_prop = print_prop,
     .visit_prop_assigment = print_prop_assigment,
     .visit_array = print_arr_expr,
+    .visit_cast = print_cast,
 };
 
 static void print_expr(void* ctx, ExprStmt* expr);
@@ -788,6 +790,18 @@ static void print_prop_assigment(void* ctx, PropAssigmentExpr* prop) {
         OFFSET({
             ACCEPT_EXPR(prop->value);
         });
+    });
+    pretty_print("]\n");
+}
+
+static void print_cast(void* ctx, CastExpr* cast) {
+    pretty_print("Cast Expr: [\n");
+    OFFSET({
+        pretty_print("Expr : [\n");
+        OFFSET({
+            ACCEPT_EXPR(cast->inner);
+        });
+        pretty_print("]\n");
     });
     pretty_print("]\n");
 }

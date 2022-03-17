@@ -60,6 +60,7 @@ typedef enum {
     TOKEN_CLASS,
     TOKEN_PUBLIC,
     TOKEN_SELF,
+    TOKEN_CAST,
 
     TOKEN_TYPE_NUMBER,
     TOKEN_TYPE_STRING,

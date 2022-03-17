@@ -495,6 +495,20 @@ static void should_tokenize_brakets() {
     );
 }
 
+static void should_tokenize_cast() {
+    assert_types(
+        " cast<String>(1)",
+        7,
+        TOKEN_CAST,
+        TOKEN_MINUS,
+        TOKEN_STRING,
+        TOKEN_GREATER,
+        TOKEN_LEFT_PAREN,
+        TOKEN_NUMBER,
+        TOKEN_RIGHT_PAREN
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -524,7 +538,8 @@ int main(void) {
         cmocka_unit_test(should_tokenize_class_correctly),
         cmocka_unit_test(should_tokenize_public),
         cmocka_unit_test(should_tokenize_new),
-        cmocka_unit_test(should_tokenize_brakets)
+        cmocka_unit_test(should_tokenize_brakets),
+        cmocka_unit_test(should_tokenize_cast)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

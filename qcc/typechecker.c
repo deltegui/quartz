@@ -72,6 +72,7 @@ static void typecheck_new(void* ctx, NewExpr* new_);
 static void typecheck_prop(void* ctx, PropExpr* prop);
 static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
 static void typecheck_array(void* ctx, ArrayExpr* arr);
+static void typecheck_cast(void* ctx, CastExpr* cast);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -84,6 +85,7 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_prop = typecheck_prop,
     .visit_prop_assigment = typecheck_prop_assigment,
     .visit_array= typecheck_array,
+    .visit_cast = typecheck_cast,
 };
 
 static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
@@ -515,6 +517,28 @@ static void typecheck_array(void* ctx, ArrayExpr* arr) {
     }
 
     checker->last_type = create_type_array(inner);
+}
+
+static void typecheck_cast(void* ctx, CastExpr* cast) {
+    Typechecker* checker = (Typechecker*) ctx;
+    ACCEPT_EXPR(checker, cast->inner);
+    Type* inner = checker->last_type;
+
+    if (TYPE_IS_ASSIGNABLE(inner, cast->type)) {
+        return; // nothing to do, all is OK
+    }
+    if (TYPE_IS_BOOL(cast->type)) {
+        return; // anything can be casted to bool
+    }
+    error(
+        checker,
+        &cast->token,
+        "Invalid cast: \n");
+    fprintf(stderr, "Cannot cast from '");
+    ERR_TYPE_PRINT(inner);
+    fprintf(stderr, "' to '");
+    ERR_TYPE_PRINT(cast->type);
+    fprintf(stderr, "'.\n");
 }
 
 static void typecheck_new(void* ctx, NewExpr* new_) {

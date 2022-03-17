@@ -236,6 +236,9 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "lass", 1, 5)) {
             return create_token(lexer, TOKEN_CLASS);
         }
+        if (match_token(lexer, "ast", 1, 4)) {
+            return create_token(lexer, TOKEN_CAST);
+        }
         break;
     }
     case 'e': {

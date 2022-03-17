@@ -23,6 +23,7 @@ typedef enum {
     PREC_FACTOR,      // * /
     PREC_UNARY,       // ! -
     PREC_CALL,        // . ()
+    PREC_CAST,        // cast
     PREC_PRIMARY
 } Precedence;
 
@@ -102,6 +103,7 @@ static Expr* self(Parser* const parser, bool can_assign);
 static Expr* unary(Parser* const parser, bool can_assign);
 static Expr* new_(Parser* const parser, bool can_assign);
 static Expr* arr(Parser* const parser, bool can_assign);
+static Expr* cast(Parser* const parser, bool can_assign);
 static Expr* binary(Parser* const parser, bool can_assign, Expr* left);
 static Expr* call(Parser* const parser, bool can_assign, Expr* left);
 static Expr* prop(Parser* const parser, bool can_assign, Expr* left);
@@ -160,6 +162,7 @@ ParseRule rules[] = {
     [TOKEN_CLASS]         = {NULL,        NULL,   PREC_NONE},
     [TOKEN_PUBLIC]        = {NULL,        NULL,   PREC_NONE},
     [TOKEN_SELF]          = {self,        NULL,   PREC_NONE},
+    [TOKEN_CAST]          = {cast,        NULL,   PREC_CAST},
 
     [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_STRING]   = {NULL,        NULL,   PREC_NONE},
@@ -1191,6 +1194,22 @@ static Expr* arr(Parser* const parser, bool can_assign) {
         "Expected array expression to end with ']'");
 
     return CREATE_ARRAY_EXPR(array);
+}
+
+static Expr* cast(Parser* const parser, bool can_assign) {
+    CastExpr expr;
+    expr.token = parser->prev;
+    consume(parser, TOKEN_LOWER, "Expected '<' after keyword 'cast'");
+    if (parser->current.kind == TOKEN_GREATER) {
+        error(parser, "Expected type after '<' in cast");
+    }
+    expr.type = parse_type(parser);
+    advance(parser); // consume type
+    consume(parser, TOKEN_GREATER, "Expected '>' after type in cast");
+    consume(parser, TOKEN_LEFT_PAREN, "Expected '(' after cast<>");
+    expr.inner = expression(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after expression in cast<>");
+    return CREATE_CAST_EXPR(expr);
 }
 
 static Expr* identifier(Parser* const parser, bool can_assign) {

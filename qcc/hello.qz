@@ -1,11 +1,8 @@
 import 'stdio';
 import 'stdconv';
 
+var a = 1;
 
-var a: []Number = [5, 6];
-array_push(a, 4);
-
-var b = array_get(a, 0);
-typeof(b);
+var b = cast<Bool>(a);
 
 

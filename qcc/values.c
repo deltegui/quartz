@@ -116,7 +116,7 @@ static bool is_truthy(Value value) {
     return ! VALUE_IS_NIL(value);
 }
 
-Type* inspect_value_type(Value value) {
+static Type* inspect_value_type(Value value) {
     switch (value.kind) {
     case VALUE_NUMBER: CREATE_TYPE_NUMBER();
     case VALUE_BOOL: CREATE_TYPE_BOOL();

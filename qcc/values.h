@@ -27,7 +27,7 @@ typedef struct {
 void value_print(Value val);
 bool value_equals(Value first, Value second);
 Value value_default(Type* type);
-Type* inspect_value_type(Value value) {
+Value value_cast(Value value, Type* cast);
 void mark_value(Value value);
 
 #define NUMBER_VALUE(i) ((Value){ CREATE_TYPE_NUMBER(), VALUE_NUMBER, { .number = i } })

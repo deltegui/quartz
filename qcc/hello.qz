@@ -17,8 +17,7 @@ array_push(b, 2);
 fn each(arr: []Any, operate: (Number, Any): Void) {
     var len = array_length(arr);
     for (var i = 0; i < len; i = i + 1) {
-        var raw: Any = array_get(arr, i);
-        operate(i, raw);
+        operate(i, array_get(arr, i));
     }
 }
 

@@ -164,6 +164,7 @@ ParseRule rules[] = {
     [TOKEN_SELF]          = {self,        NULL,   PREC_NONE},
     [TOKEN_CAST]          = {cast,        NULL,   PREC_CAST},
 
+    [TOKEN_TYPE_ANY]      = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_NUMBER]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_STRING]   = {NULL,        NULL,   PREC_NONE},
     [TOKEN_TYPE_BOOL]     = {NULL,        NULL,   PREC_NONE},

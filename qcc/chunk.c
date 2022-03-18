@@ -9,6 +9,8 @@ void init_chunk(Chunk* const chunk) {
     chunk->code = NULL;
     chunk->lines = NULL;
     init_valuearray(&chunk->constants);
+    init_vector(&chunk->types, sizeof(Type*));
+    chunk->types.f_realloc = &qvm_realloc;
 }
 
 void free_chunk(Chunk* const chunk) {
@@ -21,6 +23,7 @@ void free_chunk(Chunk* const chunk) {
     chunk->size = 0;
     chunk->capacity = 0;
     free_valuearray(&chunk->constants);
+    free_vector(&chunk->types);
 }
 
 int chunk_write(Chunk* const chunk, uint8_t bytecode, int line) {
@@ -63,3 +66,9 @@ uint16_t read_long(uint8_t** pc) {
     uint8_t low = *((*pc)++);
     return high << 8 | low;
 }
+
+int chunk_add_type(Chunk* const chunk, Type* type) {
+    VECTOR_ADD_TYPE(&chunk->types, type);
+    return chunk->types.size - 1;
+}
+

@@ -3,6 +3,8 @@
 
 static Value array_push(int argc, Value* argv);
 static Value array_get(int argc, Value* argv);
+static Value array_set(int argc, Value* argv);
+static Value array_length(int argc, Value* argv);
 
 static Value array_push(int argc, Value* argv) {
     assert(argc == 2);
@@ -42,6 +44,12 @@ static Value array_set(int argc, Value* argv) {
     }
     arr->elements.values[index] = argv[2];
     return argv[2];
+}
+
+static Value array_length(int argc, Value* argv) {
+    assert(argc == 1);
+    ObjArray* arr = OBJ_AS_ARRAY(VALUE_AS_OBJ(argv[0]));
+    return NUMBER_VALUE(arr->elements.size);
 }
 
 NativeImport array_get_import() {
@@ -84,11 +92,23 @@ NativeImport array_get_import() {
         .type = set_type,
     };
 
-#define FN_LENGTH 3
+    Type* length_type = create_type_function();
+    VECTOR_ADD_TYPE(&length_type->function.param_types, generic_array);
+    length_type->function.return_type = CREATE_TYPE_NUMBER();
+
+    NativeFunction arr_length = (NativeFunction) {
+        .name = "array_length",
+        .length = 12,
+        .function = array_length,
+        .type = length_type,
+    };
+
+#define FN_LENGTH 4
     static NativeFunction functions[FN_LENGTH];
     functions[0] = arr_push;
     functions[1] = arr_get;
     functions[2] = arr_set;
+    functions[3] = arr_length;
 
     NativeImport arrays_import = (NativeImport) {
         .name = "arrays",

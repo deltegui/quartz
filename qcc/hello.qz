@@ -1,8 +1,30 @@
 import 'stdio';
 import 'stdconv';
 
-var a = 1;
+var a: []Number = [
+    0,
+    1,
+    5,
+    123
+];
 
-var b = cast<Bool>(a);
+typeof(a);
 
+var b = cast<[]Number>(a);
 
+array_push(b, 2);
+
+fn each(arr: []Any, operate: (Number, Any): Void) {
+    var len = array_length(arr);
+    for (var i = 0; i < len; i = i + 1) {
+        var raw: Any = array_get(arr, i);
+        operate(i, raw);
+    }
+}
+
+fn print_number(i: Number, ele: Any) {
+    var c = cast<Number>(ele);
+    println("[" + ntos(i) + "] " + ntos(c));
+}
+
+each(b, print_number);

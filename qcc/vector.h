@@ -8,6 +8,7 @@ typedef struct {
     uint32_t capacity;
     size_t element_size;
     void* elements;
+    void* (*f_realloc)(void* ptr, size_t old, size_t size);
 } Vector;
 
 void init_vector(Vector* const vect, size_t element_size);

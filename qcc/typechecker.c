@@ -524,11 +524,10 @@ static void typecheck_cast(void* ctx, CastExpr* cast) {
     ACCEPT_EXPR(checker, cast->inner);
     Type* inner = checker->last_type;
 
-    if (TYPE_IS_ASSIGNABLE(inner, cast->type)) {
+    Type* casted_type = type_cast(inner, cast->type);
+    if (casted_type != NULL) {
+        checker->last_type = casted_type;
         return; // nothing to do, all is OK
-    }
-    if (TYPE_IS_BOOL(cast->type)) {
-        return; // anything can be casted to bool
     }
     error(
         checker,
@@ -621,7 +620,7 @@ static void check_call_params(Typechecker* const checker, Token* identifier, Vec
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
-        if (! TYPE_IS_ASSIGNABLE(last, def_type)) {
+        if (! TYPE_IS_ASSIGNABLE(def_type, last)) {
             error_param_number(
                 checker,
                 identifier,

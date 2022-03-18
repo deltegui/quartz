@@ -102,14 +102,16 @@ Type* create_type_array(Type* inner);
 
 #define TYPE_IS_ASSIGNABLE(var_type, expr_type) (\
         (TYPE_IS_NIL(expr_type) && TYPE_IS_OBJECT(var_type)) ||\
-        (TYPE_IS_ANY(expr_type)) ||\
         (TYPE_IS_ANY(var_type)) ||\
+        (TYPE_IS_ARRAY(var_type) && TYPE_IS_ARRAY(expr_type) && TYPE_IS_ANY(var_type->array.inner)) ||\
         type_equals(var_type, expr_type)\
     )
 
 Type* simple_type_from_token_kind(TokenKind kind);
 void type_fprint(FILE* out, const Type* const type);
 bool type_equals(Type* first, Type* second);
+// This returns NULL if the type cannot be casted!!!cast->type
+Type* type_cast(Type* from, Type* to);
 
 #define VECTOR_AS_TYPES(vect) VECTOR_AS(vect, Type*)
 #define VECTOR_ADD_TYPE(vect, type) VECTOR_ADD(vect, type, Type*)

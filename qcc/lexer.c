@@ -315,6 +315,12 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
+    case 'A': {
+        if (match_token(lexer, "ny", 1, 3)) {
+            return create_token(lexer, TOKEN_TYPE_ANY);
+        }
+        break;
+    }
     case 'N': {
         if (match_token(lexer, "umber", 1, 6)) {
             return create_token(lexer, TOKEN_TYPE_NUMBER);

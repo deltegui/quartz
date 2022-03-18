@@ -206,6 +206,7 @@ Type* simple_type_from_token_kind(TokenKind kind) {
     case TOKEN_TYPE_BOOL: return CREATE_TYPE_BOOL();
     case TOKEN_TYPE_NIL: return CREATE_TYPE_NIL();
     case TOKEN_TYPE_VOID: return CREATE_TYPE_VOID();
+    case TOKEN_TYPE_ANY: return CREATE_TYPE_ANY();
     default: return CREATE_TYPE_UNKNOWN();
     }
 }
@@ -229,11 +230,8 @@ void type_fprint(FILE* out, const Type* const type) {
 
 static void type_array_print(FILE* out, const Type* const type) {
     assert(type->kind == TYPE_ARRAY);
-    fprintf(
-        out,
-        "[");
+    fprintf(out,"[]");
     type_fprint(out, type->array.inner);
-    fprintf(out, "]");
 }
 
 static void type_alias_print(FILE* out, const Type* const type) {
@@ -326,4 +324,21 @@ static bool type_class_equals(Type* first, Type* second) {
         first->klass.identifier,
         second->klass.identifier,
         first->klass.length) == 0;
+}
+
+Type* type_cast(Type* from, Type* to) {
+    if (TYPE_IS_ASSIGNABLE(to, from)) {
+        return from;
+    }
+    if (TYPE_IS_BOOL(to) || TYPE_IS_ANY(from)) {
+        return to;
+    }
+    // TODO should we let castings from [Any] to [<insert here any type>]?
+    /*
+    if (TYPE_IS_ARRAY(from) && TYPE_IS_ARRAY(to)) {
+        Type* inner = type_cast(from->array.inner, to->array.inner);
+        return create_type_array(inner);
+    }
+    */
+    return NULL;
 }

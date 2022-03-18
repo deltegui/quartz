@@ -62,6 +62,7 @@ typedef enum {
     TOKEN_SELF,
     TOKEN_CAST,
 
+    TOKEN_TYPE_ANY,
     TOKEN_TYPE_NUMBER,
     TOKEN_TYPE_STRING,
     TOKEN_TYPE_BOOL,

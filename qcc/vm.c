@@ -232,6 +232,12 @@ static inline Value stack_peek(uint8_t distance) {
         }\
     } while (false)
 
+static inline Type* read_type() {
+    uint8_t index = READ_BYTE();
+    Type** types = VECTOR_AS_TYPES(&qvm.frame->func->chunk.types);
+    return types[index];
+}
+
 static void run(ObjFunction* func) {
 #ifdef VM_DEBUG
     printf("--------[ EXECUTION ]--------\n\n");
@@ -495,6 +501,12 @@ static void run(ObjFunction* func) {
                 valuearray_write(&arr->elements, val);
             }
             stack_push(OBJ_VALUE(arr, arr->obj.type));
+            break;
+        }
+        case OP_CAST: {
+            Value value = stack_pop();
+            Type* cast = read_type();
+            stack_push(value_cast(value, cast));
             break;
         }
         }

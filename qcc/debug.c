@@ -139,6 +139,7 @@ static const char* OpCodeStrings[] = {
     "OP_SET_PROP",
     "OP_BINDED_METHOD",
     "OP_ARRAY",
+    "OP_CAST",
 };
 
 void opcode_print(uint8_t op) {
@@ -249,6 +250,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_SET_PROP:
         case OP_BINDED_METHOD:
         case OP_BIND_CLOSED:
+        case OP_CAST:
         case OP_CALL: {
             i = chunk_opcode_print(chunk, i);
             i = chunk_short_print(chunk, i);
@@ -361,6 +363,7 @@ static const char* token_type_print(TokenKind kind) {
     case TOKEN_SELF: return "TokenSelf";
     case TOKEN_LEFT_BRAKET: return "TokenLeftBraket";
     case TOKEN_RIGHT_BRAKET: return "TokenRightBraket";
+    case TOKEN_TYPE_ANY: return "TokenAnyType";
     default: return "Unknown";
     }
 }

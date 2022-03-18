@@ -147,6 +147,7 @@ static void patch_chunk_long(Compiler* const compiler, int position, uint16_t va
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
 static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
+static uint8_t make_type(Compiler* const compiler, Type* type);
 
 static void update_param_index(Compiler* const compiler, Symbol* symbol);
 static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index);
@@ -170,6 +171,7 @@ static void compile_new(void* ctx, NewExpr* new_);
 static void compile_prop(void* ctx, PropExpr* prop);
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
 static void compile_array(void* ctx, ArrayExpr* arr);
+static void compile_cast(void* ctx, CastExpr* cast);
 
 ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
@@ -182,6 +184,7 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_prop = compile_prop,
     .visit_prop_assigment = compile_prop_assigment,
     .visit_array = compile_array,
+    .visit_cast = compile_cast,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -450,6 +453,15 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
         copy_string(identifier->start, identifier->length),
         CREATE_TYPE_STRING());
     return make_constant(compiler, value);
+}
+
+static uint8_t make_type(Compiler* const compiler, Type* type) {
+    int index = chunk_add_type(current_chunk(compiler), type);
+    if (index > UINT8_COUNT) {
+        error(compiler, "Too many types for chunk!");
+        return 0;
+    }
+    return (uint8_t)index;
 }
 
 #define BLOCK(compiler, ...)\
@@ -1056,6 +1068,13 @@ static void compile_array(void* ctx, ArrayExpr* arr) {
     }
 
     emit_long(compiler, OP_ARRAY, arr->elements.size);
+}
+
+static void compile_cast(void* ctx, CastExpr* cast) {
+    Compiler* compiler = (Compiler*) ctx;
+    ACCEPT_EXPR(compiler, cast->inner);
+    uint8_t type_index = make_type(compiler, cast->type);
+    emit_short(compiler, OP_CAST, type_index);
 }
 
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {

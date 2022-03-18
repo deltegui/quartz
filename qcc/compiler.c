@@ -1063,8 +1063,8 @@ static void compile_array(void* ctx, ArrayExpr* arr) {
     Compiler* compiler = (Compiler*) ctx;
 
     Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
-    for (uint32_t i = 0; i < arr->elements.size; i++) {
-        ACCEPT_EXPR(compiler, exprs[i]);
+    for (uint32_t i = arr->elements.size; i > 0; i--) {
+        ACCEPT_EXPR(compiler, exprs[i - 1]);
     }
 
     emit_long(compiler, OP_ARRAY, arr->elements.size);

@@ -103,7 +103,7 @@ static inline void call_native(ObjNative* native, uint8_t param_count) {
 }
 
 static inline ObjFunction* prepare_binded_method(ObjBindedMethod* binded, uint8_t param_count) {
-    stack_push(OBJ_VALUE(binded->instance, binded->instance->obj.type));
+    stack_push(OBJ_VALUE(binded->instance, binded->instance->type));
     assert(OBJ_IS_FUNCTION(binded->method));
     return OBJ_AS_FUNCTION(binded->method);
 }
@@ -147,12 +147,12 @@ static inline void invoke(uint8_t prop_index, uint8_t param_count) {
     Value* slots = (qvm.stack_top - param_count - 1);
     Value instance_value = *slots;
 
-    ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(instance_value));
+    Obj* instance = VALUE_AS_OBJ(instance_value);
     Value fn_value = object_get_property(instance, prop_index);
-    Obj* obj = VALUE_AS_OBJ(fn_value);
+    Obj* fn = VALUE_AS_OBJ(fn_value);
 
     stack_push(instance_value); // Push self
-    call_function(obj, slots, ++param_count);
+    call_function(fn, slots, ++param_count);
 }
 
 void stack_push(Value val) {
@@ -463,7 +463,7 @@ static void run(ObjFunction* func) {
         case OP_GET_PROP: {
             Value val = stack_pop();
             ABORT_IF_NIL(val);
-            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
+            Obj* instance = VALUE_AS_OBJ(val);
             uint8_t pos = READ_BYTE();
             stack_push(object_get_property(instance, pos));
             break;
@@ -474,7 +474,7 @@ static void run(ObjFunction* func) {
             // to be popped later.
             Value obj_val = stack_peek(0);
             ABORT_IF_NIL(obj_val);
-            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(obj_val));
+            Obj* instance = VALUE_AS_OBJ(obj_val);
             uint8_t pos = READ_BYTE();
             object_set_property(instance, pos, val);
             break;
@@ -482,7 +482,7 @@ static void run(ObjFunction* func) {
         case OP_BINDED_METHOD: {
             Value val = stack_peek(0);
             ABORT_IF_NIL(val);
-            ObjInstance* instance = OBJ_AS_INSTANCE(VALUE_AS_OBJ(val));
+            Obj* instance = VALUE_AS_OBJ(val);
             uint8_t pos = READ_BYTE();
             Value method = object_get_property(instance, pos);
             ObjBindedMethod* binded = new_binded_method(instance, VALUE_AS_OBJ(method));

@@ -17,6 +17,7 @@ static Obj* alloc_obj(size_t size, ObjKind kind, Type* type) {
     obj->is_marked = false;
     obj->next = qvm.objects;
     qvm.objects = obj;
+    init_valuearray(&obj->props);
     return obj;
 }
 
@@ -82,21 +83,19 @@ ObjNative* new_native(const char* name, int length, native_fn_t function, Type* 
 ObjClass* new_class(const char* name, int length, Type* type) {
     ObjClass* klass = ALLOC_OBJ(ObjClass, OBJ_CLASS, type);
     klass->name = copy_string(name, length);
-    init_valuearray(&klass->instance);
     return klass;
 }
 
 ObjInstance* new_instance(ObjClass* origin) {
     ObjInstance* instance = ALLOC_OBJ(ObjInstance, OBJ_INSTANCE, origin->obj.type);
     instance->klass = origin;
-    init_valuearray(&instance->props);
     stack_push(OBJ_VALUE(instance, instance->obj.type));
-    valuearray_deep_copy(&origin->instance, &instance->props);
+    valuearray_deep_copy(&origin->obj.props, &instance->obj.props);
     stack_pop();
     return instance;
 }
 
-ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method) {
+ObjBindedMethod* new_binded_method(Obj* instance, Obj* method) {
     ObjBindedMethod* binded = ALLOC_OBJ(ObjBindedMethod, OBJ_BINDED_METHOD, method->type);
     binded->instance = instance;
     binded->method = method;
@@ -104,12 +103,12 @@ ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method) {
 }
 
 // TODO change the value array to be directly in obj?
-Value object_get_property(ObjInstance* obj, uint8_t index) {
+Value object_get_property(Obj* obj, uint8_t index) {
     assert(index < obj->props.size);
     return obj->props.values[index];
 }
 
-void object_set_property(ObjInstance* obj, uint8_t index, Value val) {
+void object_set_property(Obj* obj, uint8_t index, Value val) {
     assert(index < obj->props.size);
     obj->props.values[index] = val;
 }

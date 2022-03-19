@@ -637,8 +637,7 @@ static void compile_class(void* ctx, ClassStmt* klass) {
             }
             }
 
-            // TODO Create a fixed size array for this part
-            valuearray_write(&obj->instance, value);
+            OBJ_ADD_PROP(obj, value);
         }
     });
 

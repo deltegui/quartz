@@ -293,16 +293,13 @@ static void chunk_print_value(Value value) {
         return;
     }
     Obj* obj = VALUE_AS_OBJ(value);
+    for (int i = 0; i < obj->props.size ; i++) {
+        chunk_print_value(obj->props.values[i]);
+    }
     if (OBJ_IS_FUNCTION(obj)) {
         ObjFunction* fn = OBJ_AS_FUNCTION(obj);
         char* name = OBJ_AS_CSTRING(fn->name);
         chunk_print_with_name(&fn->chunk, name);
-    }
-    if (OBJ_IS_CLASS(obj)) {
-        ObjClass* klass = OBJ_AS_CLASS(obj);
-        for (int i = 0; i < klass->instance.size ; i++) {
-            chunk_print_value(klass->instance.values[i]);
-        }
     }
 }
 

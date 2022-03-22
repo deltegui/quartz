@@ -396,8 +396,7 @@ Stmt* parse(Parser* const parser) {
 static Stmt* parse_global(Parser* const parser) {
     ListStmt* list = create_stmt_list();
 
-    Stmt* array_import = native_import(parser, array_get_import(), 0, 0);
-    stmt_list_add(list, array_import);
+    array_register(parser->symbols);
 
     write_declaration_block(parser, TOKEN_END, list);
 

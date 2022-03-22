@@ -3,6 +3,7 @@
 #include "vm_memory.h"
 #include "vm.h"
 #include "table.h"
+#include "array.h"
 
 static Obj* alloc_obj(size_t size, ObjKind kind, Type* type);
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash);
@@ -61,6 +62,7 @@ ObjArray* new_array(Type* inner) {
     Type* type = create_type_array(inner);
     ObjArray* arr = ALLOC_OBJ(ObjArray, OBJ_ARRAY, type);
     init_valuearray(&arr->elements);
+    array_push_props(&arr->obj.props);
     return arr;
 }
 

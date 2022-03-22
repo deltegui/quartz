@@ -1,6 +1,7 @@
 #include "type.h"
 #include <stdio.h>
 #include <string.h>
+#include "array.h"
 
 // These variables are here to store only one instance
 // of these types. Simple types only stores it's kind,
@@ -341,4 +342,21 @@ Type* type_cast(Type* from, Type* to) {
     }
     */
     return NULL;
+}
+
+// TODO refactor this
+const char* type_get_class_name(Type* any_type) {
+    assert(TYPE_IS_OBJECT(any_type) || TYPE_IS_ARRAY(any_type));
+    if (TYPE_IS_ARRAY(any_type)) {
+        return ARRAY_CLASS_NAME;
+    }
+    return TYPE_OBJECT_CLASS_NAME(any_type);
+}
+
+int type_get_class_length(Type* any_type) {
+    assert(TYPE_IS_OBJECT(any_type) || TYPE_IS_ARRAY(any_type));
+    if (TYPE_IS_ARRAY(any_type)) {
+        return ARRAY_CLASS_LENGTH;
+    }
+    return TYPE_OBJECT_CLASS_LENGTH(any_type);
 }

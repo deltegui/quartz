@@ -128,4 +128,5 @@ ObjBindedMethod* new_binded_method(Obj* instance, Obj* method);
 #define OBJ_AS_ARRAY(obj) ((ObjArray*) obj)
 
 ObjArray* new_array(Type* inner);
+
 #endif

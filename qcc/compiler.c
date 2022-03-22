@@ -1040,7 +1040,7 @@ static void compile_prop(void* ctx, PropExpr* prop) {
 
     ACCEPT_EXPR(compiler, prop->object);
 
-    Symbol* klass_sym = lookup_str(compiler, TYPE_OBJECT_CLASS_NAME(prop->object_type), TYPE_OBJECT_CLASS_LENGTH(prop->object_type));
+    Symbol* klass_sym = lookup_str(compiler, type_get_class_name(prop->object_type), type_get_class_length(prop->object_type));
     assert(klass_sym != NULL);
     Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop->prop.start, prop->prop.length);
     assert(prop_symbol != NULL);

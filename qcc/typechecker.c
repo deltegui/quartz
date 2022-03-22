@@ -6,6 +6,7 @@
 #include "expr.h"
 #include "symbol.h"
 #include "error.h"
+#include "array.h"
 
 typedef struct {
     Token name;
@@ -53,6 +54,7 @@ static void end_scope(Typechecker* const checker);
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
 static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level);
 static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Token* prop, Symbol** class_out);
+static Symbol* get_native_class_prop(Typechecker* const checker, const char* const class_name, int length, Token* prop, Symbol** class_sym_out);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
 static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type);
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var);
@@ -237,6 +239,29 @@ static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Toke
     return prop_symbol;
 }
 
+static Symbol* get_native_class_prop(Typechecker* const checker, const char* const class_name, int length, Token* prop, Symbol** class_sym_out) {
+    Symbol* prop_symbol = scoped_symbol_get_class_prop_str(
+        checker->symbols,
+        class_name,
+        length,
+        prop,
+        class_sym_out);
+    // If this thing is native, the class name is fixed, so this cant happen
+    assert((*class_sym_out) != NULL);
+    if (prop_symbol == NULL) {
+        error(
+            checker,
+            prop,
+            "Native class '%.*s' does not have property '%.*s'\n",
+            length,
+            class_name,
+            prop->length,
+            prop->start);
+        return NULL;
+    }
+    return prop_symbol;
+}
+
 bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
@@ -413,11 +438,25 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
 
     ACCEPT_EXPR(checker, prop->object);
 
-    Type* obj_type = resolve_and_check_last_object_type(checker);
-    prop->object_type = obj_type; // Now we do know which type is
-
     Symbol* klass_sym;
-    Symbol* prop_symbol = get_class_prop(checker, obj_type, &prop->prop, &klass_sym);
+    Symbol* prop_symbol;
+    char* class_name;
+    int class_length;
+    switch (checker->last_type->kind) {
+    case TYPE_ARRAY:
+        class_name = ARRAY_CLASS_NAME;
+        class_length = ARRAY_CLASS_LENGTH;
+        prop_symbol = get_native_class_prop(checker, class_name, class_length, &prop->prop, &klass_sym);
+        break;
+    default: {
+        Type* obj_type = resolve_and_check_last_object_type(checker);
+        class_name = TYPE_OBJECT_CLASS_NAME(obj_type);
+        class_length = TYPE_OBJECT_CLASS_LENGTH(obj_type);
+        prop->object_type = obj_type; // Now we do know which type is
+        prop_symbol = get_class_prop(checker, obj_type, &prop->prop, &klass_sym);
+    }
+    }
+
     if (prop_symbol == NULL || klass_sym == NULL) {
         return;
     }
@@ -430,8 +469,8 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
             "'%.*s' property of class '%.*s' must be public\n",
             prop->prop.length,
             prop->prop.start,
-            TYPE_OBJECT_CLASS_LENGTH(obj_type),
-            TYPE_OBJECT_CLASS_NAME(obj_type));
+            class_length,
+            class_name);
     }
 
     checker->last_type = prop_symbol->type;

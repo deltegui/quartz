@@ -273,17 +273,27 @@ void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj
 }
 
 Symbol* scoped_symbol_get_class_prop(ScopedSymbolTable* const table, Type* class_type, Token* prop, Symbol** class_sym_out) {
+    Symbol* symbol = scoped_symbol_get_class_prop_str(
+        table,
+        TYPE_OBJECT_CLASS_NAME(class_type),
+        TYPE_OBJECT_CLASS_LENGTH(class_type),
+        prop,
+        class_sym_out);
+    assert(type_equals((*class_sym_out)->type, class_type->object.klass));
+    return symbol;
+}
+
+Symbol* scoped_symbol_get_class_prop_str(ScopedSymbolTable* const table, const char* const class_name, int length, Token* prop, Symbol** class_sym_out) {
     Symbol* class_sym = scoped_symbol_lookup_str(
             table,
-            TYPE_OBJECT_CLASS_NAME(class_type),
-            TYPE_OBJECT_CLASS_LENGTH(class_type));
+            class_name,
+            length);
     if (class_sym == NULL) {
         return NULL;
     }
     assert(class_sym != NULL);
     assert(class_sym->kind == SYMBOL_CLASS);
     assert(class_sym->klass.body != NULL);
-    assert(type_equals(class_sym->type, class_type->object.klass));
     *class_sym_out = class_sym;
     return symbol_lookup_str(class_sym->klass.body, prop->start, prop->length);
 }

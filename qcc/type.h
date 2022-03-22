@@ -66,6 +66,9 @@ typedef struct s_type {
 #define TYPE_OBJECT_CLASS_NAME(type_obj) ((type_obj)->object.klass->klass.identifier)
 #define TYPE_OBJECT_CLASS_LENGTH(type_obj) ((type_obj)->object.klass->klass.length)
 
+const char* type_get_class_name(Type* any_type);
+int type_get_class_length(Type* any_type);
+
 #define TYPE_IS_ARRAY(type) ((type)->kind == TYPE_ARRAY)
 #define TYPE_IS_OBJECT(type) ((type)->kind == TYPE_OBJECT)
 #define TYPE_IS_CLASS(type) ((type)->kind == TYPE_CLASS)

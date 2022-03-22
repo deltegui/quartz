@@ -200,6 +200,7 @@ static void compile_typealias(void* ctx, TypealiasStmt* alias);
 static void compile_import(void* ctx, ImportStmt* import);
 static void compile_native(void* ctx, NativeFunctionStmt* native);
 static void compile_class(void* ctx, ClassStmt* klass);
+static void compile_native_class(void* ctx, NativeClassStmt* native_class);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -215,6 +216,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_import = compile_import,
     .visit_native = compile_native,
     .visit_class = compile_class,
+    .visit_native_class = compile_native_class,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -658,6 +660,12 @@ static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint
     update_symbol_variable_info(compiler, symbol, index);
     assert(var->definition == NULL);
     return value_default(symbol->type);
+}
+
+static void compile_native_class(void* ctx, NativeClassStmt* native_class) {
+    Compiler* compiler = (Compiler*) ctx;
+    start_scope(compiler); // Start and end scope to access class body. Nothing to see there.
+    end_scope(compiler);
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {

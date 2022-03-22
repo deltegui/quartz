@@ -418,6 +418,7 @@ static void print_typealias(void* ctx, TypealiasStmt* alias);
 static void print_import(void* ctx, ImportStmt* import);
 static void print_native(void* ctx, NativeFunctionStmt* native);
 static void print_class(void* ctx, ClassStmt* klass);
+static void print_native_class(void* ctx, NativeClassStmt* klass);
 
 StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_expr = print_expr,
@@ -433,6 +434,7 @@ StmtVisitor printer_stmt_visitor = (StmtVisitor){
     .visit_import = print_import,
     .visit_native = print_native,
     .visit_class = print_class,
+    .visit_native_class = print_native_class,
 };
 
 #define ACCEPT_STMT(stmt) stmt_dispatch(&printer_stmt_visitor, NULL, stmt)
@@ -806,3 +808,7 @@ static void print_cast(void* ctx, CastExpr* cast) {
     pretty_print("]\n");
 }
 
+static void print_native_class(void* ctx, NativeClassStmt* klass) {
+    pretty_print("Native class ");
+    printf("'%.*s'\n", klass->length, klass->name);
+}

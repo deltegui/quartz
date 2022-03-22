@@ -85,8 +85,6 @@ void runtime_error(const char* message) {
 }
 
 static inline void call_native(ObjNative* native, uint8_t param_count) {
-    assert(native->arity == param_count);
-
     Value* params = (Value*) malloc(sizeof(Value) * param_count);
     for (int i = param_count - 1; i >= 0; i--) {
         int distance_to_peek = param_count - (i + 1);

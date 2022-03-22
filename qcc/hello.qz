@@ -12,12 +12,12 @@ typeof(a);
 
 var b = cast<[]Number>(a);
 
-array_push(b, 2);
+b.push(2);
 
 fn each(arr: []Any, operate: (Number, Any): Void) {
-    var len = array_length(arr);
+    var len = arr.length();
     for (var i = 0; i < len; i = i + 1) {
-        operate(i, array_get(arr, i));
+        operate(i, arr.get(i));
     }
 }
 

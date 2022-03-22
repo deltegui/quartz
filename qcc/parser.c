@@ -64,6 +64,7 @@ static Stmt* parse_global(Parser* parser);
 static Stmt* declaration_block(Parser* const parser, TokenKind limit_token);
 static void write_declaration_block(Parser* const parser, TokenKind limit, ListStmt* write);
 
+static Stmt* native_class(Parser* const parser, NativeClassStmt (*register_fn)(ScopedSymbolTable* const table));
 static Stmt* declaration(Parser* const parser);
 static Stmt* parse_variable(Parser* const parser);
 static Stmt* variable_decl(Parser* const parser);
@@ -396,7 +397,7 @@ Stmt* parse(Parser* const parser) {
 static Stmt* parse_global(Parser* const parser) {
     ListStmt* list = create_stmt_list();
 
-    array_register(parser->symbols);
+    stmt_list_add(list, native_class(parser, array_register));
 
     write_declaration_block(parser, TOKEN_END, list);
 
@@ -421,6 +422,11 @@ static void write_declaration_block(Parser* const parser, TokenKind limit, ListS
             stmt_list_add(write, stmt);
         }
     }
+}
+
+static Stmt* native_class(Parser* const parser, NativeClassStmt (*register_fn)(ScopedSymbolTable* const table)) {
+    NativeClassStmt native = register_fn(parser->symbols);
+    return CREATE_STMT_NATIVE_CLASS(native);
 }
 
 static Stmt* declaration(Parser* const parser) {

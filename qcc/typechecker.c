@@ -103,6 +103,7 @@ static void typecheck_while(void* ctx, WhileStmt* while_);
 static void typecheck_import(void* ctx, ImportStmt* import);
 static void typecheck_native(void* ctx, NativeFunctionStmt* native);
 static void typecheck_class(void* ctx, ClassStmt* klass);
+static void typecheck_native_class(void* ctx, NativeClassStmt* native_class);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -118,6 +119,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_import = typecheck_import,
     .visit_native = typecheck_native,
     .visit_class = typecheck_class,
+    .visit_native_class = typecheck_native_class,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -446,6 +448,7 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
     case TYPE_ARRAY:
         class_name = ARRAY_CLASS_NAME;
         class_length = ARRAY_CLASS_LENGTH;
+        prop->object_type = create_type_array(CREATE_TYPE_ANY());
         prop_symbol = get_native_class_prop(checker, class_name, class_length, &prop->prop, &klass_sym);
         break;
     default: {
@@ -780,6 +783,12 @@ static void typecheck_class(void* ctx, ClassStmt* klass) {
     checker->is_in_class = true;
     ACCEPT_STMT(ctx, klass->body);
     checker->is_in_class = old;
+    end_scope(checker);
+}
+
+static void typecheck_native_class(void* ctx, NativeClassStmt* native_class) {
+    Typechecker* checker = (Typechecker*) ctx;
+    start_scope(checker); // Enter the native class body and exit. Nothing to process there.
     end_scope(checker);
 }
 

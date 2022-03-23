@@ -1,0 +1,7 @@
+import "stdio";
+import "stdconv";
+
+var s = "demo";
+
+
+println(ntos(s.length()));

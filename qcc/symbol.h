@@ -4,6 +4,7 @@
 #include "type.h"
 #include "vector.h"
 #include "ctable.h"
+#include "stmt.h" // for NativeClassStmt
 
 typedef struct {
     CTableKey key;
@@ -156,5 +157,32 @@ typedef struct {
 
 void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* table, int depth);
 Symbol* upvalue_iterator_next(UpvalueIterator* const iterator);
+
+NativeClassStmt register_native_class(ScopedSymbolTable* const table, char* name, int length, void (*register_fn)(ScopedSymbolTable* const table));
+
+#define NATIVE_CLASS_INIT(var_name, name_f, len_f, fn, ...) do {\
+    Type* type_f;\
+    __VA_ARGS__\
+    if (var_name == NULL) {\
+        var_name = new_native(name_f, len_f, fn, type_f);\
+    }\
+} while (false)
+
+#define NATIVE_INSERT_METHOD(table, native_obj, cte) do {\
+    Symbol sym = create_symbol(\
+        create_symbol_name(\
+            native_obj->name,\
+            native_obj->length),\
+        0,\
+        0,\
+        native_obj->obj.type);\
+    sym.visibility = SYMBOL_VISIBILITY_PUBLIC;\
+    sym.constant_index = cte++;\
+    scoped_symbol_insert(table, sym);\
+} while (false)
+
+#define NATIVE_PUSH_PROP(props, native_obj) do {\
+valuearray_write(props, OBJ_VALUE(native_obj, native_obj->obj.type));\
+} while (false)
 
 #endif

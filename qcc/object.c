@@ -4,6 +4,7 @@
 #include "vm.h"
 #include "table.h"
 #include "array.h"
+#include "string.h"
 
 static Obj* alloc_obj(size_t size, ObjKind kind, Type* type);
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash);
@@ -143,6 +144,7 @@ ObjString* copy_string(const char* chars, int length) {
     stack_push(OBJ_VALUE(str, CREATE_TYPE_STRING())); // We need to GC discover our new string.
     table_set(&qvm.strings, str, NIL_VALUE());
     stack_pop();
+    string_push_props(&str->obj.props);
     return str;
 }
 

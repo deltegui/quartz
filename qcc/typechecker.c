@@ -7,6 +7,7 @@
 #include "symbol.h"
 #include "error.h"
 #include "array.h"
+#include "string.h"
 
 typedef struct {
     Token name;
@@ -440,6 +441,7 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
 
     ACCEPT_EXPR(checker, prop->object);
 
+    // TODO fix this shit
     Symbol* klass_sym;
     Symbol* prop_symbol;
     char* class_name;
@@ -449,6 +451,12 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
         class_name = ARRAY_CLASS_NAME;
         class_length = ARRAY_CLASS_LENGTH;
         prop->object_type = create_type_array(CREATE_TYPE_ANY());
+        prop_symbol = get_native_class_prop(checker, class_name, class_length, &prop->prop, &klass_sym);
+        break;
+    case TYPE_STRING:
+        class_name = STRING_CLASS_NAME;
+        class_length = STRING_CLASS_LENGTH;
+        prop->object_type = CREATE_TYPE_STRING();
         prop_symbol = get_native_class_prop(checker, class_name, class_length, &prop->prop, &klass_sym);
         break;
     default: {

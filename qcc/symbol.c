@@ -360,3 +360,26 @@ static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator) {
     }
     return false;
 }
+
+NativeClassStmt register_native_class(ScopedSymbolTable* const table, char* name, int length, void (*register_fn)(ScopedSymbolTable* const table)) {
+    SymbolName sym_name = create_symbol_name(name, length);
+    Symbol symbol = create_symbol(
+        sym_name,
+        0,
+        0,
+        CREATE_TYPE_UNKNOWN());
+    symbol.kind = SYMBOL_CLASS;
+    symbol.global = true;
+    scoped_symbol_insert(table, symbol);
+    Symbol* inserted = scoped_symbol_lookup(table, &sym_name);
+
+    symbol_create_scope(table);
+    scoped_symbol_update_class_body(table, inserted);
+    register_fn(table);
+    symbol_end_scope(table);
+
+    NativeClassStmt native;
+    native.name = name;
+    native.length = length;
+    return native;
+}

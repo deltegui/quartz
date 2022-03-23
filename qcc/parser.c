@@ -7,6 +7,7 @@
 #include "error.h"
 #include "import.h"
 #include "array.h"
+#include "string.h"
 
 #ifdef PARSER_DEBUG
 #include "debug.h"
@@ -398,6 +399,7 @@ static Stmt* parse_global(Parser* const parser) {
     ListStmt* list = create_stmt_list();
 
     stmt_list_add(list, native_class(parser, array_register));
+    stmt_list_add(list, native_class(parser, string_register));
 
     write_declaration_block(parser, TOKEN_END, list);
 

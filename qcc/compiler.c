@@ -1076,7 +1076,11 @@ static void compile_call(void* ctx, CallExpr* call) {
 static void compile_prop(void* ctx, PropExpr* prop) {
     Compiler* compiler = (Compiler*) ctx;
 
+    // TODO create a macro or something for this shit
+    bool old_want = compiler->want_to_call;
+    compiler->want_to_call = false;
     ACCEPT_EXPR(compiler, prop->object);
+    compiler->want_to_call = old_want;
 
     Symbol* klass_sym = lookup_str(compiler, type_get_class_name(prop->object_type), type_get_class_length(prop->object_type));
     assert(klass_sym != NULL);

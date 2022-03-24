@@ -12,7 +12,7 @@ class Memory {
 
     pub fn increment() {
         var old = self.read();
-        //self.memory.set(self.ptr, old + 1);
+        self.memory.set(self.ptr, old + 1);
     }
 
     pub fn decrement() {
@@ -47,9 +47,64 @@ class Memory {
     }
 }
 
-var mem = new Memory();
+typedef Command = (): Void;
 
-mem.increment();
-/*
-mem.print();
-*/
+class VM {
+    var memory: Memory;
+    var tokens: []String;
+    var commands: []Any;
+    var pc: Number;
+    var program: String;
+
+    pub fn init() {
+        self.memory = new Memory();
+        // self.tokens = ["<", ">", "+", "-", ".", ",", "[", "]"];
+        self.tokens = ["<", ">", "+", "-"];
+        self.commands = [];
+        self.commands.push(self.move_left);
+        self.commands.push(self.move_right);
+        self.commands.push(self.memory.increment);
+        self.commands.push(self.memory.decrement);
+        self.pc = 0;
+    }
+
+    pub fn interpret(program: String) {
+        println("Executing program: " + program);
+        self.program = program;
+        var len = program.length();
+        for (; self.pc < len; self.pc = self.pc + 1) {
+            var token = program.get_char(self.pc);
+            println("Current token: " + token);
+            self.dispatch(token);
+        }
+    }
+
+    fn dispatch(token: String) {
+        var len = self.tokens.length();
+        for (var i = 0; i < len; i = i + 1) {
+            println("Checking known token with index " + ntos(i));
+            var current = cast<String>(self.tokens.get(i));
+            if (current == token) {
+                var cmd = cast<Command>(self.commands.get(i));
+                println("Found handler for token " + current + " in index " + ntos(i));
+                cmd();
+            }
+        }
+    }
+
+    fn move_left() {
+        self.memory.previous();
+    }
+
+    fn move_right() {
+        self.memory.advance();
+    }
+
+    pub fn print() {
+        self.memory.print();
+    }
+}
+
+var vm = new VM();
+// vm.interpret("++>+++>+<-<-");
+// vm.print();

@@ -158,6 +158,7 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym);
 static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var);
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index);
+static void preindex_class_props(Compiler* const compiler, ListStmt* body);
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index);
 static void call_with_params(Compiler* const compiler, Vector* params);
 
@@ -618,6 +619,9 @@ static void compile_class(void* ctx, ClassStmt* klass) {
 
     assert(STMT_IS_LIST(*klass->body));
     ListStmt* body = klass->body->list;
+
+    preindex_class_props(compiler, body);
+
     ENABLE_SELF(compiler, symbol, {
         for (int i = 0; i < body->size; i++) {
             Stmt* prop = body->stmts[i];
@@ -652,6 +656,32 @@ static void compile_class(void* ctx, ClassStmt* klass) {
     uint16_t default_value = make_constant(compiler, OBJ_VALUE(obj, symbol->type));
     emit_param(compiler, OP_CONSTANT, OP_CONSTANT_LONG, default_value);
     emit_variable_declaration(compiler, klass_index);
+}
+
+static void preindex_class_props(Compiler* const compiler, ListStmt* body) {
+    for (int i = 0; i < body->size; i++) {
+        Stmt* prop = body->stmts[i];
+        SymbolName name;
+
+        switch (prop->kind) {
+        case STMT_FUNCTION: {
+            name = create_symbol_name(prop->function.identifier.start, prop->function.identifier.length);
+            break;
+        }
+        case STMT_VAR: {
+            name = create_symbol_name(prop->var.identifier.start, prop->var.identifier.length);
+            break;
+        }
+        default: {
+            assert(false); // You must not reach this line
+            return;
+        }
+        }
+
+        Symbol* symbol = scoped_symbol_lookup_levels(&compiler->symbols, &name, 0);
+        assert(symbol != NULL);
+        symbol->constant_index = i;
+    }
 }
 
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index) {

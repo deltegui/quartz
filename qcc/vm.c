@@ -496,7 +496,9 @@ static void run(ObjFunction* func) {
                 if (arr->obj.type->array.inner->kind == TYPE_ANY) {
                     arr->obj.type->array.inner = val.type;
                 }
+                stack_push(OBJ_VALUE(arr, arr->obj.type));
                 valuearray_write(&arr->elements, val);
+                stack_pop();
             }
             stack_push(OBJ_VALUE(arr, arr->obj.type));
             break;

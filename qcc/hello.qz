@@ -2,16 +2,34 @@ import "stdio";
 import "stdconv";
 
 class Memory {
-    pub fn increment() {
-        self.read();
+    var memory: []Number;
+    var ptr: Number;
+
+    pub fn init() {
+        self.memory = [0];
+        self.ptr = 0;
+        println("finished init");
     }
 
-    pub fn read() {
-        println("Read");
+    pub fn increment() {
+        println("Call increment");
+        var old = self.read();
+        println("Finished Call increment");
+    }
+
+    pub fn read(): Number {
+        println("Call read");
+        var ptr = self.ptr;
+        println("ptr done!");
+        var mem = self.memory;
+        var data = mem.get(ptr);
+        println("data done!");
+        return cast<Number>(data);
     }
 }
 
 var mem = new Memory();
 
 mem.increment();
+
 

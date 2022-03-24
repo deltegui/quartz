@@ -62,8 +62,10 @@ ObjArray* new_array(Type* inner) {
     assert(inner != NULL);
     Type* type = create_type_array(inner);
     ObjArray* arr = ALLOC_OBJ(ObjArray, OBJ_ARRAY, type);
+    stack_push(OBJ_VALUE(arr, type));
     init_valuearray(&arr->elements);
     array_push_props(&arr->obj.props);
+    stack_pop();
     return arr;
 }
 

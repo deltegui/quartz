@@ -4,6 +4,8 @@
 #include "../parser.h"
 #include "../expr.h"
 #include "../debug.h"
+#include "../array.h"
+#include "../string.h"
 
 static inline void assert_has_errors(const char* source);
 static void assert_stmt_equals(Stmt* first, Stmt* second);
@@ -125,6 +127,8 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_stmt_equals(first->klass.body, second->klass.body);
         break;
     }
+    case STMT_NATIVE_CLASS:
+        break;
     }
 }
 
@@ -184,6 +188,16 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         assert_expr_equals(first->prop_assigment.value, second->prop_assigment.value);
         break;
     }
+    case EXPR_ARRAY: {
+        // TODO implement
+        break;
+    }
+    case EXPR_CAST: {
+        assert_expr_equals(first->cast.inner, second->cast.inner);
+        assert_true(t_token_equals(&first->cast.token, &second->cast.token));
+        assert_true(type_equals(first->cast.type, second->cast.type));
+        break;
+    }
     }
 }
 
@@ -211,8 +225,20 @@ static void assert_ast(const char* source, Stmt* expected_ast) {
     free_stmt(result);
 }
 
+#define LIST_ADD_NATIVE_CLASS(list, name_class, length_class) do {\
+    NativeClassStmt native;\
+    native.name = name_class;\
+    native.length = length_class;\
+    stmt_list_add(list, CREATE_STMT_NATIVE_CLASS(native));\
+} while (false)
+
+#define LIST_ADD_PRE_NATIVE(list)\
+    LIST_ADD_NATIVE_CLASS(list, ARRAY_CLASS_NAME, ARRAY_CLASS_LENGTH);\
+    LIST_ADD_NATIVE_CLASS(list, STRING_CLASS_NAME, STRING_CLASS_LENGTH)
+
 static void assert_stmt_ast(const char* source, Stmt* expected) {
     ListStmt* list = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(list);
     stmt_list_add(list, expected);
     Stmt* stmt = CREATE_STMT_LIST(list);
     assert_ast(source, stmt);
@@ -507,6 +533,7 @@ static void should_use_of_globals() {
     };
 
     ListStmt* list = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(list);
     stmt_list_add(list, CREATE_STMT_VAR(var));
     stmt_list_add(list, CREATE_STMT_EXPR(expr));
 
@@ -529,6 +556,7 @@ static void should_assign_vars() {
     };
 
     ListStmt* list = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(list);
     stmt_list_add(list, CREATE_STMT_VAR(var));
     stmt_list_add(list, CREATE_STMT_EXPR(expr));
 
@@ -558,6 +586,7 @@ static void should_parse_blocks() {
     };
 
     ListStmt* global = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(global);
     stmt_list_add(global, CREATE_STMT_BLOCK(block));
 
     Stmt* stmt = CREATE_STMT_LIST(global);
@@ -924,6 +953,7 @@ static void should_parse_empty_class() {
 
 static void should_parse_new_expr() {
     ListStmt* main = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(main);
 
     ClassStmt klass;
     klass.identifier = hello_token;
@@ -957,6 +987,8 @@ static int test_teardown(void** args) {
 }
 
 int main(void) {
+    array_init();
+    string_init();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_returns),
         cmocka_unit_test(should_parse_empty_blocks),

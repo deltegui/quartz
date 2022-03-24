@@ -5,6 +5,8 @@
 #include "../typechecker.h"
 #include "../debug.h"
 #include "../type.h"
+#include "../array.h"
+#include "../string.h"
 
 #define TABLE(...) do {\
     SymbolTable table;\
@@ -569,6 +571,8 @@ void object_symbols_can_be_added() {
 }
 
 int main(void) {
+    array_init();
+    string_init();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(scoped_symbol_should_insert_locals),
         cmocka_unit_test(scoped_symbol_should_insert_globals),

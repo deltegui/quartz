@@ -4,6 +4,8 @@
 #include "../chunk.h"
 #include "../values.h"
 #include "../vm.h"
+#include "../array.h"
+#include "../string.h"
 
 #define ASSERT_CHUNK(code, ...) do {\
     Chunk my;\
@@ -112,6 +114,8 @@ static void should_compile_globals_with_default_values() {
 }
 
 int main(void) {
+    array_init();
+    string_init();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_compile_globals_with_default_values),
         cmocka_unit_test(should_compile_globals),

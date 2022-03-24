@@ -1,0 +1,55 @@
+import "stdio";
+import "stdconv";
+
+class Memory {
+    var memory: []Number;
+    var ptr: Number;
+
+    pub fn init() {
+        self.memory = [0];
+        self.ptr = 0;
+    }
+
+    pub fn increment() {
+        var old = self.read();
+        //self.memory.set(self.ptr, old + 1);
+    }
+
+    pub fn decrement() {
+        var old = self.read();
+        self.memory.set(self.ptr, old - 1);
+    }
+
+    pub fn read(): Number {
+        return cast<Number>(self.memory.get(self.ptr));
+    }
+
+    pub fn advance() {
+        var max = self.memory.length() - 1;
+        if (self.ptr >= max) {
+            self.memory.push(0);
+        }
+        self.ptr = self.ptr + 1;
+    }
+
+    pub fn previous() {
+        if (self.ptr == 0) {
+            return;
+        }
+        self.ptr = self.ptr - 1;
+    }
+
+    pub fn print() {
+        for (var i = 0; i < self.memory.length(); i = i + 1) {
+            var current = cast<Number>(self.memory.get(i));
+            println(ntos(current));
+        }
+    }
+}
+
+var mem = new Memory();
+
+mem.increment();
+/*
+mem.print();
+*/

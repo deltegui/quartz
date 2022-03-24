@@ -17,7 +17,6 @@ typedef enum {
     EXPR_PROP,
     EXPR_PROP_ASSIGMENT,
     EXPR_ARRAY,
-    EXPR_ARRAY_ACCESS, // TODO we must create this shit
     EXPR_CAST,
 } ExprKind;
 
@@ -76,11 +75,6 @@ typedef struct {
 } ArrayExpr;
 
 typedef struct {
-    uint64_t index;
-    Token array;
-} ArrayAccesExpr;
-
-typedef struct {
     Token token;
     struct s_expr* inner;
     struct s_type* type;
@@ -99,7 +93,6 @@ typedef struct s_expr {
         PropExpr prop;
         PropAssigmentExpr prop_assigment;
         ArrayExpr array;
-        ArrayAccesExpr array_access;
         CastExpr cast;
     };
 } Expr;
@@ -115,7 +108,6 @@ typedef struct {
     void (*visit_prop)(void* ctx, PropExpr* prop);
     void (*visit_prop_assigment)(void* ctx, PropAssigmentExpr* prop_assigment);
     void (*visit_array)(void* ctx, ArrayExpr* array);
-    void (*visit_array_access)(void* ctx, ArrayAccesExpr* array_access);
     void (*visit_cast)(void* ctx, CastExpr* cast);
 } ExprVisitor;
 

@@ -11,6 +11,7 @@ static Value stdconv_btos(int argc, Value* argv);
 static Value stdconv_sum(int argc, Value* argv);
 static Value stdconv_ston(int argc, Value* argv);
 static Value stdconv_typeof(int argc, Value* argv);
+static Value stdconv_parse_ascii(int argc, Value* argv);
 
 #define DEFINE_TYPE(name, param_type)\
     Type* name = create_type_function();\
@@ -66,13 +67,24 @@ void register_stdconv(CTable* table) {
         .type = ston_type,
     };
 
-#define FN_LENGTH 5
+    DEFINE_TYPE(
+        parse_ascii_type,
+        create_type_array(CREATE_TYPE_NUMBER()));
+    NativeFunction parse_ascii = (NativeFunction) {
+        .name = "parse_ascii",
+        .length = 11,
+        .function = stdconv_parse_ascii,
+        .type = parse_ascii_type,
+    };
+
+#define FN_LENGTH 6
     static NativeFunction functions[FN_LENGTH];
     functions[0] = ntos;
     functions[1] = btos;
     functions[2] = sum;
     functions[3] = ston;
     functions[4] = typeof_;
+    functions[5] = parse_ascii;
 
     NativeImport stdconv_import = (NativeImport) {
         .name = "stdconv",
@@ -130,4 +142,18 @@ static Value stdconv_typeof(int argc, Value* argv) {
     type_fprint(stdout, argv[0].type);
     printf("\n");
     return NIL_VALUE();
+}
+
+static Value stdconv_parse_ascii(int argc, Value* argv) {
+    assert(argc == 1);
+    ObjArray* in = OBJ_AS_ARRAY(VALUE_AS_OBJ(argv[0]));
+    char* buffer = (char*) malloc(in->elements.size * sizeof(char));
+
+    for (int i = 0; i < in->elements.size; i++) {
+        buffer[i] = (char)VALUE_AS_NUMBER(in->elements.values[i]);
+    }
+
+    ObjString* out = copy_string(buffer, in->elements.size);
+    free(buffer);
+    return OBJ_VALUE(out, CREATE_TYPE_STRING());
 }

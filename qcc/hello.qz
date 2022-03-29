@@ -1,16 +1,5 @@
 import "stdio";
 import "stdconv";
 
-class Memory {
-    pub var memory: []Number;
-
-    pub fn init() {
-        self.memory = [0];
-    }
-}
-
-var mem = new Memory();
-
-
-mem.memory.get(0);
-
+var cosa = readstr();
+println(cosa);

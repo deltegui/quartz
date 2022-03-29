@@ -714,6 +714,7 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
     FuncMeta* meta = function_stack_peek(checker);
     Symbol* fn_sym = lookup_str(checker, meta->name.start, meta->name.length);
     assert(fn_sym != NULL);
+    printf("%.*s\n", SYMBOL_NAME_LENGTH(fn_sym->name), SYMBOL_NAME_START(fn_sym->name));
     assert(fn_sym->kind == SYMBOL_FUNCTION);
     scoped_symbol_upvalue(checker->symbols, fn_sym, var);
 }

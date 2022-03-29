@@ -24,6 +24,10 @@ class Memory {
         return cast<Number>(self.memory.get(self.ptr));
     }
 
+    pub fn write(data: Number) {
+        self.memory.set(self.ptr, data);
+    }
+
     pub fn advance() {
         var max = self.memory.length() - 1;
         if (self.ptr >= max) {
@@ -39,10 +43,10 @@ class Memory {
         self.ptr = self.ptr - 1;
     }
 
-    pub fn print() {
+    pub fn dump() {
         for (var i = 0; i < self.memory.length(); i = i + 1) {
             var current = cast<Number>(self.memory.get(i));
-            println(ntos(current));
+            println("[" + ntos(i) + "] " + ntos(current));
         }
     }
 }
@@ -52,19 +56,21 @@ typedef Command = (): Void;
 class VM {
     var memory: Memory;
     var tokens: []String;
-    var commands: []Any;
+    var commands: []Command;
     var pc: Number;
     var program: String;
 
     pub fn init() {
         self.memory = new Memory();
-        // self.tokens = ["<", ">", "+", "-", ".", ",", "[", "]"];
-        self.tokens = ["<", ">", "+", "-"];
-        self.commands = [];
-        self.commands.push(self.move_left);
-        self.commands.push(self.move_right);
-        self.commands.push(self.memory.increment);
-        self.commands.push(self.memory.decrement);
+        self.tokens = ["<", ">", "+", "-", ".", ","];
+        self.commands = [
+            self.move_left,
+            self.move_right,
+            self.memory.increment,
+            self.memory.decrement,
+            self.print,
+            self.input
+        ];
         self.pc = 0;
     }
 
@@ -74,7 +80,6 @@ class VM {
         var len = program.length();
         for (; self.pc < len; self.pc = self.pc + 1) {
             var token = program.get_char(self.pc);
-            println("Current token: " + token);
             self.dispatch(token);
         }
     }
@@ -82,11 +87,9 @@ class VM {
     fn dispatch(token: String) {
         var len = self.tokens.length();
         for (var i = 0; i < len; i = i + 1) {
-            println("Checking known token with index " + ntos(i));
             var current = cast<String>(self.tokens.get(i));
             if (current == token) {
                 var cmd = cast<Command>(self.commands.get(i));
-                println("Found handler for token " + current + " in index " + ntos(i));
                 cmd();
             }
         }
@@ -100,11 +103,28 @@ class VM {
         self.memory.advance();
     }
 
-    pub fn print() {
-        self.memory.print();
+    fn print() {
+        var current: Number = self.memory.read();
+        var str: String = parse_ascii([current]);
+        println(str);
+    }
+
+    fn input() {
+        print("> ");
+        var input: String = readstr();
+        if (input.length() <= 0) {
+            return;
+        }
+        var raw: []Number = input.to_ascii();
+        var num = cast<Number>(raw.get(0));
+        self.memory.write(num);
+    }
+
+    pub fn dump() {
+        self.memory.dump();
     }
 }
 
 var vm = new VM();
-// vm.interpret("++>+++>+<-<-");
-// vm.print();
+vm.interpret("++>+++>+<-<->>++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.");
+// vm.dump();

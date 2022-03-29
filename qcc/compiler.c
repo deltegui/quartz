@@ -1104,9 +1104,11 @@ static void compile_array(void* ctx, ArrayExpr* arr) {
     Compiler* compiler = (Compiler*) ctx;
 
     Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
-    for (uint32_t i = arr->elements.size; i > 0; i--) {
-        ACCEPT_EXPR(compiler, exprs[i - 1]);
-    }
+    IN_ASSIGNMENT(compiler, { // Assign to array positions is an assigment.
+        for (uint32_t i = arr->elements.size; i > 0; i--) {
+            ACCEPT_EXPR(compiler, exprs[i - 1]);
+        }
+    });
 
     emit_long(compiler, OP_ARRAY, arr->elements.size);
 }
@@ -1174,9 +1176,11 @@ static void call_with_params(Compiler* const compiler, Vector* params) {
     compiler->want_to_call = false;
 
     uint32_t i = 0;
-    for (; i < params->size; i++) {
-        ACCEPT_EXPR(compiler, exprs[i]);
-    }
+    IN_ASSIGNMENT(compiler, { // Param passing is an assigment to "params" vars
+        for (; i < params->size; i++) {
+            ACCEPT_EXPR(compiler, exprs[i]);
+        }
+    });
 
     compiler->want_to_call = old_want;
 

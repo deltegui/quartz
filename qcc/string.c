@@ -1,5 +1,6 @@
 #include "string.h"
 #include "vm.h"
+#include "object.h"
 
 static void insert_methods(ScopedSymbolTable* const table);
 
@@ -93,5 +94,11 @@ void string_push_props(ValueArray* props) {
     NATIVE_PUSH_PROP(props, length_fn);
     NATIVE_PUSH_PROP(props, get_char_fn);
     NATIVE_PUSH_PROP(props, to_ascii_fn);
+}
+
+void mark_string() {
+    mark_object((Obj*) length_fn);
+    mark_object((Obj*) get_char_fn);
+    mark_object((Obj*) to_ascii_fn);
 }
 

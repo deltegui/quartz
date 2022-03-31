@@ -1,5 +1,6 @@
 #include "array.h"
 #include "vm.h"
+#include "object.h"
 
 static void insert_methods(ScopedSymbolTable* const table);
 
@@ -126,5 +127,12 @@ void array_push_props(ValueArray* props) {
     NATIVE_PUSH_PROP(props, get_fn);
     NATIVE_PUSH_PROP(props, set_fn);
     NATIVE_PUSH_PROP(props, length_fn);
+}
+
+void mark_array() {
+    mark_object((Obj*) push_fn);
+    mark_object((Obj*) get_fn);
+    mark_object((Obj*) set_fn);
+    mark_object((Obj*) length_fn);
 }
 

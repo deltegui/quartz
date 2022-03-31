@@ -10,5 +10,6 @@
 void init_array();
 void array_push_props(ValueArray* props);
 NativeClassStmt array_register(ScopedSymbolTable* const table);
+void mark_array();
 
 #endif

@@ -10,5 +10,6 @@
 void init_string();
 void string_push_props(ValueArray* props);
 NativeClassStmt string_register(ScopedSymbolTable* const table);
+void mark_string();
 
 #endif

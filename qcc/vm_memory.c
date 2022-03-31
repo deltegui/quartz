@@ -3,6 +3,8 @@
 #include "object.h"
 #include "vm.h"
 #include "table.h"
+#include "string.h"
+#include "array.h"
 
 #ifdef GC_DEBUG
 #include "debug.h"
@@ -137,6 +139,8 @@ static void mark_roots() {
     mark_stack();
     mark_globals();
     mark_callframes();
+    mark_array();
+    mark_string();
 #ifdef GC_DEBUG
     printf("-- gc end marking roots\n");
 #endif

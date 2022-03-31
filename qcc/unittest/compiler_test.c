@@ -114,8 +114,8 @@ static void should_compile_globals_with_default_values() {
 }
 
 int main(void) {
-    array_init();
-    string_init();
+    init_array();
+    init_string();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_compile_globals_with_default_values),
         cmocka_unit_test(should_compile_globals),

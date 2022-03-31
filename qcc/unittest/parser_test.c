@@ -987,8 +987,8 @@ static int test_teardown(void** args) {
 }
 
 int main(void) {
-    array_init();
-    string_init();
+    init_array();
+    init_string();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_returns),
         cmocka_unit_test(should_parse_empty_blocks),

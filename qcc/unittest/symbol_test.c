@@ -571,8 +571,8 @@ void object_symbols_can_be_added() {
 }
 
 int main(void) {
-    array_init();
-    string_init();
+    init_array();
+    init_string();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(scoped_symbol_should_insert_locals),
         cmocka_unit_test(scoped_symbol_should_insert_globals),

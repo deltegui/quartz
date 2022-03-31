@@ -115,8 +115,7 @@ class VM {
         if (input.length() <= 0) {
             return;
         }
-        var num = ston(input);
-        self.memory.write(num);
+        self.memory.write(ston(input));
     }
 
     pub fn dump() {

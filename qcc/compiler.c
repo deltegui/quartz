@@ -1182,6 +1182,11 @@ static void call_with_params(Compiler* const compiler, Vector* params) {
     bool old_want = compiler->want_to_call;
     compiler->want_to_call = false;
 
+    // Disable prop_index, which is used to know if is a method. In the params we can
+    // have other function calls with other prop_index or a plain function with no prop_index.
+    int old_prop_index = compiler->prop_index;
+    compiler->prop_index = PROP_INDEX_NOT_DEFINED;
+
     uint32_t i = 0;
     IN_ASSIGNMENT(compiler, { // Param passing is an assigment to "params" vars
         for (; i < params->size; i++) {
@@ -1189,6 +1194,7 @@ static void call_with_params(Compiler* const compiler, Vector* params) {
         }
     });
 
+    compiler->prop_index = old_prop_index;
     compiler->want_to_call = old_want;
 
     if (i > UINT8_MAX) {

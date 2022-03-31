@@ -53,7 +53,9 @@ static void have_error(Typechecker* const checker);
 static void start_scope(Typechecker* const checker);
 static void end_scope(Typechecker* const checker);
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
+static Symbol* lookup_with_class_str(Typechecker* const checker, const char* name, int length);
 static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level);
+static Symbol* fn_lookup_str(Typechecker* const checker, const char* name, int length);
 static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Token* prop, Symbol** class_out);
 static Symbol* get_native_class_prop(Typechecker* const checker, const char* const class_name, int length, Token* prop, Symbol** class_sym_out);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
@@ -215,8 +217,16 @@ static Symbol* lookup_str(Typechecker* const checker, const char* name, int leng
     return scoped_symbol_lookup_str(checker->symbols, name, length);
 }
 
+static Symbol* lookup_with_class_str(Typechecker* const checker, const char* name, int length) {
+    return scoped_symbol_lookup_with_class_str(checker->symbols, name, length);
+}
+
 static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level) {
     return scoped_symbol_lookup_levels(checker->symbols, &name, level);
+}
+
+static Symbol* fn_lookup_str(Typechecker* const checker, const char* name, int length) {
+    return scoped_symbol_lookup_function_str(checker->symbols, name, length);
 }
 
 static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Token* prop, Symbol** class_out) {
@@ -301,7 +311,7 @@ static void typecheck_expr(void* ctx, ExprStmt* expr) {
 static void typecheck_var(void* ctx, VarStmt* var) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
+    Symbol* symbol = lookup_with_class_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
 
     if (var->definition == NULL) {
@@ -712,9 +722,8 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
     printf("Yes\n");
 #endif
     FuncMeta* meta = function_stack_peek(checker);
-    Symbol* fn_sym = lookup_str(checker, meta->name.start, meta->name.length);
+    Symbol* fn_sym = lookup_with_class_str(checker, meta->name.start, meta->name.length);
     assert(fn_sym != NULL);
-    printf("%.*s\n", SYMBOL_NAME_LENGTH(fn_sym->name), SYMBOL_NAME_START(fn_sym->name));
     assert(fn_sym->kind == SYMBOL_FUNCTION);
     scoped_symbol_upvalue(checker->symbols, fn_sym, var);
 }
@@ -760,7 +769,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     ACCEPT_STMT(ctx, function->body);
     end_scope(checker);
 
-    Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
+    Symbol* symbol = lookup_with_class_str(checker, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     typecheck_params_arent_void(checker, symbol);
@@ -831,7 +840,7 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     }
     FuncMeta* meta = function_stack_peek(checker);
     Token func_identifier = meta->name;
-    Symbol* symbol = lookup_str(checker, func_identifier.start, func_identifier.length);
+    Symbol* symbol = fn_lookup_str(checker, func_identifier.start, func_identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     if (! type_equals(TYPE_FN_RETURN(symbol->type), checker->last_type)) {

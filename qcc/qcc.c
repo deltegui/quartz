@@ -5,8 +5,6 @@
 #include "compiler.h"
 #include "vm.h"
 #include "import.h"
-#include "array.h"
-#include "string.h"
 
 #ifdef DEBUG
 #include "debug.h"
@@ -68,8 +66,6 @@ void repl() {
 }
 
 int main(int argc, char** argv) {
-    string_init();
-    array_init();
     if (argc <= 1) {
         repl();
     }

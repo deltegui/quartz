@@ -4,6 +4,8 @@
 #include "vm_memory.h"
 #include "type.h" // to init and free type_pool
 #include "stdlib/stdlib.h" // to init and free stdlib
+#include "array.h"
+#include "string.h"
 
 #ifdef VM_DEBUG
 #include "debug.h"
@@ -41,6 +43,9 @@ void init_qvm() {
 
     qvm.stack_top = qvm.stack;
     qvm.objects = NULL;
+
+    init_string();
+    init_array();
 
     init_gray_stack();
 

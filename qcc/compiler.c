@@ -126,6 +126,7 @@ static void end_scope(Compiler* const compiler);
 static void pop_all_locals(Compiler* const compiler, int scope);
 static void reset_loop_locals(Compiler* const compiler);
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
+static Symbol* lookup_with_class_str(Compiler* const compiler, const char* name, int length);
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length);
 
 static int emit(Compiler* const compiler, uint8_t bytecode);
@@ -296,6 +297,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     memset(compiler->locals, 0, UINT8_COUNT);
 
     compiler->current_self = NULL;
+    compiler->want_to_call = false;
     compiler->prop_index = PROP_INDEX_NOT_DEFINED;
 
     compiler->in_assignment = false;
@@ -331,6 +333,7 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     memset(inner->locals, 0, UINT8_COUNT);
 
     inner->current_self = outer->current_self;
+    inner->want_to_call = false;
     inner->prop_index = PROP_INDEX_NOT_DEFINED;
 
     inner->in_assignment = false;
@@ -407,6 +410,10 @@ static void reset_loop_locals(Compiler* const compiler) {
 
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length) {
     return scoped_symbol_lookup_str(&compiler->symbols, name, length);
+}
+
+static Symbol* lookup_with_class_str(Compiler* const compiler, const char* name, int length) {
+    return scoped_symbol_lookup_with_class_str(&compiler->symbols, name, length);
 }
 
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length) {
@@ -546,7 +553,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     Compiler* compiler = (Compiler*) ctx;
     uint16_t fn_index = get_variable_index(compiler, &function->identifier);
 
-    Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
+    Symbol* symbol = lookup_with_class_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
 
     Value fn_value = do_compile_function(compiler, function, fn_index);
@@ -559,7 +566,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 }
 
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index) {
-    Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
+    Symbol* symbol = lookup_with_class_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
     update_symbol_variable_info(compiler, symbol, index);
 
@@ -685,7 +692,7 @@ static void preindex_class_props(Compiler* const compiler, ListStmt* body) {
 }
 
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index) {
-    Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
+    Symbol* symbol = lookup_with_class_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     update_symbol_variable_info(compiler, symbol, index);
     assert(var->definition == NULL);

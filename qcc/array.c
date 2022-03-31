@@ -13,7 +13,7 @@ static ObjNative *push_fn = NULL,
                  *set_fn = NULL,
                  *length_fn = NULL;
 
-void array_init() {
+void init_array() {
     NATIVE_CLASS_INIT(push_fn, "push", 4, array_push, {
         type_f = create_type_function();
         VECTOR_ADD_TYPE(&type_f->function.param_types, CREATE_TYPE_ANY());

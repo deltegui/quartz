@@ -8,8 +8,9 @@ typedef bool (*ExitCondition) (Symbol*);
 static bool symbol_name_equals(SymbolName* first, SymbolName* second);
 static SymbolKind kind_from_type(Type* type);
 static void create_function_symbol(Symbol* const symbol);
+static void create_scope(ScopedSymbolTable* const table, bool is_class_scope);
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
-static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, ExitCondition test_condition);
+static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, bool want_class_scope, ExitCondition test_condition);
 
 SymbolName create_symbol_name(const char* start, int length) {
     CTableKey key = create_ctable_key(start, length);
@@ -128,6 +129,7 @@ void init_symbol_node(SymbolNode* const node) {
     init_symbol_table(&node->symbols);
     node->father = NULL;
     init_vector(&node->childs, sizeof(SymbolNode));
+    node->is_class_scope = false;
     node->next_node_to_visit = 0;
 }
 
@@ -166,9 +168,18 @@ void free_scoped_symbol_table(ScopedSymbolTable* const table) {
 }
 
 void symbol_create_scope(ScopedSymbolTable* const table) {
+    create_scope(table, false);
+}
+
+void symbol_create_class_scope(ScopedSymbolTable* const table) {
+    create_scope(table, true);
+}
+
+static void create_scope(ScopedSymbolTable* const table, bool is_class_scope) {
     assert(table->current != NULL);
     SymbolNode child;
     init_symbol_node(&child);
+    child.is_class_scope = is_class_scope;
     table->current = symbol_node_add_child(table->current, &child);
 }
 
@@ -199,14 +210,19 @@ bool test_only_functions(Symbol* symbol) {
     return symbol->kind == SYMBOL_FUNCTION;
 }
 
-static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, ExitCondition test_condition) {
+#define WITH_CLASS_SCOPE true
+#define WITHOUT_CLASS_SCOPE false
+
+static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, bool want_class_scope, ExitCondition test_condition) {
     assert(table->current != NULL);
     SymbolNode* current = table->current;
     Symbol* symbol = NULL;
     while (current != NULL && levels >= 0) {
-        symbol = symbol_lookup(&current->symbols, name);
-        if (symbol != NULL && test_condition(symbol)) {
-            return symbol;
+        if ((!want_class_scope && !current->is_class_scope) || want_class_scope) {
+            symbol = symbol_lookup(&current->symbols, name);
+            if (symbol != NULL && test_condition(symbol)) {
+                return symbol;
+            }
         }
         current = current->father;
         levels--;
@@ -215,7 +231,12 @@ static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const 
 }
 
 Symbol* scoped_symbol_lookup(ScopedSymbolTable* const table, SymbolName* name) {
-    return scoped_symbol_lookup_levels_conditional(table, name, INT_MAX, test_all);
+    return scoped_symbol_lookup_levels_conditional(
+        table,
+        name,
+        INT_MAX,
+        WITHOUT_CLASS_SCOPE,
+        test_all);
 }
 
 Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* name, int length) {
@@ -224,7 +245,12 @@ Symbol* scoped_symbol_lookup_str(ScopedSymbolTable* const table, const char* nam
 }
 
 Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName* name) {
-    return scoped_symbol_lookup_levels_conditional(table, name, INT_MAX, test_only_functions);
+    return scoped_symbol_lookup_levels_conditional(
+        table,
+        name,
+        INT_MAX,
+        WITH_CLASS_SCOPE,
+        test_only_functions);
 }
 
 Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length) {
@@ -233,12 +259,31 @@ Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const 
 }
 
 Symbol* scoped_symbol_lookup_levels(ScopedSymbolTable* const table, SymbolName* name, int levels) {
-    return scoped_symbol_lookup_levels_conditional(table, name, levels, test_all);
+    return scoped_symbol_lookup_levels_conditional(
+        table,
+        name,
+        levels,
+        WITH_CLASS_SCOPE,
+        test_all);
 }
 
 Symbol* scoped_symbol_lookup_levels_str(ScopedSymbolTable* const table, const char* name, int length, int levels) {
     SymbolName symbol_name = create_symbol_name(name, length);
     return scoped_symbol_lookup_levels(table, &symbol_name, levels);
+}
+
+ Symbol* scoped_symbol_lookup_with_class(ScopedSymbolTable* const table, SymbolName* name) {
+    return scoped_symbol_lookup_levels_conditional(
+        table,
+        name,
+        INT_MAX,
+        WITH_CLASS_SCOPE,
+        test_all);
+ }
+
+Symbol* scoped_symbol_lookup_with_class_str(ScopedSymbolTable* const table, const char* name, int length) {
+    SymbolName symbol_name = create_symbol_name(name, length);
+    return scoped_symbol_lookup_with_class(table, &symbol_name);
 }
 
 Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name) {

@@ -48,9 +48,11 @@ static void syncronize(Parser* const parser);
 #define ERROR_AT(parser, token, msg) (error_at(parser, token, msg, NULL))
 
 static void create_scope(Parser* const parser);
+static void create_class_scope(Parser* const parser);
 static void end_scope(Parser* const parser);
 static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name);
 static Symbol* lookup_str(Parser* const parser, const char* name, int length);
+static Symbol* lookup_with_class_str(Parser* const parser, const char* name, int length);
 static void insert(Parser* const parser, Symbol entry);
 static bool register_symbol(Parser* const parser, Symbol symbol);
 static Symbol create_symbol_calc_global(Parser* const parser, Token* token, Type* type);
@@ -308,6 +310,11 @@ static void create_scope(Parser* const parser){
     symbol_create_scope(parser->symbols);
 }
 
+static void create_class_scope(Parser* const parser) {
+    parser->scope_depth++;
+    symbol_create_class_scope(parser->symbols);
+}
+
 static void end_scope(Parser* const parser){
     symbol_end_scope(parser->symbols);
     parser->scope_depth--;
@@ -319,6 +326,10 @@ static Symbol* current_scope_lookup(Parser* const parser, SymbolName* name){
 
 static Symbol* lookup_str(Parser* const parser, const char* name, int length){
     return scoped_symbol_lookup_str(parser->symbols, name, length);
+}
+
+static Symbol* lookup_with_class_str(Parser* const parser, const char* name, int length) {
+    return scoped_symbol_lookup_with_class_str(parser->symbols, name, length);
 }
 
 static void insert(Parser* const parser, Symbol entry){
@@ -629,7 +640,7 @@ static Stmt* class_decl(Parser* const parser) {
     assert(inserted != NULL);
 
     consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after class name in class declaration");
-    create_scope(parser);
+    create_class_scope(parser);
     symbol_update_class_body(parser, inserted);
     IN_CLASS(parser, inserted->type, {
         klass.body = parse_class_body(parser, inserted);
@@ -667,7 +678,8 @@ static Stmt* parse_class_body(Parser* const parser, Symbol* klass_sym) {
             return CREATE_STMT_LIST(list);
         }
 
-        Symbol* sym = lookup_str(parser, identifier.start, identifier.length);
+        Symbol* sym = lookup_with_class_str(parser, identifier.start, identifier.length);
+        assert(sym != NULL);
         sym->visibility = visibility;
         stmt_list_add(list, stmt);
     }
@@ -717,7 +729,7 @@ static Stmt* function_decl(Parser* const parser) {
     // Insert symbol before parsing the function body
     // so you can call a function inside a function
     TRY_REGISTER_SYMBOL(parser, symbol, NULL);
-    Symbol* registered = lookup_str(parser, fn.identifier.start, fn.identifier.length);
+    Symbol* registered = lookup_with_class_str(parser, fn.identifier.start, fn.identifier.length);
     assert(registered != NULL);
 
     parse_function_body(parser, &fn, registered);

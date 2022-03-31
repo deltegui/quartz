@@ -7,7 +7,7 @@
 #define STRING_CLASS_NAME "String"
 #define STRING_CLASS_LENGTH 6
 
-void string_init();
+void init_string();
 void string_push_props(ValueArray* props);
 NativeClassStmt string_register(ScopedSymbolTable* const table);
 

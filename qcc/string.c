@@ -11,7 +11,7 @@ static ObjNative *length_fn = NULL,
                  *get_char_fn = NULL,
                  *to_ascii_fn = NULL;
 
-void string_init() {
+void init_string() {
     NATIVE_CLASS_INIT(length_fn, "length", 6, string_length, {
         type_f = create_type_function();
         type_f->function.return_type = CREATE_TYPE_NUMBER();

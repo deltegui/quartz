@@ -3,11 +3,12 @@ import "stdconv";
 
 class Hello {
     fn println() {
-
+        println("Dentro de metodo");
     }
 
     pub fn input() {
         println("hola");
+        self.println();
     }
 }
 

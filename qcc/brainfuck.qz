@@ -115,8 +115,7 @@ class VM {
         if (input.length() <= 0) {
             return;
         }
-        var raw: []Number = input.to_ascii();
-        var num = cast<Number>(raw.get(0));
+        var num = ston(input);
         self.memory.write(num);
     }
 
@@ -126,5 +125,5 @@ class VM {
 }
 
 var vm = new VM();
-vm.interpret("++>+++>+<-<->>++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.");
-// vm.dump();
+vm.interpret("++>+++>+<-<->>++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++.>,.");
+vm.dump();

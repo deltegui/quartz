@@ -97,6 +97,7 @@ typedef struct s_symbol_node {
     SymbolTable symbols;
     struct s_symbol_node* father;
     Vector childs; // Vector<SymbolNode>
+    bool is_class_scope;
     uint32_t next_node_to_visit;
 } SymbolNode;
 
@@ -117,6 +118,7 @@ void init_scoped_symbol_table(ScopedSymbolTable* const table);
 void free_scoped_symbol_table(ScopedSymbolTable* const table);
 
 void symbol_create_scope(ScopedSymbolTable* const table);
+void symbol_create_class_scope(ScopedSymbolTable* const table);
 void symbol_end_scope(ScopedSymbolTable* const table);
 void symbol_start_scope(ScopedSymbolTable* const table);
 void symbol_reset_scopes(ScopedSymbolTable* const table);
@@ -129,6 +131,8 @@ Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName
 Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length);
 Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name);
 Symbol* scoped_symbol_lookup_object_prop_str(Symbol* const obj_sym, const char* name, int legnth);
+Symbol* scoped_symbol_lookup_with_class(ScopedSymbolTable* const table, SymbolName* name);
+Symbol* scoped_symbol_lookup_with_class_str(ScopedSymbolTable* const table, const char* name, int length);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* var_upvalue);
 void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj);

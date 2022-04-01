@@ -2,14 +2,24 @@ import "stdio";
 import "stdconv";
 
 class Hello {
-    fn println() {
-
-    }
-
-    pub fn input() {
-        println("hola");
-    }
+    fn uno() {}
+    fn dos() {}
+    fn tres() {}
+    fn cuatro() {}
+    fn cinco() {}
+    fn seis() {}
+    fn siete() {}
+    fn ocho() {}
+    fn nueve() {}
+    fn diez() {}
+    fn once() {}
+    fn doce() {}
+    fn trece() {}
+    fn catorce() {}
+    fn quince() {}
+    fn dieciseis() {}
+    fn diecisiete() {}
+    fn dieciocho() {}
+    fn diecinueve() {}
+    fn veinte() {}
 }
-
-var h = new Hello();
-h.input();

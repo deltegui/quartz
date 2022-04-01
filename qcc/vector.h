@@ -4,6 +4,7 @@
 #include "common.h"
 
 typedef struct {
+    bool had_realloc;
     uint32_t size;
     uint32_t capacity;
     size_t element_size;

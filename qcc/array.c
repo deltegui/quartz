@@ -4,6 +4,7 @@
 
 static void insert_methods(ScopedSymbolTable* const table);
 
+static Value array_pop(int argc, Value* argv);
 static Value array_push(int argc, Value* argv);
 static Value array_get(int argc, Value* argv);
 static Value array_set(int argc, Value* argv);
@@ -12,6 +13,7 @@ static Value array_length(int argc, Value* argv);
 static ObjNative *push_fn = NULL,
                  *get_fn = NULL,
                  *set_fn = NULL,
+                 *pop_fn = NULL,
                  *length_fn = NULL;
 
 void init_array() {
@@ -37,6 +39,11 @@ void init_array() {
     NATIVE_CLASS_INIT(length_fn, "length", 6, array_length, {
         type_f = create_type_function();
         type_f->function.return_type = CREATE_TYPE_NUMBER();
+    });
+
+    NATIVE_CLASS_INIT(pop_fn, "pop", 3, array_pop, {
+        type_f = create_type_function();
+        type_f->function.return_type = CREATE_TYPE_ANY();
     });
 }
 
@@ -70,6 +77,22 @@ static Value array_get(int argc, Value* argv) {
         return NIL_VALUE();
     }
     return arr->elements.values[index];
+
+#undef INDEX
+#undef SELF
+}
+
+static Value array_pop(int argc, Value* argv) {
+    assert(argc == 1);
+#define SELF argv[0]
+
+    ObjArray* arr = OBJ_AS_ARRAY(VALUE_AS_OBJ(SELF));
+    if (arr->elements.size == 0) {
+        runtime_error("Called pop in empty array");
+        return NUMBER_VALUE(0);
+    }
+    arr->elements.size--;
+    return arr->elements.values[arr->elements.size];
 
 #undef INDEX
 #undef SELF
@@ -120,6 +143,7 @@ static void insert_methods(ScopedSymbolTable* const table) {
     NATIVE_INSERT_METHOD(table, get_fn, constant_index);
     NATIVE_INSERT_METHOD(table, set_fn, constant_index);
     NATIVE_INSERT_METHOD(table, length_fn, constant_index);
+    NATIVE_INSERT_METHOD(table, pop_fn, constant_index);
 }
 
 void array_push_props(ValueArray* props) {
@@ -127,6 +151,7 @@ void array_push_props(ValueArray* props) {
     NATIVE_PUSH_PROP(props, get_fn);
     NATIVE_PUSH_PROP(props, set_fn);
     NATIVE_PUSH_PROP(props, length_fn);
+    NATIVE_PUSH_PROP(props, pop_fn);
 }
 
 void mark_array() {
@@ -134,5 +159,6 @@ void mark_array() {
     mark_object((Obj*) get_fn);
     mark_object((Obj*) set_fn);
     mark_object((Obj*) length_fn);
+    mark_object((Obj*) pop_fn);
 }
 

@@ -72,6 +72,7 @@ typedef struct {
 typedef struct {
     Vector elements; // Vector<Expr>
     Token left_braket;
+    struct s_type* inner;
 } ArrayExpr;
 
 typedef struct {

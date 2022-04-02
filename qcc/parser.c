@@ -1203,15 +1203,21 @@ static Expr* prop(Parser* const parser, bool can_assign, Expr* left) {
 }
 
 static Expr* arr(Parser* const parser, bool can_assign) {
+    consume(parser, TOKEN_RIGHT_BRAKET, "Expected ']' after '[' in array expression");
+
     ArrayExpr array;
     array.left_braket = parser->current;
     init_vector(&array.elements, sizeof(Expr*));
+    array.inner = parse_type(parser);
+    advance(parser); // Consume type
+
+    consume(parser, TOKEN_LEFT_BRACE, "Expected '{' after type in array expression");
 
     parse_expression_list(
         parser,
         &array.elements,
-        TOKEN_RIGHT_BRAKET,
-        "Expected array expression to end with ']'");
+        TOKEN_RIGHT_BRACE,
+        "Expected array expression to end with '}'");
 
     return CREATE_ARRAY_EXPR(array);
 }

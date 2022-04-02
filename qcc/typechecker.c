@@ -559,14 +559,10 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
 static void typecheck_array(void* ctx, ArrayExpr* arr) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Type* inner = CREATE_TYPE_ANY();
+    Type* inner = arr->inner;
     Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
     for (uint32_t i = 0; i < arr->elements.size; i++) {
         ACCEPT_EXPR(checker, exprs[i]);
-        if (TYPE_IS_ANY(inner)) {
-            inner = checker->last_type;
-            continue;
-        }
         if (! type_equals(inner, checker->last_type)) {
             error(
                 checker,

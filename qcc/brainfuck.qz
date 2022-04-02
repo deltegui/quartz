@@ -6,7 +6,7 @@ class Memory {
     var ptr: Number;
 
     pub fn init() {
-        self.memory = [0];
+        self.memory = []Number{0};
         self.ptr = 0;
     }
 
@@ -57,8 +57,7 @@ class Stack {
     var stack: []Number;
 
     pub fn init() {
-        self.stack = [0];
-        self.stack.pop();
+        self.stack = []Number{};
     }
 
     pub fn push(element: Number) {
@@ -68,7 +67,7 @@ class Stack {
     pub fn pop(): Number {
         return cast<Number>(self.stack.pop());
     }
-    
+
     pub fn length(): Number {
 		return self.stack.length();
 	}
@@ -85,8 +84,8 @@ class VM {
 
     pub fn init() {
         self.memory = new Memory();
-        self.tokens = ["<", ">", "+", "-", ".", ",", "[", "]"];
-        self.commands = [
+        self.tokens = []String{"<", ">", "+", "-", ".", ",", "[", "]"};
+        self.commands = []Command{
             self.move_left,
             self.move_right,
             self.memory.increment,
@@ -95,14 +94,14 @@ class VM {
             self.input,
             self.cond_init,
             self.cond_end
-        ];
+        };
         self.pc = 0;
         self.conditional_stack = new Stack();
         self.had_error = false;
     }
-    
+
     fn print_program() {
-		println("Executing program:");
+        println("Executing program:");
         println(self.program);
         println("");
     }
@@ -112,9 +111,9 @@ class VM {
         self.print_program();
         var len = program.length();
         for (; self.pc < len; self.pc = self.pc + 1) {
-			if (self.had_error) {
-				return;
-			}
+            if (self.had_error) {
+                return;
+            }
             var token = program.get_char(self.pc);
             self.dispatch(token);
         }
@@ -141,7 +140,7 @@ class VM {
 
     fn print() {
         var current: Number = self.memory.read();
-        var str: String = parse_ascii([current]);
+        var str: String = parse_ascii([]Number{current});
         print(str);
     }
 
@@ -157,6 +156,7 @@ class VM {
     fn cond_init() {
         if (self.memory.read() == 0) {
             self.match_cond_end();
+            return;
         }
         self.conditional_stack.push(self.pc - 1);
     }
@@ -164,7 +164,7 @@ class VM {
     fn match_cond_end() {
         var inner_conds = 0;
         while (self.pc < self.program.length()) {
-			self.pc = self.pc + 1;
+            self.pc = self.pc + 1;
             var current = self.program.get_char(self.pc);
             if (current == "[") {
                 inner_conds = inner_conds + 1;
@@ -184,7 +184,7 @@ class VM {
     pub fn dump() {
         self.memory.dump();
     }
-    
+
     fn error(msg: String) {
 		println("Error!: " + msg);
 		self.had_error = true;

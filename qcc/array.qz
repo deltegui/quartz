@@ -1,12 +1,12 @@
 import 'stdio';
 import 'stdconv';
 
-var a: []Number = [
+var a: []Number = []Number{
     0,
     1,
     5,
     123
-];
+};
 
 typeof(a);
 

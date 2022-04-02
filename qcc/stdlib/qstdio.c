@@ -10,6 +10,7 @@
 static Value stdio_println(int argc, Value* argv);
 static Value stdio_print(int argc, Value* argv);
 static Value stdio_readstr(int argc, Value* argv);
+static Value stdio_read_stdin(int argc, Value* argv);
 
 void register_stdio(CTable* table) {
     Type* print_type = create_type_function();
@@ -40,11 +41,19 @@ void register_stdio(CTable* table) {
         .type = readstr_type,
     };
 
-#define FN_LENGTH 3
+    NativeFunction read_stdin = (NativeFunction) {
+        .name = "stdin",
+        .length = 5,
+        .function = stdio_read_stdin,
+        .type = readstr_type,
+    };
+
+#define FN_LENGTH 4
     static NativeFunction functions[FN_LENGTH];
     functions[0] = println;
     functions[1] = print;
     functions[2] = readstr;
+    functions[3] = read_stdin;
 
     NativeImport stdio_import = (NativeImport) {
         .name = "stdio",
@@ -80,4 +89,19 @@ static Value stdio_readstr(int argc, Value* argv) {
     ObjString* str = copy_string(buffer, strlen(buffer));
     free(buffer);
     return OBJ_VALUE(str, CREATE_TYPE_STRING());
+}
+
+static Value stdio_read_stdin(int argc, Value* argv) {
+    Vector buffer;
+    init_vector(&buffer, sizeof(char));
+
+    char c = getchar();
+    while (c != EOF) {
+        VECTOR_ADD(&buffer, c, char);
+        c = getchar();
+    }
+
+    ObjString* contents = copy_string((char*) buffer.elements, buffer.size);
+    free_vector(&buffer);
+    return OBJ_VALUE(contents, CREATE_TYPE_STRING());
 }

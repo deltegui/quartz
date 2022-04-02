@@ -1,25 +1,4 @@
 import "stdio";
 import "stdconv";
 
-class Hello {
-    fn uno() {}
-    fn dos() {}
-    fn tres() {}
-    fn cuatro() {}
-    fn cinco() {}
-    fn seis() {}
-    fn siete() {}
-    fn ocho() {}
-    fn nueve() {}
-    fn diez() {}
-    fn once() {}
-    fn doce() {}
-    fn trece() {}
-    fn catorce() {}
-    fn quince() {}
-    fn dieciseis() {}
-    fn diecisiete() {}
-    fn dieciocho() {}
-    fn diecinueve() {}
-    fn veinte() {}
-}
+var a = []Number{0, 1, 2};

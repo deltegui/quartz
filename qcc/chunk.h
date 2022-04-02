@@ -63,6 +63,7 @@ typedef enum {
     OP_SET_PROP,
     OP_BINDED_METHOD,
     OP_ARRAY,
+    OP_ARRAY_PUSH,
 
     // Types
     OP_CAST,

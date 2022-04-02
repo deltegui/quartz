@@ -494,18 +494,17 @@ static void run(ObjFunction* func) {
             break;
         }
         case OP_ARRAY: {
-            uint16_t size = READ_LONG();
-            ObjArray* arr = new_array(CREATE_TYPE_ANY());
-            for (uint16_t i = 0; i < size; i++) {
-                Value val = stack_pop();
-                if (arr->obj.type->array.inner->kind == TYPE_ANY) {
-                    arr->obj.type->array.inner = val.type;
-                }
-                stack_push(OBJ_VALUE(arr, arr->obj.type));
-                valuearray_write(&arr->elements, val);
-                stack_pop();
-            }
+            Type* inner = read_type();
+            ObjArray* arr = new_array(inner);
             stack_push(OBJ_VALUE(arr, arr->obj.type));
+            // Just let the array in the top of the stack.
+            break;
+        }
+        case OP_ARRAY_PUSH: {
+            Value val = stack_pop();
+            Value target = stack_peek(0);
+            ObjArray* arr = OBJ_AS_ARRAY(VALUE_AS_OBJ(target));
+            valuearray_write(&arr->elements, val);
             break;
         }
         case OP_CAST: {

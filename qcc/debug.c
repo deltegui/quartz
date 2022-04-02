@@ -146,6 +146,7 @@ static const char* OpCodeStrings[] = {
     "OP_SET_PROP",
     "OP_BINDED_METHOD",
     "OP_ARRAY",
+    "OP_ARRAY_PUSH",
 
     "OP_CAST",
 };
@@ -269,6 +270,7 @@ static void standalone_chunk_print(const Chunk* chunk) {
         case OP_DEFINE_GLOBAL_LONG:
         case OP_CONSTANT_LONG:
         case OP_ARRAY:
+        case OP_ARRAY_PUSH:
         case OP_JUMP:
         case OP_JUMP_IF_FALSE: {
             i = chunk_opcode_print(chunk, i);

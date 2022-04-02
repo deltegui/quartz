@@ -1110,14 +1110,16 @@ static void compile_prop(void* ctx, PropExpr* prop) {
 static void compile_array(void* ctx, ArrayExpr* arr) {
     Compiler* compiler = (Compiler*) ctx;
 
+    uint8_t index_type = make_type(compiler, arr->inner);
+    emit_short(compiler, OP_ARRAY, index_type);
+
     Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
     IN_ASSIGNMENT(compiler, { // Assign to array positions is an assigment.
         for (uint32_t i = arr->elements.size; i > 0; i--) {
             ACCEPT_EXPR(compiler, exprs[i - 1]);
+            emit(compiler, OP_ARRAY_PUSH);
         }
     });
-
-    emit_long(compiler, OP_ARRAY, arr->elements.size);
 }
 
 static void compile_cast(void* ctx, CastExpr* cast) {

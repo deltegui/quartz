@@ -22,7 +22,11 @@ static inline void assert_has_errors(const char* source) {
     Parser parser;
     ScopedSymbolTable symbols;
     init_scoped_symbol_table(&symbols);
-    init_parser(&parser, source, &symbols);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_parser(&parser, ctx, &symbols);
     Stmt* result = parse(&parser);
     free_scoped_symbol_table(&symbols);
     assert_true(parser.has_error);
@@ -218,7 +222,11 @@ static void assert_ast(const char* source, Stmt* expected_ast) {
     Parser parser;
     ScopedSymbolTable symbols;
     init_scoped_symbol_table(&symbols);
-    init_parser(&parser, source, &symbols);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_parser(&parser, ctx, &symbols);
     Stmt* result = parse(&parser);
     compare_asts(result, expected_ast);
     free_scoped_symbol_table(&symbols);

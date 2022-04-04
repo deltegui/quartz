@@ -101,8 +101,9 @@ void init_symbol_table(SymbolTable* const table) {
 
 void free_symbol_table(SymbolTable* const table) {
     CTable* ctable = (CTable*) table;
-    CTABLE_FOREACH(ctable, Symbol, {
-        free_symbol(&elements[i]);
+    CTABLE_FOREACH(ctable, Symbol*, {
+        free_symbol(elements[i]);
+        free(elements[i]);
     });
     free_ctable(ctable);
 }
@@ -113,8 +114,8 @@ Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name) {
     if (entry == NULL) {
         return NULL;
     }
-    Symbol* elements = (Symbol*) ctable->data.elements;
-    return &elements[entry->vector_pos];
+    Symbol** elements = (Symbol**) ctable->data.elements;
+    return elements[entry->vector_pos];
 }
 
 Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length) {
@@ -123,7 +124,9 @@ Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length
 }
 
 void symbol_insert(SymbolTable* const table, Symbol symbol) {
-    CTABLE_SET((CTable*)table, symbol.name.key, symbol, Symbol);
+    Symbol* dst = malloc(sizeof(Symbol));
+    *(dst) = symbol;
+    CTABLE_SET((CTable*)table, symbol.name.key, dst, Symbol*);
 }
 
 void init_symbol_node(SymbolNode* const node) {
@@ -136,26 +139,27 @@ void init_symbol_node(SymbolNode* const node) {
 
 void free_symbol_node(SymbolNode* const node) {
     free_symbol_table(&node->symbols);
-    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
+    SymbolNode** childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
     for (uint32_t i = 0; i < node->childs.size; i++) {
-        free_symbol_node(&childs[i]);
+        free_symbol_node(childs[i]);
+        free(childs[i]);
     }
     free_vector(&node->childs);
 }
 
 void symbol_node_reset(SymbolNode* const node) {
     node->next_node_to_visit = 0;
-    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
+    SymbolNode** childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
     for (uint32_t i = 0; i < node->childs.size; i++) {
-        symbol_node_reset(&childs[i]);
+        symbol_node_reset(childs[i]);
     }
 }
 
 SymbolNode* symbol_node_add_child(SymbolNode* const node, SymbolNode* const child) {
     child->father = node;
-    VECTOR_ADD_SYMBOL_NODE(&node->childs, *child);
-    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
-    return &childs[node->childs.size - 1];
+    VECTOR_ADD_SYMBOL_NODE(&node->childs, child);
+    SymbolNode** childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
+    return childs[node->childs.size - 1];
 }
 
 void init_scoped_symbol_table(ScopedSymbolTable* const table) {
@@ -178,11 +182,11 @@ void symbol_create_class_scope(ScopedSymbolTable* const table) {
 
 static void create_scope(ScopedSymbolTable* const table, bool is_class_scope) {
     assert(table->current != NULL);
-    SymbolNode child;
-    init_symbol_node(&child);
-    child.is_class_scope = is_class_scope;
-    SymbolNode* next = symbol_node_add_child(table->current, &child);
-    update_father_pointer_for_childs(table);
+    SymbolNode* child = malloc(sizeof(SymbolNode));
+    init_symbol_node(child);
+    child->is_class_scope = is_class_scope;
+    SymbolNode* next = symbol_node_add_child(table->current, child);
+    update_father_pointer_for_childs(table); // TODO Change!
     table->current = next;
 }
 
@@ -202,14 +206,14 @@ static void update_father_pointer_for_childs(ScopedSymbolTable* const table) {
         return;
     }
 
-    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&table->current->childs);
+    SymbolNode** childs = VECTOR_AS_SYMBOL_NODE(&table->current->childs);
     int i_len = table->current->childs.size;
     for (int i = 0; i < i_len; i++) {
-        SymbolNode current = childs[i];
-        SymbolNode* inner = VECTOR_AS_SYMBOL_NODE(&current.childs);
-        int j_len = current.childs.size;
+        SymbolNode* current = childs[i];
+        SymbolNode** inner = VECTOR_AS_SYMBOL_NODE(&current->childs);
+        int j_len = current->childs.size;
         for (int j = 0; j < j_len; j++) {
-            inner[j].father = &childs[i]; // Not &current
+            inner[j]->father = current;
         }
     }
 }
@@ -224,8 +228,8 @@ void symbol_start_scope(ScopedSymbolTable* const table) {
     assert(table->current != NULL);
     assert(table->current->next_node_to_visit < table->current->childs.size);
     table->current->next_node_to_visit++;
-    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&table->current->childs);
-    table->current = &childs[table->current->next_node_to_visit - 1];
+    SymbolNode** childs = VECTOR_AS_SYMBOL_NODE(&table->current->childs);
+    table->current = childs[table->current->next_node_to_visit - 1];
 }
 
 void symbol_reset_scopes(ScopedSymbolTable* const table) {
@@ -413,8 +417,8 @@ Symbol* upvalue_iterator_next(UpvalueIterator* const iterator) {
             }
         }
         assert(CTABLE_SIZE(iterator->current->symbols.table) > 0);
-        Symbol* symbols = CTABLE_AS(iterator->current->symbols.table, Symbol);
-        Symbol* sym = &symbols[iterator->current_upvalue];
+        Symbol** symbols = CTABLE_AS(iterator->current->symbols.table, Symbol*);
+        Symbol* sym = symbols[iterator->current_upvalue];
         iterator->current_upvalue++;
         if (SYMBOL_SET_SIZE(sym->upvalue_fn_refs) > 0) {
             return sym;

@@ -115,7 +115,7 @@ struct IdentifierOps {
 
 static void error(Compiler* const compiler, const char* message);
 
-static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source);
+static void init_compiler(Compiler* const compiler, CompilerMode mode, FileImport ctx);
 static void free_compiler(Compiler* const compiler);
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym);
 
@@ -279,9 +279,9 @@ static void error(Compiler* const compiler, const char* message) {
     compiler->has_error = true;
 }
 
-static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source) {
+static void init_compiler(Compiler* const compiler, CompilerMode mode, FileImport ctx) {
     init_scoped_symbol_table(&compiler->symbols);
-    init_parser(&compiler->parser, source, &compiler->symbols);
+    init_parser(&compiler->parser, ctx, &compiler->symbols);
 
     compiler->func = new_function("<GLOBAL>", 8, 0, CREATE_TYPE_UNKNOWN());
     compiler->mode = mode;
@@ -346,7 +346,7 @@ static Chunk* current_chunk(Compiler* const compiler) {
     return &compiler->func->chunk;
 }
 
-CompilationResult compile(const char* source, ObjFunction** const result) {
+CompilationResult compile(FileImport ctx, ObjFunction** const result) {
 #define END_WITH(final) do {\
         free_compiler(&compiler);\
         free_stmt(ast);\
@@ -354,13 +354,13 @@ CompilationResult compile(const char* source, ObjFunction** const result) {
 } while (false)
 
     Compiler compiler;
-    init_compiler(&compiler, MODE_SCRIPT, source);
+    init_compiler(&compiler, MODE_SCRIPT, ctx);
     Stmt* ast = parse(&compiler.parser);
     if (compiler.parser.has_error) {
         END_WITH(NULL);
         return PARSING_ERROR;
     }
-    if (!typecheck(source, ast, &compiler.symbols)) {
+    if (!typecheck(ast, &compiler.symbols)) {
         END_WITH(NULL);
         return TYPE_ERROR;
     }

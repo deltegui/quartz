@@ -49,7 +49,7 @@ static void symbol_table_print(const SymbolTable* table) {
     printf("| Name\t| Line \t| Type  \t| Global? \t| Symbol upvalues \t | Function upvalues\n");
     printf("|-------|-------|---------------|---------------|------------------------|------------\n");
     SYMBOL_TABLE_FOREACH(table, {
-        Symbol* current = &elements[i];
+        Symbol* current = elements[i];
         printf(
             "| %.*s\t| %d\t| ",
             SYMBOL_NAME_LENGTH(current->name),
@@ -73,9 +73,9 @@ static void symbol_table_print(const SymbolTable* table) {
 static void symbol_node_print(const SymbolNode* node) {
     symbol_table_print(&node->symbols);
     printf("SCOPE CHILDS: %d\n", node->childs.size);
-    SymbolNode* childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
+    SymbolNode** childs = VECTOR_AS_SYMBOL_NODE(&node->childs);
     for (uint32_t i = 0; i < node->childs.size; i++) {
-        symbol_node_print(&childs[i]);
+        symbol_node_print(childs[i]);
     }
 }
 

@@ -12,12 +12,12 @@ static void* compiler_realloc(void* ptr, size_t old_size, size_t size) {
 }
 
 void init_vector(Vector* const vect, size_t element_size) {
-    vect->had_realloc = false;
     vect->size = 0;
     vect->capacity = 0;
     vect->element_size = element_size;
     vect->elements = NULL;
     vect->f_realloc = compiler_realloc;
+    vect->had_realloc = false;
 }
 
 void free_vector(Vector* const vect) {

@@ -1,4 +1,4 @@
-[Line 3] Type error: The Type '(Number): Void' does not match with type '(String, Number): Void' in function return
+[File ../programs/functions/return_fn_mismatch.qz, Line 3] Type error: The Type '(Number): Void' does not match with type '(String, Number): Void' in function return
 2 | 
 3 | fn hola(): (Number): Void {
   | ~~~~~~~^

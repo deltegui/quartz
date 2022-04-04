@@ -82,7 +82,7 @@ void free_symbol(Symbol* const symbol);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
 typedef struct s_symbol_table {
-    CTable table; // CTable<Symbol>
+    CTable table; // CTable<Symbol*>
 } SymbolTable;
 
 void init_symbol_table(SymbolTable* const table);
@@ -91,18 +91,18 @@ Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name);
 Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length);
 void symbol_insert(SymbolTable* const table, Symbol entry);
 
-#define SYMBOL_TABLE_FOREACH(symbols, block) CTABLE_FOREACH(&(symbols)->table, Symbol, block)
+#define SYMBOL_TABLE_FOREACH(symbols, block) CTABLE_FOREACH(&(symbols)->table, Symbol*, block)
 
 typedef struct s_symbol_node {
     SymbolTable symbols;
     struct s_symbol_node* father;
-    Vector childs; // Vector<SymbolNode>
+    Vector childs; // Vector<SymbolNode*>
     bool is_class_scope;
     uint32_t next_node_to_visit;
 } SymbolNode;
 
-#define VECTOR_AS_SYMBOL_NODE(vect) VECTOR_AS(vect, SymbolNode)
-#define VECTOR_ADD_SYMBOL_NODE(vect, node) VECTOR_ADD(vect, node, SymbolNode)
+#define VECTOR_AS_SYMBOL_NODE(vect) VECTOR_AS(vect, SymbolNode*)
+#define VECTOR_ADD_SYMBOL_NODE(vect, node) VECTOR_ADD(vect, node, SymbolNode*)
 
 void init_symbol_node(SymbolNode* const node);
 void free_symbol_node(SymbolNode* const node);

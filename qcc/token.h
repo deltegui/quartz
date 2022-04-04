@@ -71,11 +71,18 @@ typedef enum {
 } TokenKind;
 
 typedef struct {
+    const char* path;
+    int path_length;
+    const char* source;
+} FileImport;
+
+typedef struct {
     TokenKind kind;
     const char* start;
     int length;
     uint32_t line;
     uint32_t column;
+    FileImport ctx;
 } Token;
 
 #define VECTOR_AS_TOKENS(vect) VECTOR_AS(vect, Token)

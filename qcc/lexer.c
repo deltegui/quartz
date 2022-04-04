@@ -36,12 +36,12 @@ Token next_token(Lexer* const lexer);
     lexer->line++;\
     lexer->column = 0
 
-void init_lexer(Lexer* const lexer, const char* const buffer) {
-    lexer->source = buffer;
-    lexer->current = buffer;
-    lexer->start = buffer;
+void init_lexer(Lexer* const lexer, FileImport ctx) {
+    lexer->current = ctx.source;
+    lexer->start = ctx.source;
     lexer->line = 1;
     lexer->column = 0;
+    lexer->ctx = ctx;
 }
 
 static bool is_at_end(Lexer* const lexer) {
@@ -89,6 +89,7 @@ static Token create_token(Lexer* const lexer, TokenKind kind) {
     token.column = lexer->column - 1;
     token.start = lexer->start;
     token.kind = kind;
+    token.ctx = lexer->ctx;
 #ifdef LEXER_DEBUG
     printf("[LEXER DEBUG]: Read ");
     token_print(token);

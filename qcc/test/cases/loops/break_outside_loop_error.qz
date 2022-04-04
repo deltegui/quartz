@@ -1,9 +1,9 @@
-[Line 4] Error at 'break': Expected break/continue statement to be inside a loop
+[File: ../programs/loops/break_outside_loop_error.qz, Line 4] Error at 'break': Expected break/continue statement to be inside a loop
 3 | 
 4 | break;
   | ~~~~~^
 
-[Line 5] Error at 'continue': Expected break/continue statement to be inside a loop
+[File: ../programs/loops/break_outside_loop_error.qz, Line 5] Error at 'continue': Expected break/continue statement to be inside a loop
 4 | break;
 5 | continue;
   | ~~~~~~~~^

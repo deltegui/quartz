@@ -6,7 +6,11 @@
 
 static void assert_types(const char* source, int size, ...) {
     Lexer lexer;
-    init_lexer(&lexer, source);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_lexer(&lexer, ctx);
     va_list tokens;
     va_start(tokens, size);
     for (int i = 0; i < size; i++) {
@@ -20,7 +24,11 @@ static void assert_types(const char* source, int size, ...) {
 
 static void assert_tokens(const char* source, int size, ...) {
     Lexer lexer;
-    init_lexer(&lexer, source);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_lexer(&lexer, ctx);
     va_list tokens;
     va_start(tokens, size);
     for (int i = 0; i < size; i++) {

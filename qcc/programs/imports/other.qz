@@ -1,4 +1,5 @@
 import '../programs/imports/name.qz';
+import 'stdio';
 
 fn generate_name(index: Number): Name {
     if (index == 0) return 'Javier';

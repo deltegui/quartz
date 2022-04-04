@@ -34,16 +34,18 @@ static void assert_chunk(Chunk* expected, Chunk* emitted) {
 }
 
 static void assert_compiled_chunk(const char* source, Chunk* expected) {
-    //init_qvm();
     ObjFunction* compiled;
-    CompilationResult result = compile(source, &compiled);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    CompilationResult result = compile(ctx, &compiled);
     switch (result) {
     case PARSING_ERROR: printf("PARSING_ERROR!"); break;
     case TYPE_ERROR: printf("TYPE_ERROR!"); break;
     case COMPILATION_ERROR: printf("COMPILATION_ERROR!"); break;
     case COMPILATION_OK: assert_chunk(expected, &compiled->chunk); break;
     }
-    //free_qvm();
 }
 
 static void emit_value(Chunk* chunk, Value value, int line) {

@@ -232,11 +232,11 @@ static Expr* parse_precendence(Parser* const parser, Precedence precedence) {
     return left;
 }
 
-void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* symbols) {
+void init_parser(Parser* const parser, FileImport ctx, ScopedSymbolTable* symbols) {
     parser->symbols = symbols;
     parser->current.kind = -1;
     parser->prev.kind = -1;
-    init_lexer(&parser->lexer, source);
+    init_lexer(&parser->lexer, ctx);
     parser->panic_mode = false;
     parser->has_error = false;
     parser->function_deep_count = 0;
@@ -264,7 +264,12 @@ static void error_at(Parser* const parser, Token* token, const char* format, va_
         return;
     }
     parser->panic_mode = true;
-    fprintf(stderr, "[Line %d] Error", token->line);
+    fprintf(
+        stderr,
+        "[File: %.*s, Line %d] Error",
+        parser->lexer.ctx.path_length,
+        parser->lexer.ctx.path,
+        token->line);
     switch(token->kind) {
     case TOKEN_ERROR: break;
     case TOKEN_END:
@@ -279,7 +284,7 @@ static void error_at(Parser* const parser, Token* token, const char* format, va_
         fprintf(stderr, "%s", format);
     }
     fprintf(stderr, "\n");
-    print_error_context(parser->lexer.source, token);
+    print_error_context(token);
     parser->has_error = true;
 }
 
@@ -564,9 +569,11 @@ static Stmt* import_decl(Parser* const parser) {
     Import imp = import(
         import_stmt.filename.start,
         import_stmt.filename.length);
-    import_stmt.ast = (imp.is_native) ?
-        native_import(parser, imp.native, import_stmt.filename.line, import_stmt.filename.column) :
-        file_import(parser, imp.file);
+    if (! imp.is_already_loaded) {
+        import_stmt.ast = (imp.is_native) ?
+            native_import(parser, imp.native, import_stmt.filename.line, import_stmt.filename.column) :
+            file_import(parser, imp.file);
+    }
     return CREATE_STMT_IMPORT(import_stmt);
 }
 
@@ -603,15 +610,12 @@ static Stmt* native_import(Parser* const parser, NativeImport import, int line, 
 }
 
 static Stmt* file_import(Parser* const parser, FileImport import) {
-    if (import.is_already_loaded) {
-        return NULL;
-    }
     if (import.source == NULL) {
         parser->has_error = true;
         return NULL;
     }
     Parser subparser;
-    init_parser(&subparser, import.source, parser->symbols);
+    init_parser(&subparser, import, parser->symbols);
     Stmt* subast = parse(&subparser);
     if (subparser.has_error) {
         parser->has_error = true;

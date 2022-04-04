@@ -1,4 +1,4 @@
-[Line 2] Type error: Calling 'a' which is not a function
+[File ../programs/functions/you_cant_call_not_a_fn.qz, Line 2] Type error: Calling 'a' which is not a function
 1 | var a = 5;
 2 | a();
   | ~^

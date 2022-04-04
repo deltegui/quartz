@@ -17,6 +17,14 @@ typedef struct {
 #define VECTOR_AS_FUNC_META(vect) VECTOR_AS(vect, FuncMeta)
 #define VECTOR_ADD_FUNC_META(vect, meta) VECTOR_ADD(vect, meta, FuncMeta)
 
+#define PRINT_FILE_LINE_ERR(tkn)\
+    fprintf(\
+        stderr,\
+        "[File %.*s, Line %d] Type error: ",\
+        (tkn)->ctx.path_length,\
+        (tkn)->ctx.path,\
+        (tkn)->line)
+
 typedef struct {
     ScopedSymbolTable* symbols;
     Type* last_type;
@@ -31,8 +39,6 @@ typedef struct {
     Symbol* calling_prop_class;
 
     bool is_in_class;
-
-    const char* source;
 } Typechecker;
 
 #define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack.size == 0)
@@ -165,7 +171,8 @@ static void function_stack_end_scope(Typechecker* const checker) {
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
     Type* last_type = checker->last_type;
     have_error(checker);
-    fprintf(stderr, "[Line %d] Type error: The Type '", where->line);
+    PRINT_FILE_LINE_ERR(where);
+    fprintf(stderr, "The Type '");
     ERR_TYPE_PRINT(first);
     fprintf(stderr, "' does not match with type '");
     ERR_TYPE_PRINT(last_type);
@@ -174,12 +181,12 @@ static void error_last_type_match(Typechecker* const checker, Token* where, Type
 }
 
 static void error_ctx(Typechecker* const checker, Token* token) {
-    print_error_context(checker->source, token);
+    print_error_context(token);
 }
 
 static void error_param_number(Typechecker* const checker, Token* token, Type* type, Type* actual_type, int param_num) {
     have_error(checker);
-    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    PRINT_FILE_LINE_ERR(token);
     fprintf(stderr, "Type of param number %d in function call (", param_num);
     ERR_TYPE_PRINT(type);
     fprintf(stderr, ") does not match with function definition (");
@@ -192,7 +199,7 @@ static void error(Typechecker* const checker, Token* token, const char* message,
     have_error(checker);
     va_list params;
     va_start(params, message);
-    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    PRINT_FILE_LINE_ERR(token);
     vfprintf(stderr, message, params);
     va_end(params);
     error_ctx(checker, token);
@@ -275,7 +282,7 @@ static Symbol* get_native_class_prop(Typechecker* const checker, const char* con
     return prop_symbol;
 }
 
-bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
+bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
@@ -283,7 +290,6 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     checker.defining_variable = NULL;
     checker.calling_prop_class = NULL;
     checker.is_in_class = false;
-    checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
@@ -935,8 +941,10 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     ACCEPT_EXPR(checker, binary->right);
     Type* right_type = checker->last_type;
 
-#define ERROR(msg) have_error(checker);\
-    fprintf(stderr, "[Line %d] Type error: %s for types '", binary->op.line, msg);\
+#define ERROR(msg)\
+    have_error(checker);\
+    PRINT_FILE_LINE_ERR(&binary->op);\
+    fprintf(stderr, "%s for types '", msg);\
     ERR_TYPE_PRINT(left_type);\
     fprintf(stderr, "' and '");\
     ERR_TYPE_PRINT(right_type);\
@@ -1005,8 +1013,10 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     ACCEPT_EXPR(checker, unary->expr);
     Type* inner_type = checker->last_type;
 
-#define ERROR(msg) have_error(checker);\
-    fprintf(stderr, "[Line %d] Type error: %s for type '", unary->op.line, msg);\
+#define ERROR(msg)\
+    have_error(checker);\
+    PRINT_FILE_LINE_ERR(&unary->op);\
+    fprintf(stderr, "%s for type '", msg);\
     ERR_TYPE_PRINT(inner_type);\
     fprintf(stderr, "'\n");\
     error_ctx(checker, &unary->op)

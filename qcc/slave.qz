@@ -1,0 +1,21 @@
+import 'stdio';
+
+class A {
+    var name: String;
+
+    pub fn init(name: String) {
+        self.name = name;
+    }
+
+
+
+
+
+
+
+
+
+    pub fn print_name(): String {
+        println(self.name);
+    }
+}

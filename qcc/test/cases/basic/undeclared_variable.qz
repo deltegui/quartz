@@ -1,4 +1,4 @@
-[Line 3] Error at 'b': Use of undeclared variable
+[File: ../programs/basic/undeclared_variable.qz, Line 3] Error at 'b': Use of undeclared variable
 2 | 
 3 | print(b + 1);
   | ~~~~~~~^

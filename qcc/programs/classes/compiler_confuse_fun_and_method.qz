@@ -1,0 +1,16 @@
+import "stdio";
+import "stdconv";
+
+class Hello {
+    fn println() {
+        println("Dentro de metodo");
+    }
+
+    pub fn input() {
+        println("hola");
+        self.println();
+    }
+}
+
+var h = new Hello();
+h.input();

@@ -1,0 +1,143 @@
+import "stdio";
+import "stdconv";
+import "./memory.qz";
+
+typedef Command = (): Void;
+
+class Stack {
+    var stack: []Number;
+
+    pub fn init() {
+        self.stack = []Number{};
+    }
+
+    pub fn push(element: Number) {
+        self.stack.push(element);
+    }
+
+    pub fn pop(): Number {
+        return cast<Number>(self.stack.pop());
+    }
+
+    pub fn length(): Number {
+		return self.stack.length();
+	}
+}
+
+class VM {
+    var memory: Memory;
+    var tokens: []String;
+    var commands: []Command;
+    var pc: Number;
+    var program: String;
+    var conditional_stack: Stack;
+    var had_error: Bool;
+
+    pub fn init() {
+        self.memory = new Memory();
+        self.tokens = []String{"<", ">", "+", "-", ".", ",", "[", "]"};
+        self.commands = []Command{
+            self.move_left,
+            self.move_right,
+            self.memory.increment,
+            self.memory.decrement,
+            self.print,
+            self.input,
+            self.cond_init,
+            self.cond_end
+        };
+        self.pc = 0;
+        self.conditional_stack = new Stack();
+        self.had_error = false;
+    }
+
+    fn print_program() {
+        println("Executing program:");
+        println(self.program);
+        println("");
+    }
+
+    pub fn interpret(program: String) {
+        self.program = program;
+        self.print_program();
+        var len = program.length();
+        for (; self.pc < len; self.pc = self.pc + 1) {
+            if (self.had_error) {
+                return;
+            }
+            var token = program.get_char(self.pc);
+            self.dispatch(token);
+        }
+    }
+
+    fn dispatch(token: String) {
+        var len = self.tokens.length();
+        for (var i = 0; i < len; i = i + 1) {
+            var current = cast<String>(self.tokens.get(i));
+            if (current == token) {
+                var cmd = cast<Command>(self.commands.get(i));
+                cmd();
+            }
+        }
+    }
+
+    fn move_left() {
+        self.memory.previous();
+    }
+
+    fn move_right() {
+        self.memory.advance();
+    }
+
+    fn print() {
+        var current: Number = self.memory.read();
+        var str: String = parse_ascii([]Number{current});
+        print(str);
+    }
+
+    fn input() {
+        print("> ");
+        var input: String = readstr();
+        if (input.length() <= 0) {
+            return;
+        }
+        self.memory.write(ston(input));
+    }
+
+    fn cond_init() {
+        if (self.memory.read() == 0) {
+            self.match_cond_end();
+            return;
+        }
+        self.conditional_stack.push(self.pc - 1);
+    }
+
+    fn match_cond_end() {
+        var inner_conds = 0;
+        while (self.pc < self.program.length()) {
+            self.pc = self.pc + 1;
+            var current = self.program.get_char(self.pc);
+            if (current == "[") {
+                inner_conds = inner_conds + 1;
+            }
+            if (current == "]") {
+                if (inner_conds == 0) return;
+                inner_conds = inner_conds - 1;
+            }
+        }
+        self.error("Missing ]");
+    }
+
+    fn cond_end() {
+		self.pc = self.conditional_stack.pop();
+    }
+
+    pub fn dump() {
+        self.memory.dump();
+    }
+
+    fn error(msg: String) {
+		println("Error!: " + msg);
+		self.had_error = true;
+	}
+}

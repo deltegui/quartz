@@ -3,6 +3,6 @@
 
 #include "token.h"
 
-void print_error_context(const char* source, Token* at);
+void print_error_context(Token* at);
 
 #endif

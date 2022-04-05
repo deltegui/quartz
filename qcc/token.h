@@ -17,6 +17,8 @@ typedef enum {
     TOKEN_PERCENT,
     TOKEN_LEFT_PAREN,
     TOKEN_RIGHT_PAREN,
+    TOKEN_LEFT_BRAKET,
+    TOKEN_RIGHT_BRAKET,
     TOKEN_DOT,
     TOKEN_BANG,
     TOKEN_EQUAL,
@@ -58,7 +60,9 @@ typedef enum {
     TOKEN_CLASS,
     TOKEN_PUBLIC,
     TOKEN_SELF,
+    TOKEN_CAST,
 
+    TOKEN_TYPE_ANY,
     TOKEN_TYPE_NUMBER,
     TOKEN_TYPE_STRING,
     TOKEN_TYPE_BOOL,
@@ -67,11 +71,18 @@ typedef enum {
 } TokenKind;
 
 typedef struct {
+    const char* path;
+    int path_length;
+    const char* source;
+} FileImport;
+
+typedef struct {
     TokenKind kind;
     const char* start;
-    uint8_t length;
+    int length;
     uint32_t line;
     uint32_t column;
+    FileImport ctx;
 } Token;
 
 #define VECTOR_AS_TOKENS(vect) VECTOR_AS(vect, Token)

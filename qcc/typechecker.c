@@ -6,6 +6,8 @@
 #include "expr.h"
 #include "symbol.h"
 #include "error.h"
+#include "array.h"
+#include "string.h"
 
 typedef struct {
     Token name;
@@ -14,6 +16,14 @@ typedef struct {
 
 #define VECTOR_AS_FUNC_META(vect) VECTOR_AS(vect, FuncMeta)
 #define VECTOR_ADD_FUNC_META(vect, meta) VECTOR_ADD(vect, meta, FuncMeta)
+
+#define PRINT_FILE_LINE_ERR(tkn)\
+    fprintf(\
+        stderr,\
+        "[File %.*s, Line %d] Type error: ",\
+        (tkn)->ctx.path_length,\
+        (tkn)->ctx.path,\
+        (tkn)->line)
 
 typedef struct {
     ScopedSymbolTable* symbols;
@@ -29,8 +39,6 @@ typedef struct {
     Symbol* calling_prop_class;
 
     bool is_in_class;
-
-    const char* source;
 } Typechecker;
 
 #define TYPECHECK_IS_GLOBAL_FN(checker) (checker->function_stack.size == 0)
@@ -51,8 +59,11 @@ static void have_error(Typechecker* const checker);
 static void start_scope(Typechecker* const checker);
 static void end_scope(Typechecker* const checker);
 static Symbol* lookup_str(Typechecker* const checker, const char* name, int length);
+static Symbol* lookup_with_class_str(Typechecker* const checker, const char* name, int length);
 static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level);
+static Symbol* fn_lookup_str(Typechecker* const checker, const char* name, int length);
 static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Token* prop, Symbol** class_out);
+static Symbol* get_native_class_prop(Typechecker* const checker, const char* const class_name, int length, Token* prop, Symbol** class_sym_out);
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol);
 static void check_call_params(Typechecker* const checker, Token* identifier, Vector* params, Type* type);
 static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var);
@@ -71,6 +82,8 @@ static void typecheck_call(void* ctx, CallExpr* call);
 static void typecheck_new(void* ctx, NewExpr* new_);
 static void typecheck_prop(void* ctx, PropExpr* prop);
 static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
+static void typecheck_array(void* ctx, ArrayExpr* arr);
+static void typecheck_cast(void* ctx, CastExpr* cast);
 
 ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_literal = typecheck_literal,
@@ -82,6 +95,8 @@ ExprVisitor typechecker_expr_visitor = (ExprVisitor){
     .visit_new = typecheck_new,
     .visit_prop = typecheck_prop,
     .visit_prop_assigment = typecheck_prop_assigment,
+    .visit_array= typecheck_array,
+    .visit_cast = typecheck_cast,
 };
 
 static void typecheck_typealias(void* ctx, TypealiasStmt* alias);
@@ -97,6 +112,7 @@ static void typecheck_while(void* ctx, WhileStmt* while_);
 static void typecheck_import(void* ctx, ImportStmt* import);
 static void typecheck_native(void* ctx, NativeFunctionStmt* native);
 static void typecheck_class(void* ctx, ClassStmt* klass);
+static void typecheck_native_class(void* ctx, NativeClassStmt* native_class);
 
 StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_expr = typecheck_expr,
@@ -112,6 +128,7 @@ StmtVisitor typechecker_stmt_visitor = (StmtVisitor){
     .visit_import = typecheck_import,
     .visit_native = typecheck_native,
     .visit_class = typecheck_class,
+    .visit_native_class = typecheck_native_class,
 };
 
 #define ACCEPT_STMT(typechecker, stmt) stmt_dispatch(&typechecker_stmt_visitor, typechecker, stmt)
@@ -154,7 +171,8 @@ static void function_stack_end_scope(Typechecker* const checker) {
 static void error_last_type_match(Typechecker* const checker, Token* where, Type* first, const char* message) {
     Type* last_type = checker->last_type;
     have_error(checker);
-    fprintf(stderr, "[Line %d] Type error: The Type '", where->line);
+    PRINT_FILE_LINE_ERR(where);
+    fprintf(stderr, "The Type '");
     ERR_TYPE_PRINT(first);
     fprintf(stderr, "' does not match with type '");
     ERR_TYPE_PRINT(last_type);
@@ -163,12 +181,12 @@ static void error_last_type_match(Typechecker* const checker, Token* where, Type
 }
 
 static void error_ctx(Typechecker* const checker, Token* token) {
-    print_error_context(checker->source, token);
+    print_error_context(token);
 }
 
 static void error_param_number(Typechecker* const checker, Token* token, Type* type, Type* actual_type, int param_num) {
     have_error(checker);
-    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    PRINT_FILE_LINE_ERR(token);
     fprintf(stderr, "Type of param number %d in function call (", param_num);
     ERR_TYPE_PRINT(type);
     fprintf(stderr, ") does not match with function definition (");
@@ -181,7 +199,7 @@ static void error(Typechecker* const checker, Token* token, const char* message,
     have_error(checker);
     va_list params;
     va_start(params, message);
-    fprintf(stderr, "[Line %d] Type error: ",token->line);
+    PRINT_FILE_LINE_ERR(token);
     vfprintf(stderr, message, params);
     va_end(params);
     error_ctx(checker, token);
@@ -206,8 +224,16 @@ static Symbol* lookup_str(Typechecker* const checker, const char* name, int leng
     return scoped_symbol_lookup_str(checker->symbols, name, length);
 }
 
+static Symbol* lookup_with_class_str(Typechecker* const checker, const char* name, int length) {
+    return scoped_symbol_lookup_with_class_str(checker->symbols, name, length);
+}
+
 static Symbol* lookup_levels(Typechecker* const checker, SymbolName name, int level) {
     return scoped_symbol_lookup_levels(checker->symbols, &name, level);
+}
+
+static Symbol* fn_lookup_str(Typechecker* const checker, const char* name, int length) {
+    return scoped_symbol_lookup_function_str(checker->symbols, name, length);
 }
 
 static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Token* prop, Symbol** class_out) {
@@ -233,7 +259,30 @@ static Symbol* get_class_prop(Typechecker* const checker, Type* class_type, Toke
     return prop_symbol;
 }
 
-bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
+static Symbol* get_native_class_prop(Typechecker* const checker, const char* const class_name, int length, Token* prop, Symbol** class_sym_out) {
+    Symbol* prop_symbol = scoped_symbol_get_class_prop_str(
+        checker->symbols,
+        class_name,
+        length,
+        prop,
+        class_sym_out);
+    // If this thing is native, the class name is fixed, so this cant happen
+    assert((*class_sym_out) != NULL);
+    if (prop_symbol == NULL) {
+        error(
+            checker,
+            prop,
+            "Native class '%.*s' does not have property '%.*s'\n",
+            length,
+            class_name,
+            prop->length,
+            prop->start);
+        return NULL;
+    }
+    return prop_symbol;
+}
+
+bool typecheck(Stmt* ast, ScopedSymbolTable* symbols) {
     Typechecker checker;
     checker.symbols = symbols;
     checker.has_error = false;
@@ -241,7 +290,6 @@ bool typecheck(const char* source, Stmt* ast, ScopedSymbolTable* symbols) {
     checker.defining_variable = NULL;
     checker.calling_prop_class = NULL;
     checker.is_in_class = false;
-    checker.source = source;
     init_vector(&checker.function_stack, sizeof(FuncMeta));
     symbol_reset_scopes(checker.symbols);
     ACCEPT_STMT(&checker, ast);
@@ -269,7 +317,7 @@ static void typecheck_expr(void* ctx, ExprStmt* expr) {
 static void typecheck_var(void* ctx, VarStmt* var) {
     Typechecker* checker = (Typechecker*) ctx;
 
-    Symbol* symbol = lookup_str(checker, var->identifier.start, var->identifier.length);
+    Symbol* symbol = lookup_with_class_str(checker, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
 
     if (var->definition == NULL) {
@@ -409,11 +457,33 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
 
     ACCEPT_EXPR(checker, prop->object);
 
-    Type* obj_type = resolve_and_check_last_object_type(checker);
-    prop->object_type = obj_type; // Now we do know which type is
-
+    // TODO fix this shit
     Symbol* klass_sym;
-    Symbol* prop_symbol = get_class_prop(checker, obj_type, &prop->prop, &klass_sym);
+    Symbol* prop_symbol;
+    char* class_name;
+    int class_length;
+    switch (checker->last_type->kind) {
+    case TYPE_ARRAY:
+        class_name = ARRAY_CLASS_NAME;
+        class_length = ARRAY_CLASS_LENGTH;
+        prop->object_type = create_type_array(CREATE_TYPE_ANY());
+        prop_symbol = get_native_class_prop(checker, class_name, class_length, &prop->prop, &klass_sym);
+        break;
+    case TYPE_STRING:
+        class_name = STRING_CLASS_NAME;
+        class_length = STRING_CLASS_LENGTH;
+        prop->object_type = CREATE_TYPE_STRING();
+        prop_symbol = get_native_class_prop(checker, class_name, class_length, &prop->prop, &klass_sym);
+        break;
+    default: {
+        Type* obj_type = resolve_and_check_last_object_type(checker);
+        class_name = TYPE_OBJECT_CLASS_NAME(obj_type);
+        class_length = TYPE_OBJECT_CLASS_LENGTH(obj_type);
+        prop->object_type = obj_type; // Now we do know which type is
+        prop_symbol = get_class_prop(checker, obj_type, &prop->prop, &klass_sym);
+    }
+    }
+
     if (prop_symbol == NULL || klass_sym == NULL) {
         return;
     }
@@ -426,8 +496,8 @@ static void typecheck_prop(void* ctx, PropExpr* prop) {
             "'%.*s' property of class '%.*s' must be public\n",
             prop->prop.length,
             prop->prop.start,
-            TYPE_OBJECT_CLASS_LENGTH(obj_type),
-            TYPE_OBJECT_CLASS_NAME(obj_type));
+            class_length,
+            class_name);
     }
 
     checker->last_type = prop_symbol->type;
@@ -490,6 +560,46 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
     }
 
     checker->last_type = prop_symbol->type;
+}
+
+static void typecheck_array(void* ctx, ArrayExpr* arr) {
+    Typechecker* checker = (Typechecker*) ctx;
+
+    Type* inner = arr->inner;
+    Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
+    for (uint32_t i = 0; i < arr->elements.size; i++) {
+        ACCEPT_EXPR(checker, exprs[i]);
+        if (! type_equals(inner, checker->last_type)) {
+            error(
+                checker,
+                &arr->left_braket,
+                "Not matching type in %d position of array. Expected all elements to have the same type.\n",
+                i);
+        }
+    }
+
+    checker->last_type = create_type_array(inner);
+}
+
+static void typecheck_cast(void* ctx, CastExpr* cast) {
+    Typechecker* checker = (Typechecker*) ctx;
+    ACCEPT_EXPR(checker, cast->inner);
+    Type* inner = checker->last_type;
+
+    Type* casted_type = type_cast(inner, cast->type);
+    if (casted_type != NULL) {
+        checker->last_type = casted_type;
+        return; // nothing to do, all is OK
+    }
+    error(
+        checker,
+        &cast->token,
+        "Invalid cast: \n");
+    fprintf(stderr, "Cannot cast from '");
+    ERR_TYPE_PRINT(inner);
+    fprintf(stderr, "' to '");
+    ERR_TYPE_PRINT(cast->type);
+    fprintf(stderr, "'.\n");
 }
 
 static void typecheck_new(void* ctx, NewExpr* new_) {
@@ -572,7 +682,7 @@ static void check_call_params(Typechecker* const checker, Token* identifier, Vec
         ACCEPT_EXPR(checker, exprs[i]);
         Type* def_type = param_types[i];
         Type* last = checker->last_type;
-        if (! TYPE_IS_ASSIGNABLE(last, def_type)) {
+        if (! TYPE_IS_ASSIGNABLE(def_type, last)) {
             error_param_number(
                 checker,
                 identifier,
@@ -614,7 +724,7 @@ static void check_and_mark_upvalue(Typechecker* const checker, Symbol* var) {
     printf("Yes\n");
 #endif
     FuncMeta* meta = function_stack_peek(checker);
-    Symbol* fn_sym = lookup_str(checker, meta->name.start, meta->name.length);
+    Symbol* fn_sym = lookup_with_class_str(checker, meta->name.start, meta->name.length);
     assert(fn_sym != NULL);
     assert(fn_sym->kind == SYMBOL_FUNCTION);
     scoped_symbol_upvalue(checker->symbols, fn_sym, var);
@@ -661,7 +771,7 @@ static void typecheck_function(void* ctx, FunctionStmt* function) {
     ACCEPT_STMT(ctx, function->body);
     end_scope(checker);
 
-    Symbol* symbol = lookup_str(checker, function->identifier.start, function->identifier.length);
+    Symbol* symbol = lookup_with_class_str(checker, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     typecheck_params_arent_void(checker, symbol);
@@ -696,6 +806,12 @@ static void typecheck_class(void* ctx, ClassStmt* klass) {
     end_scope(checker);
 }
 
+static void typecheck_native_class(void* ctx, NativeClassStmt* native_class) {
+    Typechecker* checker = (Typechecker*) ctx;
+    start_scope(checker); // Enter the native class body and exit. Nothing to process there.
+    end_scope(checker);
+}
+
 static void typecheck_params_arent_void(Typechecker* const checker, Symbol* symbol) {
     Vector* vector_types = &TYPE_FN_PARAMS(symbol->type);
     Vector* vector_names = &symbol->function.param_names;
@@ -726,7 +842,7 @@ static void typecheck_return(void* ctx, ReturnStmt* return_) {
     }
     FuncMeta* meta = function_stack_peek(checker);
     Token func_identifier = meta->name;
-    Symbol* symbol = lookup_str(checker, func_identifier.start, func_identifier.length);
+    Symbol* symbol = fn_lookup_str(checker, func_identifier.start, func_identifier.length);
     assert(symbol != NULL);
     assert(symbol->kind == SYMBOL_FUNCTION);
     if (! type_equals(TYPE_FN_RETURN(symbol->type), checker->last_type)) {
@@ -825,8 +941,10 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     ACCEPT_EXPR(checker, binary->right);
     Type* right_type = checker->last_type;
 
-#define ERROR(msg) have_error(checker);\
-    fprintf(stderr, "[Line %d] Type error: %s for types '", binary->op.line, msg);\
+#define ERROR(msg)\
+    have_error(checker);\
+    PRINT_FILE_LINE_ERR(&binary->op);\
+    fprintf(stderr, "%s for types '", msg);\
     ERR_TYPE_PRINT(left_type);\
     fprintf(stderr, "' and '");\
     ERR_TYPE_PRINT(right_type);\
@@ -874,11 +992,11 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     }
     case TOKEN_EQUAL_EQUAL:
     case TOKEN_BANG_EQUAL: {
-        if (type_equals(left_type, right_type)) {
+        if (TYPE_IS_ASSIGNABLE(left_type, right_type)) {
             checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
-        ERROR("Elements with different types arent coparable");
+        ERROR("Elements with different types arent comparable");
         return;
     }
     default: {
@@ -895,8 +1013,10 @@ static void typecheck_unary(void* ctx, UnaryExpr* unary) {
     ACCEPT_EXPR(checker, unary->expr);
     Type* inner_type = checker->last_type;
 
-#define ERROR(msg) have_error(checker);\
-    fprintf(stderr, "[Line %d] Type error: %s for type '", unary->op.line, msg);\
+#define ERROR(msg)\
+    have_error(checker);\
+    PRINT_FILE_LINE_ERR(&unary->op);\
+    fprintf(stderr, "%s for type '", msg);\
     ERR_TYPE_PRINT(inner_type);\
     fprintf(stderr, "'\n");\
     error_ctx(checker, &unary->op)

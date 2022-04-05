@@ -6,7 +6,11 @@
 
 static void assert_types(const char* source, int size, ...) {
     Lexer lexer;
-    init_lexer(&lexer, source);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_lexer(&lexer, ctx);
     va_list tokens;
     va_start(tokens, size);
     for (int i = 0; i < size; i++) {
@@ -20,7 +24,11 @@ static void assert_types(const char* source, int size, ...) {
 
 static void assert_tokens(const char* source, int size, ...) {
     Lexer lexer;
-    init_lexer(&lexer, source);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_lexer(&lexer, ctx);
     va_list tokens;
     va_start(tokens, size);
     for (int i = 0; i < size; i++) {
@@ -483,6 +491,32 @@ static void should_tokenize_self() {
     );
 }
 
+static void should_tokenize_brakets() {
+    assert_types(
+        "   hello[1]; ",
+        5,
+        TOKEN_IDENTIFIER,
+        TOKEN_LEFT_BRAKET,
+        TOKEN_NUMBER,
+        TOKEN_RIGHT_BRAKET,
+        TOKEN_SEMICOLON
+    );
+}
+
+static void should_tokenize_cast() {
+    assert_types(
+        " cast<String>(1)",
+        7,
+        TOKEN_CAST,
+        TOKEN_LOWER,
+        TOKEN_TYPE_STRING,
+        TOKEN_GREATER,
+        TOKEN_LEFT_PAREN,
+        TOKEN_NUMBER,
+        TOKEN_RIGHT_PAREN
+    );
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_tokenize_print_correctly),
@@ -511,7 +545,9 @@ int main(void) {
         cmocka_unit_test(should_import_correctly),
         cmocka_unit_test(should_tokenize_class_correctly),
         cmocka_unit_test(should_tokenize_public),
-        cmocka_unit_test(should_tokenize_new)
+        cmocka_unit_test(should_tokenize_new),
+        cmocka_unit_test(should_tokenize_brakets),
+        cmocka_unit_test(should_tokenize_cast)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

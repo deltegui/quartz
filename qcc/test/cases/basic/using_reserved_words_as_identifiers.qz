@@ -1,9 +1,9 @@
-[Line 3] Error at 'var': Expected identifier to be var name
+[File: ../programs/basic/using_reserved_words_as_identifiers.qz, Line 3] Error at 'var': Expected identifier to be var name
 2 | 
 3 | var var = 5;
   | ~~~~~~~^
 
-[Line 5] Error at ')': Expected identifier to be var name
+[File: ../programs/basic/using_reserved_words_as_identifiers.qz, Line 5] Error at ')': Expected identifier to be var name
 4 | 
 5 | print(var);
   | ~~~~~~~~~~^

@@ -3,16 +3,11 @@
 
 #include "common.h"
 #include "native.h"
-
-typedef struct {
-    const char* path;
-    int path_length;
-    const char* source;
-    bool is_already_loaded;
-} FileImport;
+#include "token.h"
 
 typedef struct {
     bool is_native;
+    bool is_already_loaded;
     union {
         NativeImport native;
         FileImport file;

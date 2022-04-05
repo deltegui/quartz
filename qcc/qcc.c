@@ -26,7 +26,7 @@ int run(const char* file, int length) {
     int exit_code = 0;
     ObjFunction* main_func;
     init_qvm();
-    if (compile(main.file.source, &main_func) == COMPILATION_OK) {
+    if (compile(main.file, &main_func) == COMPILATION_OK) {
         qvm_execute(main_func);
     } else {
         exit_code = EX_DATAERR;
@@ -44,6 +44,9 @@ void repl() {
 #define BUFFER_SIZE 256
     char input_buffer[BUFFER_SIZE];
     ObjFunction* main_func;
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
     for (;;) {
         init_module_system();
         printf("<qz> ");
@@ -55,8 +58,9 @@ void repl() {
         if (strempty(input_buffer)) {
             continue;
         }
+        ctx.source = (char*)&input_buffer;
         init_qvm();
-        if (compile(input_buffer, &main_func) == COMPILATION_OK) {
+        if (compile(ctx, &main_func) == COMPILATION_OK) {
             qvm_execute(main_func);
         }
         free_qvm();

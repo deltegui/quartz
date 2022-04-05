@@ -1,15 +1,9 @@
-import 'stdio';
+import "stdio";
+import "stdconv";
 
-class Blob {
-    pub fn init() {
-        println("HEELLOOO STRUCTS");
-    }
-}
+var a = []Number{0, 1, 2};
 
-typedef Pipo = Blob;
+import './slave.qz';
 
-fn create_blob(): ElAmigos {
-    return new Blob();
-}
-
-create_blob();
+var b = new A('puto');
+b.print_name();

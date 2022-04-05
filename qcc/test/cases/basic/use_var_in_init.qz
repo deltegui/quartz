@@ -1,3 +1,3 @@
-[Line 1] Error at 'a': Use of undeclared variable
+[File: ../programs/basic/use_var_in_init.qz, Line 1] Error at 'a': Use of undeclared variable
 1 | var a = a + 1;
   | ~~~~~~~~^

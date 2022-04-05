@@ -16,6 +16,8 @@ typedef enum {
     EXPR_NEW,
     EXPR_PROP,
     EXPR_PROP_ASSIGMENT,
+    EXPR_ARRAY,
+    EXPR_CAST,
 } ExprKind;
 
 struct s_expr;
@@ -67,6 +69,18 @@ typedef struct {
     struct s_type* object_type;
 } PropAssigmentExpr;
 
+typedef struct {
+    Vector elements; // Vector<Expr>
+    Token left_braket;
+    struct s_type* inner;
+} ArrayExpr;
+
+typedef struct {
+    Token token;
+    struct s_expr* inner;
+    struct s_type* type;
+} CastExpr;
+
 typedef struct s_expr {
     ExprKind kind;
     union {
@@ -79,6 +93,8 @@ typedef struct s_expr {
         NewExpr new_;
         PropExpr prop;
         PropAssigmentExpr prop_assigment;
+        ArrayExpr array;
+        CastExpr cast;
     };
 } Expr;
 
@@ -92,6 +108,8 @@ typedef struct {
     void (*visit_new)(void* ctx, NewExpr* new_);
     void (*visit_prop)(void* ctx, PropExpr* prop);
     void (*visit_prop_assigment)(void* ctx, PropAssigmentExpr* prop_assigment);
+    void (*visit_array)(void* ctx, ArrayExpr* array);
+    void (*visit_cast)(void* ctx, CastExpr* cast);
 } ExprVisitor;
 
 #define EXPR_IS_BINARY(expr) ((expr).kind == EXPR_BINARY)
@@ -103,6 +121,9 @@ typedef struct {
 #define EXPR_IS_NEW(expr) ((expr).kind == EXPR_NEW)
 #define EXPR_IS_PROP(expr) ((expr).kind == EXPR_PROP)
 #define EXPR_IS_PROP_ASSIGMENT(expr) ((expr).kind == EXPR_PROP_ASSIGMENT)
+#define EXPR_IS_ARRAY(expr) ((expr).kind == EXPR_ARRAY)
+#define EXPR_IS_ARRAY_ACCESS(expr) ((expr).kind == EXPR_ARRAY_ACCESS)
+#define EXPR_IS_CAST(expr) ((expr).kind == EXPR_CAST)
 
 #define CREATE_BINARY_EXPR(binary) create_expr(EXPR_BINARY, &binary)
 #define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)
@@ -113,6 +134,9 @@ typedef struct {
 #define CREATE_NEW_EXPR(new_) create_expr(EXPR_NEW, &new_)
 #define CREATE_PROP_EXPR(prop) create_expr(EXPR_PROP, &prop)
 #define CREATE_PROP_ASSIGMENT_EXPR(prop_assigment) create_expr(EXPR_PROP_ASSIGMENT, &prop_assigment)
+#define CREATE_ARRAY_EXPR(array) create_expr(EXPR_ARRAY, &array)
+#define CREATE_ARRAY_ACCESS_EXPR(array_access) create_expr(EXPR_ARRAY_ACCESS, &array_access)
+#define CREATE_CAST_EXPR(cast) create_expr(EXPR_CAST, &cast)
 
 Expr* create_expr(ExprKind type, const void* const expr_node);
 void free_expr(Expr* const expr);

@@ -23,7 +23,7 @@ typedef struct {
     Type* current_class_type;
 } Parser;
 
-void init_parser(Parser* const parser, const char* source, ScopedSymbolTable* symbols);
+void init_parser(Parser* const parser, FileImport ctx, ScopedSymbolTable* symbols);
 Stmt* parse(Parser* const parser);
 
 #endif

@@ -11,6 +11,7 @@ typedef struct s_obj {
     ObjKind kind;
     Type* type;
     bool is_marked;
+    ValueArray props;
     struct s_obj* next;
 } Obj;
 
@@ -54,21 +55,25 @@ typedef struct {
 typedef struct {
     Obj obj;
     ObjString* name;
-    // TODO this should have the static part
-    ValueArray instance;
 } ObjClass;
 
 typedef struct {
     Obj obj;
     ObjClass* klass;
-    ValueArray props;
 } ObjInstance;
 
 typedef struct {
     Obj obj;
-    ObjInstance* instance;
+    Obj* instance;
     Obj* method; // This can be ObjFunction or ObjNative
 } ObjBindedMethod;
+
+typedef struct {
+    Obj obj;
+    ValueArray elements;
+} ObjArray;
+
+#define OBJ_ADD_PROP(obj, value) (valuearray_write(&((Obj*)obj)->props, value))
 
 void print_object(Obj* const obj);
 bool object_is_kind(Obj* const obj, ObjKind kind);
@@ -109,12 +114,17 @@ ObjClass* new_class(const char* name, int length, Type* type);
 #define OBJ_AS_INSTANCE(obj) ((ObjInstance*) obj)
 
 ObjInstance* new_instance(ObjClass* origin);
-Value object_get_property(ObjInstance* obj, uint8_t index);
-void object_set_property(ObjInstance* obj, uint8_t index, Value val);
+Value object_get_property(Obj* obj, uint8_t index);
+void object_set_property(Obj* obj, uint8_t index, Value val);
 
 #define OBJ_IS_BINDED_METHOD(obj) (object_is_kind(obj, OBJ_BINDED_METHOD))
 #define OBJ_AS_BINDED_METHOD(obj) ((ObjBindedMethod*) obj)
 
-ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method);
+ObjBindedMethod* new_binded_method(Obj* instance, Obj* method);
+
+#define OBJ_IS_ARRAY(obj) (object_is_kind(obj, OBJ_ARRAY))
+#define OBJ_AS_ARRAY(obj) ((ObjArray*) obj)
+
+ObjArray* new_array(Type* inner);
 
 #endif

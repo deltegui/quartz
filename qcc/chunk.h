@@ -62,6 +62,11 @@ typedef enum {
     OP_GET_PROP,
     OP_SET_PROP,
     OP_BINDED_METHOD,
+    OP_ARRAY,
+    OP_ARRAY_PUSH,
+
+    // Types
+    OP_CAST,
 } OpCode;
 
 typedef struct {
@@ -70,6 +75,7 @@ typedef struct {
     uint8_t* code;
     int* lines;
     ValueArray constants;
+    Vector types; // Vector<Type*>
 } Chunk;
 
 void init_chunk(Chunk* const chunk);
@@ -77,6 +83,7 @@ void free_chunk(Chunk* const chunk);
 int chunk_write(Chunk* const chunk, uint8_t bytecode, int line);
 bool chunk_check_last_byte(Chunk* const chunk, uint8_t bytecode);
 int chunk_add_constant(Chunk* const chunk, Value value);
+int chunk_add_type(Chunk* const chunk, Type* type);
 void chunk_patch(Chunk* const chunk, int position, uint8_t bytecode);
 
 uint16_t read_long(uint8_t **pc);

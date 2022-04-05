@@ -3,6 +3,8 @@
 #include "vm_memory.h"
 #include "vm.h"
 #include "table.h"
+#include "array.h"
+#include "string.h"
 
 static Obj* alloc_obj(size_t size, ObjKind kind, Type* type);
 static ObjString* alloc_string(const char* chars, int length, uint32_t hash);
@@ -17,6 +19,7 @@ static Obj* alloc_obj(size_t size, ObjKind kind, Type* type) {
     obj->is_marked = false;
     obj->next = qvm.objects;
     qvm.objects = obj;
+    init_valuearray(&obj->props);
     return obj;
 }
 
@@ -55,6 +58,17 @@ Value* function_get_upvalue(ObjFunction* const function, int slot) {
     return target;
 }
 
+ObjArray* new_array(Type* inner) {
+    assert(inner != NULL);
+    Type* type = create_type_array(inner);
+    ObjArray* arr = ALLOC_OBJ(ObjArray, OBJ_ARRAY, type);
+    stack_push(OBJ_VALUE(arr, type));
+    init_valuearray(&arr->elements);
+    array_push_props(&arr->obj.props);
+    stack_pop();
+    return arr;
+}
+
 ObjClosed* new_closed(Value value) {
     // TODO again, which type should be a ObjClosed (look vm.c too)
     ObjClosed* closed = ALLOC_OBJ(ObjClosed, OBJ_CLOSED, CREATE_TYPE_UNKNOWN());
@@ -66,7 +80,7 @@ ObjNative* new_native(const char* name, int length, native_fn_t function, Type* 
     ObjNative* native = ALLOC_OBJ(ObjNative, OBJ_NATIVE, type);
     native->name = name;
     native->length = length;
-    native->arity = type->function->param_types.size;
+    native->arity = type->function.param_types.size;
     native->function = function;
     return native;
 }
@@ -74,21 +88,19 @@ ObjNative* new_native(const char* name, int length, native_fn_t function, Type* 
 ObjClass* new_class(const char* name, int length, Type* type) {
     ObjClass* klass = ALLOC_OBJ(ObjClass, OBJ_CLASS, type);
     klass->name = copy_string(name, length);
-    init_valuearray(&klass->instance);
     return klass;
 }
 
 ObjInstance* new_instance(ObjClass* origin) {
     ObjInstance* instance = ALLOC_OBJ(ObjInstance, OBJ_INSTANCE, origin->obj.type);
     instance->klass = origin;
-    init_valuearray(&instance->props);
     stack_push(OBJ_VALUE(instance, instance->obj.type));
-    valuearray_deep_copy(&origin->instance, &instance->props);
+    valuearray_deep_copy(&origin->obj.props, &instance->obj.props);
     stack_pop();
     return instance;
 }
 
-ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method) {
+ObjBindedMethod* new_binded_method(Obj* instance, Obj* method) {
     ObjBindedMethod* binded = ALLOC_OBJ(ObjBindedMethod, OBJ_BINDED_METHOD, method->type);
     binded->instance = instance;
     binded->method = method;
@@ -96,12 +108,12 @@ ObjBindedMethod* new_binded_method(ObjInstance* instance, Obj* method) {
 }
 
 // TODO change the value array to be directly in obj?
-Value object_get_property(ObjInstance* obj, uint8_t index) {
+Value object_get_property(Obj* obj, uint8_t index) {
     assert(index < obj->props.size);
     return obj->props.values[index];
 }
 
-void object_set_property(ObjInstance* obj, uint8_t index, Value val) {
+void object_set_property(Obj* obj, uint8_t index, Value val) {
     assert(index < obj->props.size);
     obj->props.values[index] = val;
 }
@@ -133,6 +145,7 @@ ObjString* copy_string(const char* chars, int length) {
     ObjString* str = alloc_string(chars, length, hash);
     stack_push(OBJ_VALUE(str, CREATE_TYPE_STRING())); // We need to GC discover our new string.
     table_set(&qvm.strings, str, NIL_VALUE());
+    string_push_props(&str->obj.props);
     stack_pop();
     return str;
 }
@@ -189,6 +202,13 @@ void print_object(Obj* const obj) {
         ObjBindedMethod* binded = OBJ_AS_BINDED_METHOD(obj);
         printf("Binded Method: ");
         print_object(binded->method);
+        break;
+    }
+    case OBJ_ARRAY: {
+        ObjArray* arr = OBJ_AS_ARRAY(obj);
+        printf("<Array with %d elements: ", arr->elements.size);
+        TYPE_PRINT(obj->type);
+        printf(">");
         break;
     }
     }

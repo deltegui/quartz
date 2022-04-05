@@ -1,0 +1,13 @@
+/**
+* A brainfuck interpreter written in my own programming language (Quartz)
+*/
+
+
+import "stdio";
+import "./vm.qz";
+
+var program = stdin();
+var vm = new VM();
+vm.interpret(program);
+println("");
+vm.dump();

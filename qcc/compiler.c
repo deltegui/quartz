@@ -115,7 +115,7 @@ struct IdentifierOps {
 
 static void error(Compiler* const compiler, const char* message);
 
-static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source);
+static void init_compiler(Compiler* const compiler, CompilerMode mode, FileImport ctx);
 static void free_compiler(Compiler* const compiler);
 static void init_inner_compiler(Compiler* const inner, Compiler* const outer, const Token* fn_identifier, Symbol* fn_sym);
 
@@ -126,6 +126,7 @@ static void end_scope(Compiler* const compiler);
 static void pop_all_locals(Compiler* const compiler, int scope);
 static void reset_loop_locals(Compiler* const compiler);
 static Symbol* lookup_str(Compiler* const compiler, const char* name, int length);
+static Symbol* lookup_with_class_str(Compiler* const compiler, const char* name, int length);
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length);
 
 static int emit(Compiler* const compiler, uint8_t bytecode);
@@ -147,6 +148,7 @@ static void patch_chunk_long(Compiler* const compiler, int position, uint16_t va
 
 static uint16_t make_constant(Compiler* const compiler, Value value);
 static uint16_t identifier_constant(Compiler* const compiler, const Token* identifier);
+static uint8_t make_type(Compiler* const compiler, Type* type);
 
 static void update_param_index(Compiler* const compiler, Symbol* symbol);
 static void update_symbol_variable_info(Compiler* const compiler, Symbol* var_sym, uint16_t var_index);
@@ -157,6 +159,7 @@ static void identifier_use(Compiler* const compiler, Token identifier, const str
 static void ensure_function_returns_value(Compiler* const compiler, Symbol* fn_sym);
 static int get_current_function_upvalue_index(Compiler* const compiler, Symbol* var);
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index);
+static void preindex_class_props(Compiler* const compiler, ListStmt* body);
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index);
 static void call_with_params(Compiler* const compiler, Vector* params);
 
@@ -169,6 +172,8 @@ static void compile_call(void* ctx, CallExpr* call);
 static void compile_new(void* ctx, NewExpr* new_);
 static void compile_prop(void* ctx, PropExpr* prop);
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assigment);
+static void compile_array(void* ctx, ArrayExpr* arr);
+static void compile_cast(void* ctx, CastExpr* cast);
 
 ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_literal = compile_literal,
@@ -180,6 +185,8 @@ ExprVisitor compiler_expr_visitor = (ExprVisitor){
     .visit_new = compile_new,
     .visit_prop = compile_prop,
     .visit_prop_assigment = compile_prop_assigment,
+    .visit_array = compile_array,
+    .visit_cast = compile_cast,
 };
 
 static void compile_expr(void* ctx, ExprStmt* expr);
@@ -195,6 +202,7 @@ static void compile_typealias(void* ctx, TypealiasStmt* alias);
 static void compile_import(void* ctx, ImportStmt* import);
 static void compile_native(void* ctx, NativeFunctionStmt* native);
 static void compile_class(void* ctx, ClassStmt* klass);
+static void compile_native_class(void* ctx, NativeClassStmt* native_class);
 
 StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_expr = compile_expr,
@@ -210,6 +218,7 @@ StmtVisitor compiler_stmt_visitor = (StmtVisitor){
     .visit_import = compile_import,
     .visit_native = compile_native,
     .visit_class = compile_class,
+    .visit_native_class = compile_native_class,
 };
 
 #define ACCEPT_STMT(compiler, stmt) stmt_dispatch(&compiler_stmt_visitor, compiler, stmt)
@@ -270,9 +279,9 @@ static void error(Compiler* const compiler, const char* message) {
     compiler->has_error = true;
 }
 
-static void init_compiler(Compiler* const compiler, CompilerMode mode, const char* source) {
+static void init_compiler(Compiler* const compiler, CompilerMode mode, FileImport ctx) {
     init_scoped_symbol_table(&compiler->symbols);
-    init_parser(&compiler->parser, source, &compiler->symbols);
+    init_parser(&compiler->parser, ctx, &compiler->symbols);
 
     compiler->func = new_function("<GLOBAL>", 8, 0, CREATE_TYPE_UNKNOWN());
     compiler->mode = mode;
@@ -288,6 +297,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, const cha
     memset(compiler->locals, 0, UINT8_COUNT);
 
     compiler->current_self = NULL;
+    compiler->want_to_call = false;
     compiler->prop_index = PROP_INDEX_NOT_DEFINED;
 
     compiler->in_assignment = false;
@@ -323,6 +333,7 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     memset(inner->locals, 0, UINT8_COUNT);
 
     inner->current_self = outer->current_self;
+    inner->want_to_call = false;
     inner->prop_index = PROP_INDEX_NOT_DEFINED;
 
     inner->in_assignment = false;
@@ -335,7 +346,7 @@ static Chunk* current_chunk(Compiler* const compiler) {
     return &compiler->func->chunk;
 }
 
-CompilationResult compile(const char* source, ObjFunction** const result) {
+CompilationResult compile(FileImport ctx, ObjFunction** const result) {
 #define END_WITH(final) do {\
         free_compiler(&compiler);\
         free_stmt(ast);\
@@ -343,13 +354,13 @@ CompilationResult compile(const char* source, ObjFunction** const result) {
 } while (false)
 
     Compiler compiler;
-    init_compiler(&compiler, MODE_SCRIPT, source);
+    init_compiler(&compiler, MODE_SCRIPT, ctx);
     Stmt* ast = parse(&compiler.parser);
     if (compiler.parser.has_error) {
         END_WITH(NULL);
         return PARSING_ERROR;
     }
-    if (!typecheck(source, ast, &compiler.symbols)) {
+    if (!typecheck(ast, &compiler.symbols)) {
         END_WITH(NULL);
         return TYPE_ERROR;
     }
@@ -401,6 +412,10 @@ static Symbol* lookup_str(Compiler* const compiler, const char* name, int length
     return scoped_symbol_lookup_str(&compiler->symbols, name, length);
 }
 
+static Symbol* lookup_with_class_str(Compiler* const compiler, const char* name, int length) {
+    return scoped_symbol_lookup_with_class_str(&compiler->symbols, name, length);
+}
+
 static Symbol* fn_lookup_str(Compiler* const compiler, const char* name, int length) {
     return scoped_symbol_lookup_function_str(&compiler->symbols, name, length);
 }
@@ -448,6 +463,15 @@ static uint16_t identifier_constant(Compiler* const compiler, const Token* ident
         copy_string(identifier->start, identifier->length),
         CREATE_TYPE_STRING());
     return make_constant(compiler, value);
+}
+
+static uint8_t make_type(Compiler* const compiler, Type* type) {
+    int index = chunk_add_type(current_chunk(compiler), type);
+    if (index > UINT8_COUNT) {
+        error(compiler, "Too many types for chunk!");
+        return 0;
+    }
+    return (uint8_t)index;
 }
 
 #define BLOCK(compiler, ...)\
@@ -514,7 +538,8 @@ static Token symbol_to_token_identifier(Symbol* symbol) {
         .kind = TOKEN_IDENTIFIER,
         .start = SYMBOL_NAME_START(symbol->name),
         .length = SYMBOL_NAME_LENGTH(symbol->name),
-        .line = symbol->declaration_line,
+        .line = symbol->line,
+        .column = symbol->column,
     };
 }
 
@@ -528,7 +553,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
     Compiler* compiler = (Compiler*) ctx;
     uint16_t fn_index = get_variable_index(compiler, &function->identifier);
 
-    Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
+    Symbol* symbol = lookup_with_class_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
 
     Value fn_value = do_compile_function(compiler, function, fn_index);
@@ -541,7 +566,7 @@ static void compile_function(void* ctx, FunctionStmt* function) {
 }
 
 static Value do_compile_function(Compiler* const compiler, FunctionStmt* function, uint16_t index) {
-    Symbol* symbol = lookup_str(compiler, function->identifier.start, function->identifier.length);
+    Symbol* symbol = lookup_with_class_str(compiler, function->identifier.start, function->identifier.length);
     assert(symbol != NULL);
     update_symbol_variable_info(compiler, symbol, index);
 
@@ -570,8 +595,8 @@ static void compile_native(void* ctx, NativeFunctionStmt* native) {
     identifier.kind = TOKEN_IDENTIFIER;
     identifier.start = native->name;
     identifier.length = native->length;
-    identifier.line = symbol->declaration_line;
-    identifier.column = 0;
+    identifier.line = symbol->line;
+    identifier.column = symbol->column;
 
     uint16_t native_index = get_variable_index(compiler, &identifier);
     update_symbol_variable_info(compiler, symbol, native_index);
@@ -601,6 +626,9 @@ static void compile_class(void* ctx, ClassStmt* klass) {
 
     assert(STMT_IS_LIST(*klass->body));
     ListStmt* body = klass->body->list;
+
+    preindex_class_props(compiler, body);
+
     ENABLE_SELF(compiler, symbol, {
         for (int i = 0; i < body->size; i++) {
             Stmt* prop = body->stmts[i];
@@ -622,8 +650,7 @@ static void compile_class(void* ctx, ClassStmt* klass) {
             }
             }
 
-            // TODO Create a fixed size array for this part
-            valuearray_write(&obj->instance, value);
+            OBJ_ADD_PROP(obj, value);
         }
     });
 
@@ -638,12 +665,44 @@ static void compile_class(void* ctx, ClassStmt* klass) {
     emit_variable_declaration(compiler, klass_index);
 }
 
+static void preindex_class_props(Compiler* const compiler, ListStmt* body) {
+    for (int i = 0; i < body->size; i++) {
+        Stmt* prop = body->stmts[i];
+        SymbolName name;
+
+        switch (prop->kind) {
+        case STMT_FUNCTION: {
+            name = create_symbol_name(prop->function.identifier.start, prop->function.identifier.length);
+            break;
+        }
+        case STMT_VAR: {
+            name = create_symbol_name(prop->var.identifier.start, prop->var.identifier.length);
+            break;
+        }
+        default: {
+            assert(false); // You must not reach this line
+            return;
+        }
+        }
+
+        Symbol* symbol = scoped_symbol_lookup_levels(&compiler->symbols, &name, 0);
+        assert(symbol != NULL);
+        symbol->constant_index = i;
+    }
+}
+
 static Value compile_class_var_prop(Compiler* const compiler, VarStmt* var, uint16_t index) {
-    Symbol* symbol = lookup_str(compiler, var->identifier.start, var->identifier.length);
+    Symbol* symbol = lookup_with_class_str(compiler, var->identifier.start, var->identifier.length);
     assert(symbol != NULL);
     update_symbol_variable_info(compiler, symbol, index);
     assert(var->definition == NULL);
     return value_default(symbol->type);
+}
+
+static void compile_native_class(void* ctx, NativeClassStmt* native_class) {
+    Compiler* compiler = (Compiler*) ctx;
+    start_scope(compiler); // Start and end scope to access class body. Nothing to see there.
+    end_scope(compiler);
 }
 
 static void emit_bind_upvalues(Compiler* const compiler, Symbol* fn_sym, Token fn) {
@@ -1024,9 +1083,13 @@ static void compile_call(void* ctx, CallExpr* call) {
 static void compile_prop(void* ctx, PropExpr* prop) {
     Compiler* compiler = (Compiler*) ctx;
 
+    // TODO create a macro or something for this shit
+    bool old_want = compiler->want_to_call;
+    compiler->want_to_call = false;
     ACCEPT_EXPR(compiler, prop->object);
+    compiler->want_to_call = old_want;
 
-    Symbol* klass_sym = lookup_str(compiler, TYPE_OBJECT_CLASS_NAME(prop->object_type), TYPE_OBJECT_CLASS_LENGTH(prop->object_type));
+    Symbol* klass_sym = lookup_str(compiler, type_get_class_name(prop->object_type), type_get_class_length(prop->object_type));
     assert(klass_sym != NULL);
     Symbol* prop_symbol = symbol_lookup_str(klass_sym->klass.body, prop->prop.start, prop->prop.length);
     assert(prop_symbol != NULL);
@@ -1042,6 +1105,28 @@ static void compile_prop(void* ctx, PropExpr* prop) {
         OP_BINDED_METHOD :
         OP_GET_PROP;
     emit_short(compiler, opcode, prop_symbol->constant_index);
+}
+
+static void compile_array(void* ctx, ArrayExpr* arr) {
+    Compiler* compiler = (Compiler*) ctx;
+
+    uint8_t index_type = make_type(compiler, arr->inner);
+    emit_short(compiler, OP_ARRAY, index_type);
+
+    Expr** exprs = VECTOR_AS_EXPRS(&arr->elements);
+    IN_ASSIGNMENT(compiler, { // Assign to array positions is an assigment.
+        for (uint32_t i = arr->elements.size; i > 0; i--) {
+            ACCEPT_EXPR(compiler, exprs[i - 1]);
+            emit(compiler, OP_ARRAY_PUSH);
+        }
+    });
+}
+
+static void compile_cast(void* ctx, CastExpr* cast) {
+    Compiler* compiler = (Compiler*) ctx;
+    ACCEPT_EXPR(compiler, cast->inner);
+    uint8_t type_index = make_type(compiler, cast->type);
+    emit_short(compiler, OP_CAST, type_index);
 }
 
 static void compile_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignment) {
@@ -1099,11 +1184,19 @@ static void call_with_params(Compiler* const compiler, Vector* params) {
     bool old_want = compiler->want_to_call;
     compiler->want_to_call = false;
 
-    uint32_t i = 0;
-    for (; i < params->size; i++) {
-        ACCEPT_EXPR(compiler, exprs[i]);
-    }
+    // Disable prop_index, which is used to know if is a method. In the params we can
+    // have other function calls with other prop_index or a plain function with no prop_index.
+    int old_prop_index = compiler->prop_index;
+    compiler->prop_index = PROP_INDEX_NOT_DEFINED;
 
+    uint32_t i = 0;
+    IN_ASSIGNMENT(compiler, { // Param passing is an assigment to "params" vars
+        for (; i < params->size; i++) {
+            ACCEPT_EXPR(compiler, exprs[i]);
+        }
+    });
+
+    compiler->prop_index = old_prop_index;
     compiler->want_to_call = old_want;
 
     if (i > UINT8_MAX) {

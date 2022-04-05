@@ -4,6 +4,7 @@
 #include "type.h"
 #include "vector.h"
 #include "ctable.h"
+#include "stmt.h" // for NativeClassStmt
 
 typedef struct {
     CTableKey key;
@@ -55,7 +56,8 @@ typedef struct {
 
     SymbolVisibility visibility;
 
-    uint32_t declaration_line;
+    uint32_t line;
+    uint32_t column;
     uint16_t constant_index;
 
     bool global;
@@ -75,12 +77,12 @@ typedef struct {
 } Symbol;
 
 Symbol create_symbol_from_token(Token* token, Type* type);
-Symbol create_symbol(SymbolName name, int line, Type* type);
+Symbol create_symbol(SymbolName name, int line, int column, Type* type);
 void free_symbol(Symbol* const symbol);
 int symbol_get_function_upvalue_index(Symbol* const symbol, Symbol* upvalue);
 
 typedef struct s_symbol_table {
-    CTable table; // CTable<Symbol>
+    CTable table; // CTable<Symbol*>
 } SymbolTable;
 
 void init_symbol_table(SymbolTable* const table);
@@ -89,17 +91,18 @@ Symbol* symbol_lookup(SymbolTable* const table, SymbolName* name);
 Symbol* symbol_lookup_str(SymbolTable* const table, const char* name, int length);
 void symbol_insert(SymbolTable* const table, Symbol entry);
 
-#define SYMBOL_TABLE_FOREACH(symbols, block) CTABLE_FOREACH(&(symbols)->table, Symbol, block)
+#define SYMBOL_TABLE_FOREACH(symbols, block) CTABLE_FOREACH(&(symbols)->table, Symbol*, block)
 
 typedef struct s_symbol_node {
     SymbolTable symbols;
     struct s_symbol_node* father;
-    Vector childs; // Vector<SymbolNode>
+    Vector childs; // Vector<SymbolNode*>
+    bool is_class_scope;
     uint32_t next_node_to_visit;
 } SymbolNode;
 
-#define VECTOR_AS_SYMBOL_NODE(vect) VECTOR_AS(vect, SymbolNode)
-#define VECTOR_ADD_SYMBOL_NODE(vect, node) VECTOR_ADD(vect, node, SymbolNode)
+#define VECTOR_AS_SYMBOL_NODE(vect) VECTOR_AS(vect, SymbolNode*)
+#define VECTOR_ADD_SYMBOL_NODE(vect, node) VECTOR_ADD(vect, node, SymbolNode*)
 
 void init_symbol_node(SymbolNode* const node);
 void free_symbol_node(SymbolNode* const node);
@@ -115,6 +118,7 @@ void init_scoped_symbol_table(ScopedSymbolTable* const table);
 void free_scoped_symbol_table(ScopedSymbolTable* const table);
 
 void symbol_create_scope(ScopedSymbolTable* const table);
+void symbol_create_class_scope(ScopedSymbolTable* const table);
 void symbol_end_scope(ScopedSymbolTable* const table);
 void symbol_start_scope(ScopedSymbolTable* const table);
 void symbol_reset_scopes(ScopedSymbolTable* const table);
@@ -127,10 +131,13 @@ Symbol* scoped_symbol_lookup_function(ScopedSymbolTable* const table, SymbolName
 Symbol* scoped_symbol_lookup_function_str(ScopedSymbolTable* const table, const char* name, int length);
 Symbol* scoped_symbol_lookup_object_prop(Symbol* const obj_sym, SymbolName* name);
 Symbol* scoped_symbol_lookup_object_prop_str(Symbol* const obj_sym, const char* name, int legnth);
+Symbol* scoped_symbol_lookup_with_class(ScopedSymbolTable* const table, SymbolName* name);
+Symbol* scoped_symbol_lookup_with_class_str(ScopedSymbolTable* const table, const char* name, int length);
 void scoped_symbol_insert(ScopedSymbolTable* const table, Symbol entry);
 void scoped_symbol_upvalue(ScopedSymbolTable* const table, Symbol* fn, Symbol* var_upvalue);
 void scoped_symbol_update_class_body(ScopedSymbolTable* const table, Symbol* obj);
 Symbol* scoped_symbol_get_class_prop(ScopedSymbolTable* const table, Type* class_type, Token* prop, Symbol** class_sym_out);
+Symbol* scoped_symbol_get_class_prop_str(ScopedSymbolTable* const table, const char* const class_name, int length, Token* prop, Symbol** class_sym_out);
 
 #define SCOPED_SYMBOL_LOOKUP_OBJECT_INIT(sym) (scoped_symbol_lookup_object_prop_str(sym, CLASS_CONSTRUCTOR_NAME, CLASS_CONSTRUCTOR_LENGTH))
 
@@ -154,5 +161,32 @@ typedef struct {
 
 void init_upvalue_iterator(UpvalueIterator* const iterator, ScopedSymbolTable* table, int depth);
 Symbol* upvalue_iterator_next(UpvalueIterator* const iterator);
+
+NativeClassStmt register_native_class(ScopedSymbolTable* const table, char* name, int length, void (*register_fn)(ScopedSymbolTable* const table));
+
+#define NATIVE_CLASS_INIT(var_name, name_f, len_f, fn, ...) do {\
+    Type* type_f;\
+    __VA_ARGS__\
+    if (var_name == NULL) {\
+        var_name = new_native(name_f, len_f, fn, type_f);\
+    }\
+} while (false)
+
+#define NATIVE_INSERT_METHOD(table, native_obj, cte) do {\
+    Symbol sym = create_symbol(\
+        create_symbol_name(\
+            native_obj->name,\
+            native_obj->length),\
+        0,\
+        0,\
+        native_obj->obj.type);\
+    sym.visibility = SYMBOL_VISIBILITY_PUBLIC;\
+    sym.constant_index = cte++;\
+    scoped_symbol_insert(table, sym);\
+} while (false)
+
+#define NATIVE_PUSH_PROP(props, native_obj) do {\
+valuearray_write(props, OBJ_VALUE(native_obj, native_obj->obj.type));\
+} while (false)
 
 #endif

@@ -1,9 +1,9 @@
-[Line 23] Type error: Class 'Human' does not have property 'say_hi'
+[File ../programs/classes/cannot_call_to_a_missing_method.qz, Line 23] Type error: Class 'Human' does not have property 'say_hi'
 22 | 
 23 | do().say_hi();
    | ~~~~~~~~~~~^
 
-[Line 23] Type error: Calling 'do' which is not a function
+[File ../programs/classes/cannot_call_to_a_missing_method.qz, Line 23] Type error: Calling 'do' which is not a function
 22 | 
 23 | do().say_hi();
    | ~~^

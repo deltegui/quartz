@@ -6,7 +6,6 @@
 #include "../common.h"
 #include "../native.h"
 
-// TODO print for numbers and so on?
 static Value stdio_println(int argc, Value* argv);
 static Value stdio_print(int argc, Value* argv);
 static Value stdio_readstr(int argc, Value* argv);

@@ -335,13 +335,6 @@ Type* type_cast(Type* from, Type* to) {
     if (TYPE_IS_BOOL(to) || TYPE_IS_ANY(from)) {
         return to;
     }
-    // TODO should we let castings from [Any] to [<insert here any type>]?
-    /*
-    if (TYPE_IS_ARRAY(from) && TYPE_IS_ARRAY(to)) {
-        Type* inner = type_cast(from->array.inner, to->array.inner);
-        return create_type_array(inner);
-    }
-    */
     return NULL;
 }
 

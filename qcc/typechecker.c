@@ -521,7 +521,6 @@ static void typecheck_prop_assigment(void* ctx, PropAssigmentExpr* prop_assignme
 
     ACCEPT_EXPR(checker, prop_assignment->value);
 
-    // TODO should we let users change the implementation of a function?
     if (TYPE_IS_FUNCTION(prop_symbol->type)) {
         error(
             checker,

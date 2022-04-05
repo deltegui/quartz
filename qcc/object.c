@@ -107,7 +107,6 @@ ObjBindedMethod* new_binded_method(Obj* instance, Obj* method) {
     return binded;
 }
 
-// TODO change the value array to be directly in obj?
 Value object_get_property(Obj* obj, uint8_t index) {
     assert(index < obj->props.size);
     return obj->props.values[index];

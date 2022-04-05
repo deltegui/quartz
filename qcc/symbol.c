@@ -9,7 +9,6 @@ static bool symbol_name_equals(SymbolName* first, SymbolName* second);
 static SymbolKind kind_from_type(Type* type);
 static void create_function_symbol(Symbol* const symbol);
 static void create_scope(ScopedSymbolTable* const table, bool is_class_scope);
-static void update_father_pointer_for_childs(ScopedSymbolTable* const table);
 static bool find_next_scope_with_upvalues(UpvalueIterator* const iterator);
 static Symbol* scoped_symbol_lookup_levels_conditional(ScopedSymbolTable* const table, SymbolName* name, int levels, bool want_class_scope, ExitCondition test_condition);
 
@@ -186,36 +185,7 @@ static void create_scope(ScopedSymbolTable* const table, bool is_class_scope) {
     init_symbol_node(child);
     child->is_class_scope = is_class_scope;
     SymbolNode* next = symbol_node_add_child(table->current, child);
-    update_father_pointer_for_childs(table); // TODO Change!
     table->current = next;
-}
-
-static void update_father_pointer_for_childs(ScopedSymbolTable* const table) {
-    // A big big problem of using vector for the scope symbol table is vector reallocates memory.
-    // So, when this happends, all childs of the childs of the current node have an incorrect
-    // father pointer. We MUST fix this. There are two ways:
-    //      * Change the data structure (I dont have time for this solution)
-    //      * Walk every child's child and refresh the father pointer
-    // The last solution is what we do here. The downside is this algorithm have an average
-    // case of O(N*M) and a worst case (when N and M are too big) of O(N^2). The good part is that
-    // this code is only executed when the vector tells us there was a reallocation, so is not
-    // exectued every time we add a new child.
-    // TODO The best solution is to change the data structure. Fix that.
-
-    if (! table->current->childs.had_realloc) {
-        return;
-    }
-
-    SymbolNode** childs = VECTOR_AS_SYMBOL_NODE(&table->current->childs);
-    int i_len = table->current->childs.size;
-    for (int i = 0; i < i_len; i++) {
-        SymbolNode* current = childs[i];
-        SymbolNode** inner = VECTOR_AS_SYMBOL_NODE(&current->childs);
-        int j_len = current->childs.size;
-        for (int j = 0; j < j_len; j++) {
-            inner[j]->father = current;
-        }
-    }
 }
 
 void symbol_end_scope(ScopedSymbolTable* const table) {

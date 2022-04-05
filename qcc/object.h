@@ -55,13 +55,11 @@ typedef struct {
 typedef struct {
     Obj obj;
     ObjString* name;
-    // TODO this should have the static part
 } ObjClass;
 
 typedef struct {
     Obj obj;
     ObjClass* klass;
-    // ValueArray props;
 } ObjInstance;
 
 typedef struct {

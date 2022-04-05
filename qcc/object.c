@@ -145,8 +145,8 @@ ObjString* copy_string(const char* chars, int length) {
     ObjString* str = alloc_string(chars, length, hash);
     stack_push(OBJ_VALUE(str, CREATE_TYPE_STRING())); // We need to GC discover our new string.
     table_set(&qvm.strings, str, NIL_VALUE());
-    stack_pop();
     string_push_props(&str->obj.props);
+    stack_pop();
     return str;
 }
 

@@ -992,11 +992,11 @@ static void typecheck_binary(void* ctx, BinaryExpr* binary) {
     }
     case TOKEN_EQUAL_EQUAL:
     case TOKEN_BANG_EQUAL: {
-        if (type_equals(left_type, right_type)) {
+        if (TYPE_IS_ASSIGNABLE(left_type, right_type)) {
             checker->last_type = CREATE_TYPE_BOOL();
             return;
         }
-        ERROR("Elements with different types arent coparable");
+        ERROR("Elements with different types arent comparable");
         return;
     }
     default: {

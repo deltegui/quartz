@@ -5,7 +5,6 @@
 #include "../object.h"
 #include "../common.h"
 #include "../native.h"
-#include "../vm.h"
 
 #if defined(WIN32) || defined(_WIN32)
 #include <io.h>
@@ -17,8 +16,6 @@ static Value stdio_println(int argc, Value* argv);
 static Value stdio_print(int argc, Value* argv);
 static Value stdio_readstr(int argc, Value* argv);
 static Value stdio_read_stdin(int argc, Value* argv);
-
-static bool ensure_is_tty();
 
 void register_stdio(CTable* table) {
     Type* print_type = create_type_function();
@@ -92,10 +89,24 @@ static Value stdio_print(int argc, Value* argv) {
 }
 
 static Value stdio_readstr(int argc, Value* argv) {
-    if (! ensure_is_tty()) {
-        return NIL_VALUE();
-    }
+    static FILE* kbd_in = NULL;
 
+
+#if defined(WIN32) || defined(_WIN32)
+    #define ISATTY(dsc) _isatty(dsc)
+    #define TTYNAME(dsc) _ttyname(dsc)
+#else
+    #define ISATTY(dsc) isatty(dsc)
+    #define TTYNAME(dsc) ttyname(dsc)
+#endif
+
+    int descriptor = fileno(stdin);
+    if (descriptor == -1) {
+        // error
+    }
+    if (! ISATTY(descriptor)) {
+        freopen(TTYNAME(fileno(stdout)), "r", keyboard_descriptor);
+    }
     Vector buffer;
     init_vector(&buffer, sizeof(char));
 
@@ -108,41 +119,6 @@ static Value stdio_readstr(int argc, Value* argv) {
     ObjString* str = copy_string((char*) buffer.elements, buffer.size);
     free_vector(&buffer);
     return OBJ_VALUE(str, CREATE_TYPE_STRING());
-}
-
-static bool ensure_is_tty() {
-#if defined(WIN32) || defined(_WIN32)
-    #define ISATTY(dsc) _isatty(dsc)
-    #define TTYNAME(dsc) _ttyname(dsc)
-#else
-    #define ISATTY(dsc) isatty(dsc)
-    #define TTYNAME(dsc) ttyname(dsc)
-#endif
-
-    int dscin = fileno(stdin);
-    if (dscin == -1) {
-        runtime_error("Cannot get stdin descriptor");
-        return false;
-    }
-    if (ISATTY(dscin)) {
-        return true;
-    }
-
-    int dscout = fileno(stdout);
-    if (dscout == -1) {
-        runtime_error("Cannot get stdout descriptor");
-        return false;
-    }
-    char* tty = TTYNAME(dscout);
-    if (tty == NULL) {
-        runtime_error("Cannot get tty name");
-        return false;
-    }
-    freopen(tty, "r", stdin);
-    return true;
-
-#undef ISATTY
-#undef TTYNAME
 }
 
 static Value stdio_read_stdin(int argc, Value* argv) {

@@ -27,6 +27,7 @@ typedef struct {
 void value_print(Value val);
 bool value_equals(Value first, Value second);
 Value value_default(Type* type);
+Value value_cast(Value value, Type* cast);
 void mark_value(Value value);
 
 #define NUMBER_VALUE(i) ((Value){ CREATE_TYPE_NUMBER(), VALUE_NUMBER, { .number = i } })
@@ -53,5 +54,6 @@ void init_valuearray(ValueArray* const values);
 void free_valuearray(ValueArray* const values);
 int valuearray_write(ValueArray* const values, Value value);
 void mark_valuearray(ValueArray* const array);
+void valuearray_deep_copy(ValueArray* const origin, ValueArray* destiny);
 
 #endif

@@ -1,3 +1,3 @@
-[Line 1] Error at 'return': Cannot use return outside a function!
+[File: ../programs/basic/top_level_return.qz, Line 1] Error at 'return': Cannot use return outside a function!
 1 | return 1;
   | ~~~~~^

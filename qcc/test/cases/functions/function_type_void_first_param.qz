@@ -1,9 +1,9 @@
-[Line 3] Error at 'Void': You can't use Void type in params of function type declaration
+[File: ../programs/functions/function_type_void_first_param.qz, Line 3] Error at 'Void': You can't use Void type in params of function type declaration
 2 | 
 3 | fn create_void_fn(): (Void, Number): Void {
   | ~~~~~~~~~~~~~~~~~~~~~~~~~~^
 
-[Line 11] Error at end: Expected block to end with '}'
+[File: ../programs/functions/function_type_void_first_param.qz, Line 11] Error at end: Expected block to end with '}'
 10 | var a = create_void_fn();
 11 | a();
    | ~~~~^

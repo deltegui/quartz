@@ -6,6 +6,9 @@
 #include "vector.h"
 
 typedef enum {
+    TYPE_ARRAY,
+    TYPE_CLASS,
+    TYPE_OBJECT,
     TYPE_ALIAS,
     TYPE_NUMBER,
     TYPE_BOOL,
@@ -14,43 +17,70 @@ typedef enum {
     TYPE_FUNCTION,
     TYPE_VOID,
     TYPE_UNKNOWN,
+    TYPE_ANY,
 } TypeKind;
 
-struct s_func_type;
-struct s_alias_type;
+struct s_type;
+
+typedef struct {
+    Vector param_types;
+    struct s_type* return_type;
+} FunctionType;
+
+typedef struct {
+    struct s_type* def;
+    char* identifier;
+} AliasType;
+
+typedef struct {
+    int length;
+    char* identifier;
+} ClassType;
+
+typedef struct {
+    struct s_type* klass;
+} ObjectType;
+
+typedef struct {
+    struct s_type* inner;
+} ArrayType;
 
 typedef struct s_type {
     TypeKind kind;
     union {
-        struct s_func_type* function;
-        struct s_alias_type* alias;
+        FunctionType function;
+        AliasType alias;
+        ClassType klass;
+        ObjectType object;
+        ArrayType array;
     };
 } Type;
 
-typedef struct s_func_type {
-    Vector param_types;
-    Type* return_type;
-} FunctionType;
+#define TYPE_ALIAS_RESOLVE(type_alias) ((type_alias)->alias.def)
+#define RESOLVE_IF_TYPEALIAS(type) ((type)->kind == TYPE_ALIAS) ? TYPE_ALIAS_RESOLVE(type) : type
 
-typedef struct s_alias_type {
-    Type* def;
-    char identifier[];
-} AliasType;
+#define TYPE_FN_RETURN(type_fn) ((type_fn)->function.return_type)
+#define TYPE_FN_PARAMS(type_fn) ((type_fn)->function.param_types)
+#define TYPE_FN_ADD_PARAM(type_fn, param_type) (VECTOR_ADD_TYPE(&TYPE_FN_PARAMS(type_fn), param_type))
 
-#define TYPE_ALIAS_RESOLVE(type_alias) (type_alias->alias->def)
-#define RESOLVE_IF_TYPEALIAS(type) (type->kind == TYPE_ALIAS) ? TYPE_ALIAS_RESOLVE(type) : type
+#define TYPE_OBJECT_CLASS_NAME(type_obj) ((type_obj)->object.klass->klass.identifier)
+#define TYPE_OBJECT_CLASS_LENGTH(type_obj) ((type_obj)->object.klass->klass.length)
 
-#define TYPE_FN_RETURN(type_fn) (type_fn->function->return_type)
-#define TYPE_FN_PARAMS(type_fn) (type_fn->function->param_types)
+const char* type_get_class_name(Type* any_type);
+int type_get_class_length(Type* any_type);
 
-#define TYPE_IS_ALIAS(type) (type->kind == TYPE_ALIAS)
-#define TYPE_IS_NUMBER(type) (type->kind == TYPE_NUMBER)
-#define TYPE_IS_BOOL(type) (type->kind == TYPE_BOOL)
-#define TYPE_IS_NIL(type) (type->kind == TYPE_NIL)
-#define TYPE_IS_STRING(type) (type->kind == TYPE_STRING)
-#define TYPE_IS_FUNCTION(type) (type->kind == TYPE_FUNCTION)
-#define TYPE_IS_VOID(type) (type->kind == TYPE_VOID)
-#define TYPE_IS_UNKNOWN(type) (type->kind == TYPE_UNKNOWN)
+#define TYPE_IS_ARRAY(type) ((type)->kind == TYPE_ARRAY)
+#define TYPE_IS_OBJECT(type) ((type)->kind == TYPE_OBJECT)
+#define TYPE_IS_CLASS(type) ((type)->kind == TYPE_CLASS)
+#define TYPE_IS_ALIAS(type) ((type)->kind == TYPE_ALIAS)
+#define TYPE_IS_NUMBER(type) ((type)->kind == TYPE_NUMBER)
+#define TYPE_IS_BOOL(type) ((type)->kind == TYPE_BOOL)
+#define TYPE_IS_NIL(type) ((type)->kind == TYPE_NIL)
+#define TYPE_IS_STRING(type) ((type)->kind == TYPE_STRING)
+#define TYPE_IS_FUNCTION(type) ((type)->kind == TYPE_FUNCTION)
+#define TYPE_IS_VOID(type) ((type)->kind == TYPE_VOID)
+#define TYPE_IS_UNKNOWN(type) ((type)->kind == TYPE_UNKNOWN)
+#define TYPE_IS_ANY(type) ((type)->kind == TYPE_ANY)
 
 void init_type_pool();
 void free_type_pool();
@@ -58,6 +88,9 @@ void free_type_pool();
 Type* create_type_simple(TypeKind kind);
 Type* create_type_function();
 Type* create_type_alias(const char* identifier, int length, Type* original);
+Type* create_type_class(const char* identifier, int length);
+Type* create_type_object(Type* klass);
+Type* create_type_array(Type* inner);
 
 #define CREATE_TYPE_NUMBER() create_type_simple(TYPE_NUMBER)
 #define CREATE_TYPE_BOOL() create_type_simple(TYPE_BOOL)
@@ -65,6 +98,17 @@ Type* create_type_alias(const char* identifier, int length, Type* original);
 #define CREATE_TYPE_STRING() create_type_simple(TYPE_STRING)
 #define CREATE_TYPE_VOID() create_type_simple(TYPE_VOID)
 #define CREATE_TYPE_UNKNOWN() create_type_simple(TYPE_UNKNOWN)
+#define CREATE_TYPE_ANY() create_type_simple(TYPE_ANY)
+
+#define TYPE_PRINT(typ) type_fprint(stdout, typ)
+#define ERR_TYPE_PRINT(typ) type_fprint(stderr, typ)
+
+#define TYPE_IS_ASSIGNABLE(var_type, expr_type) (\
+        (TYPE_IS_NIL(expr_type) && TYPE_IS_OBJECT(var_type)) ||\
+        (TYPE_IS_ANY(var_type)) ||\
+        (TYPE_IS_ARRAY(var_type) && TYPE_IS_ARRAY(expr_type) && TYPE_IS_ANY(var_type->array.inner)) ||\
+        type_equals(var_type, expr_type)\
+    )
 
 #define TYPE_PRINT(typ) type_fprint(stdout, typ)
 #define ERR_TYPE_PRINT(typ) type_fprint(stderr, typ)
@@ -72,6 +116,8 @@ Type* create_type_alias(const char* identifier, int length, Type* original);
 Type* simple_type_from_token_kind(TokenKind kind);
 void type_fprint(FILE* out, const Type* const type);
 bool type_equals(Type* first, Type* second);
+// This returns NULL if the type cannot be casted!!!cast->type
+Type* type_cast(Type* from, Type* to);
 
 #define VECTOR_AS_TYPES(vect) VECTOR_AS(vect, Type*)
 #define VECTOR_ADD_TYPE(vect, type) VECTOR_ADD(vect, type, Type*)

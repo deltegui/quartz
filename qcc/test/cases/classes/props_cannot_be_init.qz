@@ -1,0 +1,9 @@
+[File: ../programs/classes/props_cannot_be_init.qz, Line 3] Error at 'age': Class variable properties cannot be initialized!
+2 |     var name: String;
+3 |     var age: Number = 5; // You cant do this
+  | ~~~~~~~~~~~^
+
+[File: ../programs/classes/props_cannot_be_init.qz, Line 8] Error at end: Expected block to end with '}'
+7 |     }
+8 | }
+  | ~^

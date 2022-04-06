@@ -11,19 +11,19 @@
 #include <unistd.h>
 #endif
 
-CTable modules; // Ctable<FileImport>
+CTable modules; // Ctable<Import>
 
-#define REGISTER_IMPORT(key, import) CTABLE_SET(&modules, key, import, FileImport)
+#define REGISTER_IMPORT(key, import) CTABLE_SET(&modules, key, import, Import)
 #define FIND_IMPORT(key) ctable_find(&modules, &key)
-#define VECTOR_AS_IMPORTS() VECTOR_AS(&modules.data, FileImport)
+#define VECTOR_AS_IMPORTS() VECTOR_AS(&modules.data, Import)
 
 static bool is_directory(const char* path);
 static bool is_import_loaded(const char* path, int len);
-static FileImport find_import(const char* path, int lengh);
-static void register_import(FileImport import);
+static Import find_import(const char* path, int lengh);
+static void register_import(Import import, const char* path, int length);
 static const char* read_file(const char* source_name);
 FileImport import_file(const char* path, int length);
-static void free_import(FileImport import);
+static void free_import(Import import);
 
 static bool is_directory(const char* path) {
 #if defined(WIN32) || defined(_WIN32)
@@ -41,11 +41,11 @@ static bool is_directory(const char* path) {
 }
 
 void init_module_system() {
-    init_ctable(&modules, sizeof(FileImport));
+    init_ctable(&modules, sizeof(Import));
 }
 
 void free_module_system() {
-    FileImport* mods = VECTOR_AS_IMPORTS();
+    Import* mods = VECTOR_AS_IMPORTS();
     for (uint32_t i = 0; i < modules.data.size; i++) {
         free_import(mods[i]);
     }
@@ -58,16 +58,16 @@ static bool is_import_loaded(const char* path, int length) {
     return entry != NULL;
 }
 
-static FileImport find_import(const char* path, int length) {
+static Import find_import(const char* path, int length) {
     CTableKey key = create_ctable_key(path, length);
     CTableEntry* entry = FIND_IMPORT(key);
     assert(entry != NULL);
-    FileImport* mods = VECTOR_AS_IMPORTS();
+    Import* mods = VECTOR_AS_IMPORTS();
     return mods[entry->vector_pos];
 }
 
-static void register_import(FileImport import) {
-    CTableKey key = create_ctable_key(import.path, import.path_length);
+static void register_import(Import import, const char* path, int length) {
+    CTableKey key = create_ctable_key(path, length);
     REGISTER_IMPORT(key, import);
 }
 
@@ -103,7 +103,12 @@ static const char* read_file(const char* source_name) {
 }
 
 Import import(const char* path, int length) {
+    if (is_import_loaded(path, length)) {
+        return find_import(path, length);
+    }
+
     Import import;
+    import.is_already_loaded = false;
     NativeImport* native_import = import_stdlib(path, length);
     import.is_native = native_import != NULL;
     if (import.is_native) {
@@ -111,14 +116,15 @@ Import import(const char* path, int length) {
     } else {
         import.file = import_file(path, length);
     }
+
+    import.is_already_loaded = true; // We save it as if was loaded.
+    register_import(import, path, length);
+    import.is_already_loaded = false; // Then we say that this is the first time
+
     return import;
 }
 
 FileImport import_file(const char* path, int length) {
-    if (is_import_loaded(path, length)) {
-        return find_import(path, length);
-    }
-
     char* cpy_path = (char*) malloc(sizeof(char) * length + 1);
     memcpy(cpy_path, path, length);
     cpy_path[length] = '\0';
@@ -127,15 +133,15 @@ FileImport import_file(const char* path, int length) {
     import.path = cpy_path;
     import.path_length = length;
     import.source = read_file(cpy_path);
-    import.is_already_loaded = true; // We save it as if was loaded.
-    register_import(import);
-    import.is_already_loaded = false; // Then we say that this is the first time
     return import;
 }
 
-static void free_import(FileImport import) {
-    free((void*) import.path);
-    if (import.source != NULL) {
-        free((void*) import.source);
+static void free_import(Import import) {
+    if (import.is_native) {
+        return;
+    }
+    free((void*) import.file.path);
+    if (import.file.source != NULL) {
+        free((void*) import.file.source);
     }
 }

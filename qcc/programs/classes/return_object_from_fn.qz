@@ -1,0 +1,19 @@
+import 'stdio';
+
+class Demo {
+    var thing_to_print: String;
+
+    pub fn init(str: String) {
+        self.thing_to_print = str;
+    }
+
+    pub fn print() {
+        println(self.thing_to_print);
+    }
+}
+
+fn rtn_obj(str: String): Demo {
+    return new Demo(str);
+}
+
+rtn_obj("HOLI!").print();

@@ -47,12 +47,12 @@ static void print_arrow(Token* token) {
     fprintf(stderr, "^\n");
 }
 
-void print_error_context(const char* source, Token* at) {
+void print_error_context(Token* at) {
     const char* line = NULL;
     if (at->line == 1) {
-        line = get_line(source, at->line);
+        line = get_line(at->ctx.source, at->line);
     } else {
-        line = get_line(source, at->line - 1);
+        line = get_line(at->ctx.source, at->line - 1);
         line = print_line(line, at->line - 1);
     }
     print_line(line, at->line);

@@ -1,5 +1,6 @@
 #include "qstdconv.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "../values.h"
 #include "../common.h"
 #include "../object.h"
@@ -8,11 +9,14 @@
 static Value stdconv_ntos(int argc, Value* argv);
 static Value stdconv_btos(int argc, Value* argv);
 static Value stdconv_sum(int argc, Value* argv);
+static Value stdconv_ston(int argc, Value* argv);
+static Value stdconv_typeof(int argc, Value* argv);
+static Value stdconv_parse_ascii(int argc, Value* argv);
 
 #define DEFINE_TYPE(name, param_type)\
     Type* name = create_type_function();\
-    VECTOR_ADD_TYPE(&name->function->param_types, param_type);\
-    name->function->return_type = CREATE_TYPE_STRING()
+    VECTOR_ADD_TYPE(&name->function.param_types, param_type);\
+    name->function.return_type = CREATE_TYPE_STRING()
 
 void register_stdconv(CTable* table) {
     DEFINE_TYPE(ntos_type, CREATE_TYPE_NUMBER());
@@ -32,10 +36,10 @@ void register_stdconv(CTable* table) {
     };
 
     Type* sum_type = create_type_function();
-    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_NUMBER());
-    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_NUMBER());
-    VECTOR_ADD_TYPE(&sum_type->function->param_types, CREATE_TYPE_BOOL());
-    sum_type->function->return_type = CREATE_TYPE_VOID();
+    VECTOR_ADD_TYPE(&sum_type->function.param_types, CREATE_TYPE_NUMBER());
+    VECTOR_ADD_TYPE(&sum_type->function.param_types, CREATE_TYPE_NUMBER());
+    VECTOR_ADD_TYPE(&sum_type->function.param_types, CREATE_TYPE_BOOL());
+    sum_type->function.return_type = CREATE_TYPE_VOID();
     NativeFunction sum = (NativeFunction) {
         .name = "__t_sum",
         .length = 7,
@@ -43,11 +47,44 @@ void register_stdconv(CTable* table) {
         .type = sum_type,
     };
 
-#define FN_LENGTH 3
+    Type* typeof_type = create_type_function();
+    VECTOR_ADD_TYPE(&typeof_type->function.param_types, CREATE_TYPE_ANY());
+    typeof_type->function.return_type = CREATE_TYPE_VOID();
+    NativeFunction typeof_ = (NativeFunction) {
+        .name = "typeof",
+        .length = 6,
+        .function = stdconv_typeof,
+        .type = typeof_type,
+    };
+
+    Type* ston_type = create_type_function();
+    VECTOR_ADD_TYPE(&ston_type->function.param_types, CREATE_TYPE_STRING());
+    TYPE_FN_RETURN(ston_type) = CREATE_TYPE_NUMBER();
+    NativeFunction ston = (NativeFunction) {
+        .name = "ston",
+        .length = 4,
+        .function = stdconv_ston,
+        .type = ston_type,
+    };
+
+    DEFINE_TYPE(
+        parse_ascii_type,
+        create_type_array(CREATE_TYPE_NUMBER()));
+    NativeFunction parse_ascii = (NativeFunction) {
+        .name = "parse_ascii",
+        .length = 11,
+        .function = stdconv_parse_ascii,
+        .type = parse_ascii_type,
+    };
+
+#define FN_LENGTH 6
     static NativeFunction functions[FN_LENGTH];
     functions[0] = ntos;
     functions[1] = btos;
     functions[2] = sum;
+    functions[3] = ston;
+    functions[4] = typeof_;
+    functions[5] = parse_ascii;
 
     NativeImport stdconv_import = (NativeImport) {
         .name = "stdconv",
@@ -91,4 +128,32 @@ static Value stdconv_sum(int argc, Value* argv) {
     bool c = VALUE_AS_BOOL(argv[2]);
     printf("SUM(%f, %f, %d) -> %f\n", a, b , c, a + b);
     return NIL_VALUE();
+}
+
+static Value stdconv_ston(int argc, Value* argv) {
+    assert(argc == 1);
+    char* str = OBJ_AS_CSTRING(VALUE_AS_OBJ(argv[0]));
+    double result = strtod(str, NULL);
+    return NUMBER_VALUE(result);
+}
+
+static Value stdconv_typeof(int argc, Value* argv) {
+    assert(argc == 1);
+    type_fprint(stdout, argv[0].type);
+    printf("\n");
+    return NIL_VALUE();
+}
+
+static Value stdconv_parse_ascii(int argc, Value* argv) {
+    assert(argc == 1);
+    ObjArray* in = OBJ_AS_ARRAY(VALUE_AS_OBJ(argv[0]));
+    char* buffer = (char*) malloc(in->elements.size * sizeof(char));
+
+    for (int i = 0; i < in->elements.size; i++) {
+        buffer[i] = (char)VALUE_AS_NUMBER(in->elements.values[i]);
+    }
+
+    ObjString* out = copy_string(buffer, in->elements.size);
+    free(buffer);
+    return OBJ_VALUE(out, CREATE_TYPE_STRING());
 }

@@ -65,6 +65,20 @@ if($ARGV[0]) {
 my $have_err = 0;
 my $test_number = 0;
 
+sub print_ok {
+	print color('bold green');
+	print "OK\n";
+	print color('reset');
+}
+
+sub print_error {
+	print color('bold red');
+	print "FAIL\n";
+    print $_[0];
+	print color('reset');
+	$have_err = 1;
+}
+
 while(my ($key, $value) = each(%tests)) {
 	if($prog{$key}) {
 		print("RUNNING TEST: $key... ");
@@ -75,15 +89,9 @@ while(my ($key, $value) = each(%tests)) {
 		$result = clean_entry($result);
 		my $expected = clean_entry(read_text($value));
 		if($expected eq $result) {
-			print color('bold green');
-			print "OK\n";
-			print color('reset');
+            print_ok();
 		} else {
-			print color('bold red');
-			print "FAIL\n";
-			print "EXPECTED:\n$expected\nBUT HAVE:\n$result\n";
-			print color('reset');
-			$have_err = 1;
+            print_error("EXPECTED:\n$expected\nBUT HAVE:\n$result\n");
 		}
 		$test_number++;
 	}

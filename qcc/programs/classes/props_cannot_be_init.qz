@@ -1,0 +1,8 @@
+class Human {
+    var name: String;
+    var age: Number = 5; // You cant do this
+
+    pub fn init(name: String, age: Number) {
+        var a = 1 + 1;
+    }
+}

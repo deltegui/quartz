@@ -1,4 +1,4 @@
-[Line 4] Type error: Missing return at the end of function body
+[File ../programs/returns/missing_return_in_non_void.qz, Line 4] Type error: Missing return at the end of function body
 3 | 
 4 | fn hello(): Number {
   | ~~~~~~~~^

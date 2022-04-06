@@ -3,6 +3,8 @@
 #include "object.h"
 #include "vm.h"
 #include "table.h"
+#include "string.h"
+#include "array.h"
 
 #ifdef GC_DEBUG
 #include "debug.h"
@@ -45,6 +47,7 @@ void* qvm_realloc(void* ptr, size_t old_size, size_t size) {
 }
 
 static void free_object(Obj* obj) {
+    free_valuearray(&obj->props);
     switch (obj->kind) {
     case OBJ_STRING: {
         FREE(ObjString, obj);
@@ -62,6 +65,24 @@ static void free_object(Obj* obj) {
     }
     case OBJ_NATIVE: {
         FREE(ObjNative, obj);
+        break;
+    }
+    case OBJ_CLASS: {
+        FREE(ObjClass, obj);
+        break;
+    }
+    case OBJ_INSTANCE: {
+        FREE(ObjInstance, obj);
+        break;
+    }
+    case OBJ_BINDED_METHOD: {
+        FREE(ObjBindedMethod, obj);
+        break;
+    }
+    case OBJ_ARRAY: {
+        ObjArray* arr = OBJ_AS_ARRAY(obj);
+        free_valuearray(&arr->elements);
+        FREE(ObjArray, arr);
         break;
     }
     }
@@ -118,6 +139,8 @@ static void mark_roots() {
     mark_stack();
     mark_globals();
     mark_callframes();
+    mark_array();
+    mark_string();
 #ifdef GC_DEBUG
     printf("-- gc end marking roots\n");
 #endif
@@ -176,6 +199,7 @@ static void trace_objects() {
 }
 
 static void blacken_object(Obj* obj) {
+    mark_valuearray(&obj->props);
     switch (obj->kind) {
     case OBJ_NATIVE:
     case OBJ_STRING:
@@ -195,6 +219,27 @@ static void blacken_object(Obj* obj) {
     case OBJ_CLOSED: {
         ObjClosed* closed = OBJ_AS_CLOSED(obj);
         mark_value(closed->value);
+        break;
+    }
+    case OBJ_CLASS: {
+        ObjClass* klass = OBJ_AS_CLASS(obj);
+        mark_object((Obj*) klass->name);
+        break;
+    }
+    case OBJ_INSTANCE: {
+        ObjInstance* instance = OBJ_AS_INSTANCE(obj);
+        mark_object((Obj*) instance->klass);
+        break;
+    }
+    case OBJ_BINDED_METHOD: {
+        ObjBindedMethod* binded = OBJ_AS_BINDED_METHOD(obj);
+        mark_object((Obj*) binded->instance);
+        mark_object(binded->method);
+        break;
+    }
+    case OBJ_ARRAY: {
+        ObjArray* arr = OBJ_AS_ARRAY(obj);
+        mark_valuearray(&arr->elements);
         break;
     }
     }

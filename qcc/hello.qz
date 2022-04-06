@@ -1,3 +1,9 @@
-import 'stdconv';
+import "stdio";
+import "stdconv";
 
-__t_sum(4, 5, true);
+var a = []Number{0, 1, 2};
+
+import './slave.qz';
+
+var b = new A('puto');
+b.print_name();

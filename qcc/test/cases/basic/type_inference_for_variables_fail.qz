@@ -1,4 +1,4 @@
-[Line 7] Type error: Cannot declare Void variable
+[File ../programs/basic/type_inference_for_variables_fail.qz, Line 7] Type error: Cannot declare Void variable
 6 | 
 7 | var a = do_something();
   | ~~~~~^

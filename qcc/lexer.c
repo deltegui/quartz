@@ -36,12 +36,12 @@ Token next_token(Lexer* const lexer);
     lexer->line++;\
     lexer->column = 0
 
-void init_lexer(Lexer* const lexer, const char* const buffer) {
-    lexer->source = buffer;
-    lexer->current = buffer;
-    lexer->start = buffer;
+void init_lexer(Lexer* const lexer, FileImport ctx) {
+    lexer->current = ctx.source;
+    lexer->start = ctx.source;
     lexer->line = 1;
     lexer->column = 0;
+    lexer->ctx = ctx;
 }
 
 static bool is_at_end(Lexer* const lexer) {
@@ -89,6 +89,7 @@ static Token create_token(Lexer* const lexer, TokenKind kind) {
     token.column = lexer->column - 1;
     token.start = lexer->start;
     token.kind = kind;
+    token.ctx = lexer->ctx;
 #ifdef LEXER_DEBUG
     printf("[LEXER DEBUG]: Read ");
     token_print(token);
@@ -233,26 +234,17 @@ static Token scan_identifier(Lexer* const lexer) {
         if (match_token(lexer, "ontinue", 1, 8)) {
             return create_token(lexer, TOKEN_CONTINUE);
         }
-        break;
-    }
-    case 'i': {
-        if (match_token(lexer, "f", 1, 2)) {
-            return create_token(lexer, TOKEN_IF);
+        if (match_token(lexer, "lass", 1, 5)) {
+            return create_token(lexer, TOKEN_CLASS);
         }
-        if (match_token(lexer, "mport", 1, 6)) {
-            return create_token(lexer, TOKEN_IMPORT);
+        if (match_token(lexer, "ast", 1, 4)) {
+            return create_token(lexer, TOKEN_CAST);
         }
         break;
     }
     case 'e': {
         if (match_token(lexer, "lse", 1, 4)) {
             return create_token(lexer, TOKEN_ELSE);
-        }
-        break;
-    }
-    case 't': {
-        if (match_token(lexer, "rue", 1, 4)) {
-            return create_token(lexer, TOKEN_TRUE);
         }
         if (match_token(lexer, "ypedef", 1, 7)) {
             return create_token(lexer, TOKEN_TYPEDEF);
@@ -271,15 +263,27 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
+    case 'i': {
+        if (match_token(lexer, "f", 1, 2)) {
+            return create_token(lexer, TOKEN_IF);
+        }
+        if (match_token(lexer, "mport", 1, 6)) {
+            return create_token(lexer, TOKEN_IMPORT);
+        }
+        break;
+    }
     case 'n': {
         if (match_token(lexer, "il", 1, 3)) {
             return create_token(lexer, TOKEN_NIL);
         }
+        if (match_token(lexer, "ew", 1, 3)) {
+            return create_token(lexer, TOKEN_NEW);
+        }
         break;
     }
-    case 'v': {
-        if (match_token(lexer, "ar", 1, 3)) {
-            return create_token(lexer, TOKEN_VAR);
+    case 'p': {
+        if (match_token(lexer, "ub", 1, 3)) {
+            return create_token(lexer, TOKEN_PUBLIC);
         }
         break;
     }
@@ -289,9 +293,35 @@ static Token scan_identifier(Lexer* const lexer) {
         }
         break;
     }
+    case 's': {
+        if (match_token(lexer, "elf", 1, 4)) {
+            return create_token(lexer, TOKEN_SELF);
+        }
+    }
+    case 't': {
+        if (match_token(lexer, "rue", 1, 4)) {
+            return create_token(lexer, TOKEN_TRUE);
+        }
+        if (match_token(lexer, "ypedef", 1, 7)) {
+            return create_token(lexer, TOKEN_TYPEDEF);
+        }
+        break;
+    }
+    case 'v': {
+        if (match_token(lexer, "ar", 1, 3)) {
+            return create_token(lexer, TOKEN_VAR);
+        }
+        break;
+    }
     case 'w': {
         if (match_token(lexer, "hile", 1, 5)) {
             return create_token(lexer, TOKEN_WHILE);
+        }
+        break;
+    }
+    case 'A': {
+        if (match_token(lexer, "ny", 1, 3)) {
+            return create_token(lexer, TOKEN_TYPE_ANY);
         }
         break;
     }
@@ -337,6 +367,8 @@ static inline Token scan_token(Lexer* const lexer) {
     case ')': return create_token(lexer, TOKEN_RIGHT_PAREN);
     case '{': return create_token(lexer, TOKEN_LEFT_BRACE);
     case '}': return create_token(lexer, TOKEN_RIGHT_BRACE);
+    case '[': return create_token(lexer, TOKEN_LEFT_BRAKET);
+    case ']': return create_token(lexer, TOKEN_RIGHT_BRAKET);
     case '.': return create_token(lexer, TOKEN_DOT);
     case ';': return create_token(lexer, TOKEN_SEMICOLON);
     case ':': return create_token(lexer, TOKEN_COLON);

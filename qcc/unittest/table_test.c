@@ -6,6 +6,8 @@
 #include "../vm.h"
 #include "../table.h"
 #include "../object.h"
+#include "../array.h"
+#include "../string.h"
 
 static char* read_words_file() {
     FILE* source = fopen("words.txt", "r");
@@ -189,6 +191,8 @@ static void should_substitute_old_key() {
 }
 
 int main(void) {
+    init_array();
+    init_string();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(benchamark_find_after_delete, start_test_case, finish_test_case),
         cmocka_unit_test_setup_teardown(should_substitute_old_key, start_test_case, finish_test_case),

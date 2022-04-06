@@ -4,6 +4,8 @@
 #include "lexer.h"
 #include "vector.h"
 
+struct s_type;
+
 typedef enum {
     EXPR_UNARY,
     EXPR_BINARY,
@@ -11,14 +13,19 @@ typedef enum {
     EXPR_IDENTIFIER,
     EXPR_ASSIGNMENT,
     EXPR_CALL,
+    EXPR_NEW,
+    EXPR_PROP,
+    EXPR_PROP_ASSIGMENT,
+    EXPR_ARRAY,
+    EXPR_CAST,
 } ExprKind;
 
-struct _Expr;
+struct s_expr;
 
 typedef struct {
-    struct _Expr* left;
+    struct s_expr* left;
     Token op;
-    struct _Expr* right;
+    struct s_expr* right;
 } BinaryExpr;
 
 typedef struct {
@@ -31,20 +38,50 @@ typedef struct {
 
 typedef struct {
     Token name;
-    struct _Expr* value;
+    struct s_expr* value;
 } AssignmentExpr;
 
 typedef struct {
     Token op;
-    struct _Expr* expr;
+    struct s_expr* expr;
 } UnaryExpr;
 
 typedef struct {
     Vector params;
-    Token identifier;
+    struct s_expr* callee;
 } CallExpr;
 
-typedef struct _Expr {
+typedef struct {
+    Vector params;
+    Token klass;
+} NewExpr;
+
+typedef struct {
+    struct s_expr* object;
+    Token prop;
+    struct s_type* object_type;
+} PropExpr;
+
+typedef struct {
+    struct s_expr* object;
+    Token prop;
+    struct s_expr* value;
+    struct s_type* object_type;
+} PropAssigmentExpr;
+
+typedef struct {
+    Vector elements; // Vector<Expr>
+    Token left_braket;
+    struct s_type* inner;
+} ArrayExpr;
+
+typedef struct {
+    Token token;
+    struct s_expr* inner;
+    struct s_type* type;
+} CastExpr;
+
+typedef struct s_expr {
     ExprKind kind;
     union {
         CallExpr call;
@@ -53,6 +90,11 @@ typedef struct _Expr {
         UnaryExpr unary;
         IdentifierExpr identifier;
         AssignmentExpr assignment;
+        NewExpr new_;
+        PropExpr prop;
+        PropAssigmentExpr prop_assigment;
+        ArrayExpr array;
+        CastExpr cast;
     };
 } Expr;
 
@@ -63,21 +105,38 @@ typedef struct {
     void (*visit_identifier)(void* ctx, IdentifierExpr* identifier);
     void (*visit_assignment)(void* ctx, AssignmentExpr* identifier);
     void (*visit_call)(void* ctx, CallExpr* call);
+    void (*visit_new)(void* ctx, NewExpr* new_);
+    void (*visit_prop)(void* ctx, PropExpr* prop);
+    void (*visit_prop_assigment)(void* ctx, PropAssigmentExpr* prop_assigment);
+    void (*visit_array)(void* ctx, ArrayExpr* array);
+    void (*visit_cast)(void* ctx, CastExpr* cast);
 } ExprVisitor;
 
 #define EXPR_IS_BINARY(expr) ((expr).kind == EXPR_BINARY)
 #define EXPR_IS_LITERAL(expr) ((expr).kind == EXPR_LITERAL)
-#define EXPR_IS_UNARY(expr) ((expr).kind == EXPR_LITERAL)
+#define EXPR_IS_UNARY(expr) ((expr).kind == EXPR_UNARY)
 #define EXPR_IS_IDENTIFIER(expr) ((expr).kind == EXPR_IDENTIFIER)
 #define EXPR_IS_ASSIGNMENT(expr) ((expr).kind == EXPR_ASSIGNMENT)
 #define EXPR_IS_CALL(expr) ((expr).kind == EXPR_CALL)
+#define EXPR_IS_NEW(expr) ((expr).kind == EXPR_NEW)
+#define EXPR_IS_PROP(expr) ((expr).kind == EXPR_PROP)
+#define EXPR_IS_PROP_ASSIGMENT(expr) ((expr).kind == EXPR_PROP_ASSIGMENT)
+#define EXPR_IS_ARRAY(expr) ((expr).kind == EXPR_ARRAY)
+#define EXPR_IS_ARRAY_ACCESS(expr) ((expr).kind == EXPR_ARRAY_ACCESS)
+#define EXPR_IS_CAST(expr) ((expr).kind == EXPR_CAST)
 
 #define CREATE_BINARY_EXPR(binary) create_expr(EXPR_BINARY, &binary)
 #define CREATE_LITERAL_EXPR(literal) create_expr(EXPR_LITERAL, &literal)
 #define CREATE_UNARY_EXPR(unary) create_expr(EXPR_UNARY, &unary)
 #define CREATE_INDENTIFIER_EXPR(identifier) create_expr(EXPR_IDENTIFIER, &identifier)
 #define CREATE_ASSIGNMENT_EXPR(assignment) create_expr(EXPR_ASSIGNMENT, &assignment)
-#define CREATE_CALL_EXPR(call) create_expr(EXPR_CALL, &call);
+#define CREATE_CALL_EXPR(call) create_expr(EXPR_CALL, &call)
+#define CREATE_NEW_EXPR(new_) create_expr(EXPR_NEW, &new_)
+#define CREATE_PROP_EXPR(prop) create_expr(EXPR_PROP, &prop)
+#define CREATE_PROP_ASSIGMENT_EXPR(prop_assigment) create_expr(EXPR_PROP_ASSIGMENT, &prop_assigment)
+#define CREATE_ARRAY_EXPR(array) create_expr(EXPR_ARRAY, &array)
+#define CREATE_ARRAY_ACCESS_EXPR(array_access) create_expr(EXPR_ARRAY_ACCESS, &array_access)
+#define CREATE_CAST_EXPR(cast) create_expr(EXPR_CAST, &cast)
 
 Expr* create_expr(ExprKind type, const void* const expr_node);
 void free_expr(Expr* const expr);

@@ -1,9 +1,9 @@
-[Line 7] Type error: Variables cannot be of type Void. Invalid type for variable 'a'
+[File ../programs/basic/assigment_to_void_fail.qz, Line 7] Type error: Variables cannot be of type Void. Invalid type for variable 'a'
 6 | 
 7 | var a: Void;
   | ~~~~~^
 
-[Line 8] Type error: Cannot assign variable to Void
+[File ../programs/basic/assigment_to_void_fail.qz, Line 8] Type error: Cannot assign variable to Void
 7 | var a: Void;
 8 | a = hello();
   | ~^

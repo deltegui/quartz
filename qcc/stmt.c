@@ -46,6 +46,8 @@ Stmt* create_stmt(StmtKind kind, void* stmt_node) {
     CASE_STMT(STMT_TYPEALIAS, typealias, TypealiasStmt);
     CASE_STMT(STMT_IMPORT, import, ImportStmt);
     CASE_STMT(STMT_NATIVE, native, NativeFunctionStmt);
+    CASE_STMT(STMT_CLASS, klass, ClassStmt);
+    CASE_STMT(STMT_NATIVE_CLASS, native_class, NativeClassStmt);
     case STMT_LIST:
         stmt->kind = STMT_LIST;
         stmt->list = (ListStmt*)stmt_node;
@@ -105,6 +107,10 @@ void free_stmt(Stmt* const stmt) {
     case STMT_IMPORT:
         free_stmt(stmt->import.ast);
         break;
+    case STMT_CLASS:
+        free_stmt(stmt->klass.body);
+        break;
+    case STMT_NATIVE_CLASS:
     case STMT_NATIVE:
     case STMT_TYPEALIAS:
     case STMT_LOOPG:
@@ -138,6 +144,8 @@ void stmt_dispatch(StmtVisitor* visitor, void* ctx, Stmt* stmt) {
     case STMT_TYPEALIAS: DISPATCH(visit_typealias, typealias); break;
     case STMT_IMPORT: DISPATCH(visit_import, import); break;
     case STMT_NATIVE: DISPATCH(visit_native, native); break;
+    case STMT_CLASS: DISPATCH(visit_class, klass); break;
+    case STMT_NATIVE_CLASS: DISPATCH(visit_native_class, native_class); break;
     default: assert(false);
     }
 #undef DISPATCH

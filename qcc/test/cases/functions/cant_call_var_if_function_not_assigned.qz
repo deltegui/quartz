@@ -1,4 +1,4 @@
-[Line 2] Error at 'inc': Use of unassigned variable
+[File: ../programs/functions/cant_call_var_if_function_not_assigned.qz, Line 2] Error at 'inc': Use of unassigned variable
 1 | var inc: (): Void;
 2 | inc();
   | ~~~^

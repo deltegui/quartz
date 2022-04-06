@@ -11,6 +11,7 @@ typedef struct s_obj {
     ObjKind kind;
     Type* type;
     bool is_marked;
+    ValueArray props;
     struct s_obj* next;
 } Obj;
 
@@ -51,6 +52,29 @@ typedef struct {
     int arity;
 } ObjNative;
 
+typedef struct {
+    Obj obj;
+    ObjString* name;
+} ObjClass;
+
+typedef struct {
+    Obj obj;
+    ObjClass* klass;
+} ObjInstance;
+
+typedef struct {
+    Obj obj;
+    Obj* instance;
+    Obj* method; // This can be ObjFunction or ObjNative
+} ObjBindedMethod;
+
+typedef struct {
+    Obj obj;
+    ValueArray elements;
+} ObjArray;
+
+#define OBJ_ADD_PROP(obj, value) (valuearray_write(&((Obj*)obj)->props, value))
+
 void print_object(Obj* const obj);
 bool object_is_kind(Obj* const obj, ObjKind kind);
 void mark_object(Obj* const obj);
@@ -80,5 +104,27 @@ ObjClosed* new_closed(Value value);
 #define OBJ_AS_NATIVE(obj) ((ObjNative*) obj)
 
 ObjNative* new_native(const char* name, int length, native_fn_t function, Type* type);
+
+#define OBJ_IS_CLASS(obj) (object_is_kind(obj, OBJ_CLASS))
+#define OBJ_AS_CLASS(obj) ((ObjClass*) obj)
+
+ObjClass* new_class(const char* name, int length, Type* type);
+
+#define OBJ_IS_INSTANCE(obj) (object_is_kind(obj, OBJ_INSTANCE))
+#define OBJ_AS_INSTANCE(obj) ((ObjInstance*) obj)
+
+ObjInstance* new_instance(ObjClass* origin);
+Value object_get_property(Obj* obj, uint8_t index);
+void object_set_property(Obj* obj, uint8_t index, Value val);
+
+#define OBJ_IS_BINDED_METHOD(obj) (object_is_kind(obj, OBJ_BINDED_METHOD))
+#define OBJ_AS_BINDED_METHOD(obj) ((ObjBindedMethod*) obj)
+
+ObjBindedMethod* new_binded_method(Obj* instance, Obj* method);
+
+#define OBJ_IS_ARRAY(obj) (object_is_kind(obj, OBJ_ARRAY))
+#define OBJ_AS_ARRAY(obj) ((ObjArray*) obj)
+
+ObjArray* new_array(Type* inner);
 
 #endif

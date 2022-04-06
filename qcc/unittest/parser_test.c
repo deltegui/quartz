@@ -4,6 +4,8 @@
 #include "../parser.h"
 #include "../expr.h"
 #include "../debug.h"
+#include "../array.h"
+#include "../string.h"
 
 static inline void assert_has_errors(const char* source);
 static void assert_stmt_equals(Stmt* first, Stmt* second);
@@ -14,12 +16,17 @@ static void assert_ast(const char* source, Stmt* expected_ast);
 static void assert_stmt_ast(const char* source, Stmt* expected);
 static void assert_expr_ast(const char* source, Expr* expected);
 static void should_parse_global_variables();
+static void assert_params_equal(Vector* first, Vector* second);
 
 static inline void assert_has_errors(const char* source) {
     Parser parser;
     ScopedSymbolTable symbols;
     init_scoped_symbol_table(&symbols);
-    init_parser(&parser, source, &symbols);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_parser(&parser, ctx, &symbols);
     Stmt* result = parse(&parser);
     free_scoped_symbol_table(&symbols);
     assert_true(parser.has_error);
@@ -37,7 +44,11 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
         assert_true(t_token_equals(
             &first->var.identifier,
             &second->var.identifier));
-        assert_expr_equals(first->var.definition, second->var.definition);
+        if (! first->var.definition) {
+            assert_true(first->var.definition == second->var.definition);
+        } else {
+            assert_expr_equals(first->var.definition, second->var.definition);
+        }
         break;
     }
     case STMT_LIST: {
@@ -112,6 +123,16 @@ static void assert_stmt_equals(Stmt* first, Stmt* second) {
                 first->native.length) == 0);
         break;
     }
+    case STMT_CLASS: {
+        assert_true(
+            t_token_equals(
+                &first->klass.identifier,
+                &second->klass.identifier));
+        assert_stmt_equals(first->klass.body, second->klass.body);
+        break;
+    }
+    case STMT_NATIVE_CLASS:
+        break;
     }
 }
 
@@ -151,15 +172,45 @@ static void assert_expr_equals(Expr* first, Expr* second) {
         break;
     }
     case EXPR_CALL: {
-        assert_true(t_token_equals(&first->call.identifier, &second->call.identifier));
-        assert_int_equal(first->call.params.size, second->call.params.size);
-        Expr** first_expr = VECTOR_AS_EXPRS(&first->call.params);
-        Expr** second_expr = VECTOR_AS_EXPRS(&second->call.params);
-        for (int i = 0; i < first->call.params.size; i++) {
-            assert_expr_equals(first_expr[i], second_expr[i]);
-        }
+        assert_expr_equals(first->call.callee, second->call.callee);
+        assert_params_equal(&first->call.params, &second->call.params);
         break;
     }
+    case EXPR_NEW: {
+        assert_true(t_token_equals(&first->new_.klass, &second->new_.klass));
+        assert_params_equal(&first->new_.params, &second->new_.params);
+        break;
+    }
+    case EXPR_PROP: {
+        assert_expr_equals(first->prop.object, second->prop.object);
+        assert_true(t_token_equals(&first->prop.prop, &second->prop.prop));
+        break;
+    }
+    case EXPR_PROP_ASSIGMENT: {
+        assert_expr_equals(first->prop_assigment.object, second->prop_assigment.object);
+        assert_true(t_token_equals(&first->prop_assigment.prop, &second->prop_assigment.prop));
+        assert_expr_equals(first->prop_assigment.value, second->prop_assigment.value);
+        break;
+    }
+    case EXPR_ARRAY: {
+        // TODO implement
+        break;
+    }
+    case EXPR_CAST: {
+        assert_expr_equals(first->cast.inner, second->cast.inner);
+        assert_true(t_token_equals(&first->cast.token, &second->cast.token));
+        assert_true(type_equals(first->cast.type, second->cast.type));
+        break;
+    }
+    }
+}
+
+static void assert_params_equal(Vector* first, Vector* second) {
+    assert_int_equal(first->size, second->size);
+    Expr** first_expr = VECTOR_AS_EXPRS(first);
+    Expr** second_expr = VECTOR_AS_EXPRS(second);
+    for (int i = 0; i < first->size; i++) {
+        assert_expr_equals(first_expr[i], second_expr[i]);
     }
 }
 
@@ -171,15 +222,31 @@ static void assert_ast(const char* source, Stmt* expected_ast) {
     Parser parser;
     ScopedSymbolTable symbols;
     init_scoped_symbol_table(&symbols);
-    init_parser(&parser, source, &symbols);
+    FileImport ctx;
+    ctx.path = "";
+    ctx.path_length = 0;
+    ctx.source = source;
+    init_parser(&parser, ctx, &symbols);
     Stmt* result = parse(&parser);
     compare_asts(result, expected_ast);
     free_scoped_symbol_table(&symbols);
     free_stmt(result);
 }
 
+#define LIST_ADD_NATIVE_CLASS(list, name_class, length_class) do {\
+    NativeClassStmt native;\
+    native.name = name_class;\
+    native.length = length_class;\
+    stmt_list_add(list, CREATE_STMT_NATIVE_CLASS(native));\
+} while (false)
+
+#define LIST_ADD_PRE_NATIVE(list)\
+    LIST_ADD_NATIVE_CLASS(list, ARRAY_CLASS_NAME, ARRAY_CLASS_LENGTH);\
+    LIST_ADD_NATIVE_CLASS(list, STRING_CLASS_NAME, STRING_CLASS_LENGTH)
+
 static void assert_stmt_ast(const char* source, Stmt* expected) {
     ListStmt* list = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(list);
     stmt_list_add(list, expected);
     Stmt* stmt = CREATE_STMT_LIST(list);
     assert_ast(source, stmt);
@@ -291,6 +358,13 @@ Token b_token = (Token){
     .length = 1,
     .line = 1,
     .start = "b",
+    .kind = TOKEN_IDENTIFIER
+};
+
+Token hello_token = (Token){
+    .length = 5,
+    .line = 1,
+    .start = "Hello",
     .kind = TOKEN_IDENTIFIER
 };
 
@@ -467,6 +541,7 @@ static void should_use_of_globals() {
     };
 
     ListStmt* list = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(list);
     stmt_list_add(list, CREATE_STMT_VAR(var));
     stmt_list_add(list, CREATE_STMT_EXPR(expr));
 
@@ -489,6 +564,7 @@ static void should_assign_vars() {
     };
 
     ListStmt* list = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(list);
     stmt_list_add(list, CREATE_STMT_VAR(var));
     stmt_list_add(list, CREATE_STMT_EXPR(expr));
 
@@ -518,6 +594,7 @@ static void should_parse_blocks() {
     };
 
     ListStmt* global = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(global);
     stmt_list_add(global, CREATE_STMT_BLOCK(block));
 
     Stmt* stmt = CREATE_STMT_LIST(global);
@@ -846,10 +923,71 @@ static void should_fail_typealias() {
     assert_has_errors("typedef Hola = Number");
 }
 
+static void should_parse_classes() {
+    ClassStmt klass;
+    klass.identifier = hello_token;
+
+    ListStmt* list = create_stmt_list();
+
+    VarStmt a_var;
+    a_var.identifier = a_token;
+    a_var.definition = NULL;
+    stmt_list_add(list, CREATE_STMT_VAR(a_var));
+
+    VarStmt b_var;
+    b_var.identifier = b_token;
+    b_var.definition = NULL;
+    stmt_list_add(list, CREATE_STMT_VAR(b_var));
+
+    klass.body = CREATE_STMT_LIST(list);
+
+    assert_stmt_ast(" class Hello { pub var a; var b; } ", CREATE_STMT_CLASS(klass));
+}
+
+static void should_fail_parsing_classes() {
+    assert_has_errors(" class Hello { pub }");
+    assert_has_errors(" class Hello { for (;;) {} }");
+}
+
+static void should_parse_empty_class() {
+    ClassStmt klass;
+    klass.identifier = hello_token;
+
+    ListStmt* list = create_stmt_list();
+    klass.body = CREATE_STMT_LIST(list);
+
+    assert_stmt_ast(" class Hello { } ", CREATE_STMT_CLASS(klass));
+}
+
+static void should_parse_new_expr() {
+    ListStmt* main = create_stmt_list();
+    LIST_ADD_PRE_NATIVE(main);
+
+    ClassStmt klass;
+    klass.identifier = hello_token;
+    ListStmt* body = create_stmt_list();
+    klass.body = CREATE_STMT_LIST(body);
+    stmt_list_add(main, CREATE_STMT_CLASS(klass));
+
+    NewExpr new_;
+    new_.klass = hello_token;
+    init_vector(&new_.params, sizeof(Expr*));
+    ExprStmt expr;
+    expr.inner = CREATE_NEW_EXPR(new_);
+    stmt_list_add(main, CREATE_STMT_EXPR(expr));
+
+    assert_ast(" class Hello {} new Hello();   ", CREATE_STMT_LIST(main));
+}
+
+static void should_fail_parsing_new() {
+    assert_has_errors(" new Hello();");
+    assert_has_errors(" class Hello {} new Hello);");
+    assert_has_errors(" class Hello {} new Hello(;");
+}
+
 static int test_setup(void** args) {
     init_type_pool();
-    return 0;
-}
+    return 0; }
 
 static int test_teardown(void** args) {
     free_type_pool();
@@ -857,6 +995,8 @@ static int test_teardown(void** args) {
 }
 
 int main(void) {
+    init_array();
+    init_string();
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(should_parse_returns),
         cmocka_unit_test(should_parse_empty_blocks),
@@ -890,7 +1030,12 @@ int main(void) {
         cmocka_unit_test(should_parse_break),
         cmocka_unit_test(should_parse_continue),
         cmocka_unit_test(should_parse_typealias),
-        cmocka_unit_test(should_fail_typealias)
+        cmocka_unit_test(should_fail_typealias),
+        cmocka_unit_test(should_parse_classes),
+        cmocka_unit_test(should_fail_parsing_classes),
+        cmocka_unit_test(should_parse_empty_class),
+        cmocka_unit_test(should_parse_new_expr),
+        cmocka_unit_test(should_fail_parsing_new)
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

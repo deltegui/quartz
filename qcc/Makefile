@@ -19,7 +19,7 @@ release:
 	$(CC) $(LIBS) -Wall -O3 $(SOURCES) -o ./quartz
 
 win64:
-	x86_64-w64-mingw32-gcc -lm -Wall -O1 $(SOURCES) -o ./quartz
+	x86_64-w64-mingw32-gcc -lm -Wall -O3 $(SOURCES) -o ./quartz
 
 debug:
 	$(CC) $(LIBS) -Wall -Wextra -Wpedantic -Wno-unused-parameter -g -D DEBUG $(SOURCES) -o ./quartz

@@ -30,7 +30,7 @@ cd ..
 mv ./qcc/quartz ./dist/quartz-debug-sgc
 mv ./qcc/quartz.exe ./dist/quartz-debug-sgc.exe
 
-mv ./readme.pdf ./dist/
+cp -a ./readme.pdf ./dist/
 
 cp -a ./qcc/programs ./dist
 zip -r quartz.zip ./dist

@@ -627,7 +627,7 @@ static void typecheck_new(void* ctx, NewExpr* new_) {
         checker->last_token = new_->klass;
         return;
     }
-    if (init_prop->kind != OBJ_FUNCTION) {
+    if (init_prop->kind != SYMBOL_FUNCTION) {
         error(
             checker,
             &new_->klass,

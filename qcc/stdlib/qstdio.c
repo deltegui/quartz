@@ -113,7 +113,7 @@ static Value stdio_readstr(int argc, Value* argv) {
 static bool ensure_is_tty() {
 #if defined(WIN32) || defined(_WIN32)
     #define ISATTY(dsc) _isatty(dsc)
-    #define TTYNAME(dsc) _ttyname(dsc)
+    #define TTYNAME(dsc) "CON"
 #else
     #define ISATTY(dsc) isatty(dsc)
     #define TTYNAME(dsc) ttyname(dsc)

@@ -1,0 +1,5 @@
+class Demo {
+    var init: String;
+}
+
+new Demo(); // <- Error appears here

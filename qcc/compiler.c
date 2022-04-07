@@ -294,7 +294,7 @@ static void init_compiler(Compiler* const compiler, CompilerMode mode, FileImpor
     compiler->loop_scope_depth = 0;
     compiler->is_in_loop = false;
     compiler->next_local_index = 1; // Is expected to always have GLOBAL in pos 0
-    memset(compiler->locals, 0, UINT8_COUNT);
+    memset(compiler->locals, 0, UINT8_COUNT * sizeof(int));
 
     compiler->current_self = NULL;
     compiler->want_to_call = false;
@@ -330,7 +330,7 @@ static void init_inner_compiler(Compiler* const inner, Compiler* const outer, co
     inner->loop_scope_depth = 0;
     inner->is_in_loop = false;
     inner->next_local_index = 1; // We expect to always have a function in pos 0
-    memset(inner->locals, 0, UINT8_COUNT);
+    memset(inner->locals, 0, UINT8_COUNT * sizeof(int));
 
     inner->current_self = outer->current_self;
     inner->want_to_call = false;

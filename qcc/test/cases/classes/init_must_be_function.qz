@@ -1,0 +1,4 @@
+[File ../programs/classes/init_must_be_function.qz, Line 5] Type error: 'init' property of class 'Demo' must be a function
+4 | 
+5 | new Demo(); // <- Error appears here
+  | ~~~~~~~~^

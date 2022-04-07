@@ -61,6 +61,7 @@ bool value_equals(Value first, Value second) {
     }
     }
     assert(false); // We should not reach this line
+    return false;
 }
 
 void init_valuearray(ValueArray* const arr) {
@@ -118,11 +119,13 @@ static bool is_truthy(Value value) {
 
 static Type* inspect_value_type(Value value) {
     switch (value.kind) {
-    case VALUE_NUMBER: CREATE_TYPE_NUMBER();
-    case VALUE_BOOL: CREATE_TYPE_BOOL();
-    case VALUE_NIL: CREATE_TYPE_NIL();
+    case VALUE_NUMBER: return CREATE_TYPE_NUMBER();
+    case VALUE_BOOL: return CREATE_TYPE_BOOL();
+    case VALUE_NIL: return CREATE_TYPE_NIL();
     case VALUE_OBJ: return VALUE_AS_OBJ(value)->type;
     }
+    assert(false);
+    return CREATE_TYPE_UNKNOWN();
 }
 
 Value value_cast(Value value, Type* cast) {

@@ -146,7 +146,7 @@ static CTableEntry* find(CTable* const table, CTableKey* key) {
         if (CTABLE_KEY_EQUALS(current->key, *key)) {
             return current;
         }
-        index = index + 1 & table->mask;
+        index = (index + 1) & table->mask;
     }
 }
 

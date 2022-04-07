@@ -56,11 +56,11 @@ import 'stdconv'; // importa la librería de conversiones.
 
 // ofrece las siguientes funciones:
 
-fn ntos(n: Number): String         // Convierte un número a string
-fn btos(b: Bool): String           // Convierte un booleano a string
-fn ston(str: String): Number       // Parsea un número
-fn typeof(any_var: Any): Void      // Imprime por pantalla el tipo de cualquier variable
-fn ascii(arr: []Number): String    // Transforma un array con números codificados en ascii y devuelve el String correspondiente.
+fn ntos(n: Number): String               // Convierte un número a string
+fn btos(b: Bool): String                 // Convierte un booleano a string
+fn ston(str: String): Number             // Parsea un número
+fn typeof(any_var: Any): Void            // Imprime por pantalla el tipo de cualquier variable
+fn parse_ascii(arr: []Number): String    // Transforma un array con números codificados en ascii y devuelve el String correspondiente.
 
 ```
 

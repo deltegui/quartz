@@ -2,7 +2,7 @@ rm ./quartz.zip
 rm -r ./dist
 
 cd ./qcc
-make
+make release
 make win64
 cd ..
 mkdir ./dist
@@ -29,6 +29,8 @@ make win64-debug-sgc
 cd ..
 mv ./qcc/quartz ./dist/quartz-debug-sgc
 mv ./qcc/quartz.exe ./dist/quartz-debug-sgc.exe
+
+mv ./readme.pdf ./dist/
 
 cp -a ./qcc/programs ./dist
 zip -r quartz.zip ./dist

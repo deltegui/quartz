@@ -1,9 +1,10 @@
 import "stdio";
-import "stdconv";
+import 'stdconv';
 
-var a = []Number{0, 1, 2};
+var num: Any = 5;
 
-import './slave.qz';
+var ok: Number = cast<Number>(num);
+// var mal: String = cast<String>(num);
+// var horrible: String = cast<Number>(num);
 
-var b = new A('puto');
-b.print_name();
+println(btos(cast<Bool>("")));

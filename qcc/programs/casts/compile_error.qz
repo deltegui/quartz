@@ -1,0 +1,9 @@
+import "stdio";
+import 'stdconv';
+
+var num: Any = 5;
+
+// Just like any other variable declaration, if the type of the
+// right expression does not match with the type of the variable
+// you just get a compile error (type match error)
+var horrible: String = cast<Number>(num);

@@ -1,0 +1,5 @@
+[File ../programs/casts/compile_error.qz, Line 9] Type error: The Type 'String' does not match with type 'Number' in variable declaration.
+8 | // you just get a compile error (type match error)
+9 | var horrible: String = cast<Number>(num);
+  | ~~~~~~~~~~~~^
+  

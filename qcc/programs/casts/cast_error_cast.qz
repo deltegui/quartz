@@ -1,0 +1,8 @@
+import "stdio";
+import 'stdconv';
+
+var num: Any = 5;
+
+// The requested type to cast does not match to the real values type.
+// Runtime error (cast error).
+var mal: String = cast<String>(num);

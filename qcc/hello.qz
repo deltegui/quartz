@@ -1,10 +1,24 @@
-import "stdio";
+import 'stdio';
 import 'stdconv';
 
-var num: Any = 5;
+fn askWord(question: String): String {
+    print(question);
+    return readstr();
+}
 
-var ok: Number = cast<Number>(num);
-// var mal: String = cast<String>(num);
-// var horrible: String = cast<Number>(num);
+var firstWord: String = askWord('Primera: ');
+var secondWord: String = askWord('Segunda: ');
 
-println(btos(cast<Bool>("")));
+if (firstWord > secondWord) {
+    println("meh");
+}
+
+/*
+if (firstWord.length() < secondWord.length()) {
+    println("Segunda es mayor");
+} else if (firstWord.length() > secondWord.length()) {
+    println("Primera es mayor");
+} else {
+    println("Iguales");
+}
+*/

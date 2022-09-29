@@ -1,0 +1,10 @@
+import "stdio";
+import 'stdconv';
+
+var num: Any = 5;
+
+// To 'unwrap' Any you need to cast to the real type for that Value
+// In this case, the value type is number.
+var ok: Number = cast<Number>(num);
+
+println(ntos(ok));

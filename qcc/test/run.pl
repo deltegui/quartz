@@ -74,7 +74,7 @@ sub print_ok {
 sub print_error {
 	print color('bold red');
 	print "FAIL\n";
-    print $_[0];
+	print $_[0];
 	print color('reset');
 	$have_err = 1;
 }
@@ -89,9 +89,9 @@ while(my ($key, $value) = each(%tests)) {
 		$result = clean_entry($result);
 		my $expected = clean_entry(read_text($value));
 		if($expected eq $result) {
-            print_ok();
+			print_ok();
 		} else {
-            print_error("EXPECTED:\n$expected\nBUT HAVE:\n$result\n");
+			print_error("EXPECTED:\n$expected\nBUT HAVE:\n$result\n");
 		}
 		$test_number++;
 	}

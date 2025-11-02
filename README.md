@@ -1,20 +1,228 @@
 # Quartz programming language
 
-![](https://raw.githubusercontent.com/deltegui/quartz/%238-closures/logo/quartz.png?token=ADHDBXCE5KP6AJ227G5S3QLBBAN2G "Quartz")
+![](https://raw.githubusercontent.com/deltegui/quartz/%238-closures/logo/quartz.png "Quartz")
 
-# Notas sobre el estilo de código
+Quartz es un lenguaje interpretado, con tipado estático, con un compilador multifase. Usado principalmente para profundizar en intérpretes y compiladores.
+Puedes ver ejemplos de código en Quartz en la carpeta 'qcc/programs'.
 
-### ¿Cuándo usar const T*, T* const y const T* const?
-- Si no quieres que el valor al que apunta el puntero sea cambiado, usa const T*. Este va a ser el más habitual.
-- En los casos en el que un puntero sea equivalente al 'this' de un lenguaje orientado a objetos o sea un parámetro de salida, usa T* const. Esto es porque en ninguno de estos casos tiene sentido que se modifique el puntero.
-- Usa const T* const cuando ocurran las dos condiciones de arriba a la vez.
+Como ejemplo, te muestro un intérprete totalmente funcional de brainfuck escrito en Quartz:
 
-### Nombrado
+brainfuck.qz:
+```
+/**
+* A brainfuck interpreter written in my own programming language (Quartz)
+*/
 
-- Todas las funciones deben llevar delante de su nombre el nombre del módulo al que pertenecen, exceptuando las funciones create, free e init que lo llevan detrás.
-  Por ejemplo expr_add(...) o create_binary_expr(...)
-- Usa init_<module>(T* t) para inicializar una estructura.
-- Usa T create_<module>() para crear una estructura reservando memoria para ella.
-- Usa free_<module>(T* t) para liberar la memoria de esa estructura.
-- Usa mark_<module>(T* t) para marcar la memoria de esa estructura.
 
+import "stdio";
+import "./vm.qz";
+
+var program = stdin();
+var vm = new VM();
+vm.interpret(program);
+println("");
+vm.dump();
+```
+
+vm.qz:
+```
+import "stdio";
+import "stdconv";
+import "./memory.qz";
+
+typedef Command = (): Void;
+
+class Stack {
+    var stack: []Number;
+
+    pub fn init() {
+        self.stack = []Number{};
+    }
+
+    pub fn push(element: Number) {
+        self.stack.push(element);
+    }
+
+    pub fn pop(): Number {
+        return cast<Number>(self.stack.pop());
+    }
+
+    pub fn length(): Number {
+		return self.stack.length();
+	}
+}
+
+class VM {
+    var memory: Memory;
+    var tokens: []String;
+    var commands: []Command;
+    var pc: Number;
+    var program: String;
+    var conditional_stack: Stack;
+    var had_error: Bool;
+
+    pub fn init() {
+        self.memory = new Memory();
+        self.tokens = []String{"<", ">", "+", "-", ".", ",", "[", "]"};
+        self.commands = []Command{
+            self.move_left,
+            self.move_right,
+            self.memory.increment,
+            self.memory.decrement,
+            self.print,
+            self.input,
+            self.cond_init,
+            self.cond_end
+        };
+        self.pc = 0;
+        self.conditional_stack = new Stack();
+        self.had_error = false;
+    }
+
+    fn print_program() {
+        println("Executing program:");
+        println(self.program);
+        println("");
+    }
+
+    pub fn interpret(program: String) {
+        self.program = program;
+        self.print_program();
+        var len = program.length();
+        for (; self.pc < len; self.pc = self.pc + 1) {
+            if (self.had_error) {
+                return;
+            }
+            var token = program.get_char(self.pc);
+            self.dispatch(token);
+        }
+    }
+
+    fn dispatch(token: String) {
+        var len = self.tokens.length();
+        for (var i = 0; i < len; i = i + 1) {
+            var current = cast<String>(self.tokens.get(i));
+            if (current == token) {
+                var cmd = cast<Command>(self.commands.get(i));
+                cmd();
+            }
+        }
+    }
+
+    fn move_left() {
+        self.memory.previous();
+    }
+
+    fn move_right() {
+        self.memory.advance();
+    }
+
+    fn print() {
+        var current: Number = self.memory.read();
+        var str: String = parse_ascii([]Number{current});
+        print(str);
+    }
+
+    fn input() {
+        print("> ");
+        var input: String = readstr();
+        if (input.length() <= 0) {
+            return;
+        }
+        self.memory.write(ston(input));
+    }
+
+    fn cond_init() {
+        if (self.memory.read() == 0) {
+            self.match_cond_end();
+            return;
+        }
+        self.conditional_stack.push(self.pc - 1);
+    }
+
+    fn match_cond_end() {
+        var inner_conds = 0;
+        while (self.pc < self.program.length()) {
+            self.pc = self.pc + 1;
+            var current = self.program.get_char(self.pc);
+            if (current == "[") {
+                inner_conds = inner_conds + 1;
+            }
+            if (current == "]") {
+                if (inner_conds == 0) return;
+                inner_conds = inner_conds - 1;
+            }
+        }
+        self.error("Missing ]");
+    }
+
+    fn cond_end() {
+		self.pc = self.conditional_stack.pop();
+    }
+
+    pub fn dump() {
+        self.memory.dump();
+    }
+
+    fn error(msg: String) {
+		println("Error!: " + msg);
+		self.had_error = true;
+	}
+}
+```
+
+memory.qz:
+```
+import "stdio";
+import "stdconv";
+
+class Memory {
+    var memory: []Number;
+    var ptr: Number;
+
+    pub fn init() {
+        self.memory = []Number{0};
+        self.ptr = 0;
+    }
+
+    pub fn increment() {
+        var old = self.read();
+        self.memory.set(self.ptr, old + 1);
+    }
+
+    pub fn decrement() {
+        var old = self.read();
+        self.memory.set(self.ptr, old - 1);
+    }
+
+    pub fn read(): Number {
+        return cast<Number>(self.memory.get(self.ptr));
+    }
+
+    pub fn write(data: Number) {
+        self.memory.set(self.ptr, data);
+    }
+
+    pub fn advance() {
+        var max = self.memory.length() - 1;
+        if (self.ptr >= max) {
+            self.memory.push(0);
+        }
+        self.ptr = self.ptr + 1;
+    }
+
+    pub fn previous() {
+        if (self.ptr == 0) {
+            return;
+        }
+        self.ptr = self.ptr - 1;
+    }
+
+    pub fn dump() {
+        for (var i = 0; i < self.memory.length(); i = i + 1) {
+            var current = cast<Number>(self.memory.get(i));
+            println("[" + ntos(i) + "] " + ntos(current));
+        }
+    }
+}
+```
